@@ -1,0 +1,4 @@
+/* Tailwind CSS directives — harus ada di file CSS utama */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
