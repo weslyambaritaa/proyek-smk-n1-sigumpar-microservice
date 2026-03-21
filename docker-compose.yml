@@ -1,126 +1,246 @@
-# docker-compose.yml
+x-db-template: &db-template
+  image: postgres:15
+  networks:
+    - microservices-network
+  restart: unless-stopped
+
+x-service-template: &service-template
+  restart: unless-stopped
+  networks:
+    - microservices-network
+  environment:
+    - NODE_ENV=production
+    - KEYCLOAK_URL=http://keycloak:8080
+    - KEYCLOAK_REALM=smk-sigumpar
+    - KEYCLOAK_CLIENT_ID=backend-client
+
 services:
-  # ============================================================
-  # SERVICE 1: Users Service
-  # ============================================================
-  users-service:
-    # Build image dari Dockerfile di folder users-service
-    build:
-      context: ./backend/users-service
-      dockerfile: Dockerfile
-
-    # Nama container yang mudah diidentifikasi
-    container_name: delcom-users-service
-
-    # Restart otomatis jika service crash (kecuali di-stop manual)
-    restart: unless-stopped
-
-    # Variabel environment — bisa di-override dari file .env
+  # ==========================================
+  # KEYCLOAK SSO & DB
+  # ==========================================
+  keycloak-db:
+    <<: *db-template
+    container_name: keycloak-db
     environment:
-      - NODE_ENV=production
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: keycloakpassword
+    volumes:
+      - keycloak_db_data:/var/lib/postgresql/data
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:22.0.1
+    container_name: keycloak
+    command: start-dev
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://keycloak-db:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: keycloakpassword
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+    ports:
+      - "8080:8080"
+    depends_on:
+      - keycloak-db
+    networks:
+      - microservices-network
+
+  # ==========================================
+  # 1. AUTH SERVICE
+  # ==========================================
+  auth-db:
+    <<: *db-template
+    container_name: auth-db
+    environment:
+      POSTGRES_DB: auth_db
+      POSTGRES_USER: auth_user
+      POSTGRES_PASSWORD: password
+    volumes:
+      - auth_db_data:/var/lib/postgresql/data
+      - ./postgres-init/init-auth.sql:/docker-entrypoint-initdb.d/init.sql
+
+  auth-service:
+    <<: *service-template
+    build: ./backend/auth-service
+    container_name: auth-service
+    environment:
       - PORT=3001
+      - DATABASE_URL=postgres://auth_user:password@auth-db:5432/auth_db
+    depends_on:
+      - auth-db
+      - keycloak
 
-    # Port: hanya expose ke jaringan Docker internal
-    # Tidak di-expose ke host karena semua traffic masuk melalui Nginx
-    expose:
-      - "3001"
-
-    # Volume: mount folder data ke host agar data persisten
-    # Format: host_path:container_path
-    volumes:
-      - ./backend/users-service/src/data:/app/src/data
-
-    # Hanya bergabung ke jaringan internal microservices
-    networks:
-      - delcom-microservices-network
-
-    # Health check: Docker akan memonitor kesehatan service ini
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3001/health"]
-      interval: 30s   # Cek setiap 30 detik
-      timeout: 10s    # Timeout jika tidak ada response dalam 10 detik
-      retries: 3      # Nyatakan 'unhealthy' setelah 3 kali gagal
-
-  # ============================================================
-  # SERVICE 2: Todos Service
-  # ============================================================
-  todos-service:
-    build:
-      context: ./backend/todos-service
-      dockerfile: Dockerfile
-    container_name: delcom-todos-service
-    restart: unless-stopped
+  # ==========================================
+  # 2. ACADEMIC SERVICE
+  # ==========================================
+  academic-db:
+    <<: *db-template
+    container_name: academic-db
     environment:
-      - NODE_ENV=production
-      - PORT=3002
-    expose:
-      - "3002"
+      POSTGRES_DB: academic_db
+      POSTGRES_USER: academic_user
+      POSTGRES_PASSWORD: password
     volumes:
-      - ./backend/todos-service/src/data:/app/src/data
-    networks:
-      - delcom-microservices-network
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3002/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      - academic_db_data:/var/lib/postgresql/data
+      - ./postgres-init/init-academic.sql:/docker-entrypoint-initdb.d/init.sql
 
-  # ============================================================
-  # SERVICE 3: Nginx — API Gateway
-  # ============================================================
-  nginx:
-    # Gunakan image Nginx resmi versi ringan (Alpine)
+  academic-service:
+    <<: *service-template
+    build: ./backend/academic-service
+    container_name: academic-service
+    environment:
+      - PORT=3002
+      - DATABASE_URL=postgres://academic_user:password@academic-db:5432/academic_db
+    depends_on:
+      - academic-db
+      - keycloak
+
+  # ==========================================
+  # 3. ASSET SERVICE
+  # ==========================================
+  asset-db:
+    <<: *db-template
+    container_name: asset-db
+    environment:
+      POSTGRES_DB: asset_db
+      POSTGRES_USER: asset_user
+      POSTGRES_PASSWORD: password
+    volumes:
+      - asset_db_data:/var/lib/postgresql/data
+      - ./postgres-init/init-asset.sql:/docker-entrypoint-initdb.d/init.sql
+
+  asset-service:
+    <<: *service-template
+    build: ./backend/asset-service
+    container_name: asset-service
+    environment:
+      - PORT=3003
+      - DATABASE_URL=postgres://asset_user:password@asset-db:5432/asset_db
+    depends_on:
+      - asset-db
+      - keycloak
+
+  # ==========================================
+  # 4. LEARNING SERVICE
+  # ==========================================
+  learning-db:
+    <<: *db-template
+    container_name: learning-db
+    environment:
+      POSTGRES_DB: learning_db
+      POSTGRES_USER: learning_user
+      POSTGRES_PASSWORD: password
+    volumes:
+      - learning_db_data:/var/lib/postgresql/data
+      - ./postgres-init/init-learning.sql:/docker-entrypoint-initdb.d/init.sql
+
+  learning-service:
+    <<: *service-template
+    build: ./backend/learning-service
+    container_name: learning-service
+    environment:
+      - PORT=3004
+      - DATABASE_URL=postgres://learning_user:password@learning-db:5432/learning_db
+    depends_on:
+      - learning-db
+      - keycloak
+
+  # ==========================================
+  # 5. STUDENT SERVICE
+  # ==========================================
+  student-db:
+    <<: *db-template
+    container_name: student-db
+    environment:
+      POSTGRES_DB: student_db
+      POSTGRES_USER: student_user
+      POSTGRES_PASSWORD: password
+    volumes:
+      - student_db_data:/var/lib/postgresql/data
+      - ./postgres-init/init-student.sql:/docker-entrypoint-initdb.d/init.sql
+
+  student-service:
+    <<: *service-template
+    build: ./backend/student-service
+    container_name: student-service
+    environment:
+      - PORT=3005
+      - DATABASE_URL=postgres://student_user:password@student-db:5432/student_db
+    depends_on:
+      - student-db
+      - keycloak
+
+  # ==========================================
+  # 6. VOCATIONAL SERVICE
+  # ==========================================
+  vocational-db:
+    <<: *db-template
+    container_name: vocational-db
+    environment:
+      POSTGRES_DB: vocational_db
+      POSTGRES_USER: vocational_user
+      POSTGRES_PASSWORD: password
+    volumes:
+      - vocational_db_data:/var/lib/postgresql/data
+      - ./postgres-init/init-vocational.sql:/docker-entrypoint-initdb.d/init.sql
+
+  vocational-service:
+    <<: *service-template
+    build: ./backend/vocational-service
+    container_name: vocational-service
+    environment:
+      - PORT=3006
+      - DATABASE_URL=postgres://vocational_user:password@vocational-db:5432/vocational_db
+    depends_on:
+      - vocational-db
+      - keycloak
+
+  # ==========================================
+  # API GATEWAY (NGINX) & FRONTEND
+  # ==========================================
+  api-gateway:
     image: nginx:alpine
-    container_name: delcom-api-gateway
+    container_name: api-gateway
     restart: unless-stopped
-
-    # Port mapping: host:container
-    # Port 80 di mesin lokal diteruskan ke port 80 di container Nginx
     ports:
       - "8001:80"
-
-    # Mount file konfigurasi Nginx dari host ke container
-    # :ro = read-only, container tidak bisa mengubah file ini
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-
-    # Nginx harus menunggu kedua service siap sebelum start
     depends_on:
-      users-service:
-        condition: service_healthy  # Tunggu hingga health check lulus
-      todos-service:
-        condition: service_healthy
-
+      - auth-service
+      - academic-service
+      - asset-service
+      - learning-service
+      - student-service
+      - vocational-service
     networks:
-      - delcom-microservices-network
+      - microservices-network
 
-  # ============================================================
-  # Frontend 4: ReactJS
-  # ============================================================
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    container_name: delcom-frontend
+    build: ./frontend
+    container_name: frontend
     restart: unless-stopped
     expose:
-      - "5173"          # Tidak perlu ports karena diakses via Nginx
+      - "5173"
+    environment:
+      - VITE_KEYCLOAK_URL=http://localhost:8080
+      - VITE_KEYCLOAK_REALM=smk-sigumpar
+      - VITE_KEYCLOAK_CLIENT_ID=frontend-client
     networks:
-      - delcom-microservices-network
+      - microservices-network
     depends_on:
-      - nginx           # Start setelah nginx siap
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:5173/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      - api-gateway
 
-# ============================================================
-# NETWORKS
-# ============================================================
 networks:
-  delcom-microservices-network:
-    # Bridge network = jaringan virtual terisolasi di dalam Docker
-    # Service dalam network ini bisa saling berkomunikasi menggunakan nama service
+  microservices-network:
     driver: bridge
-    name: delcom-microservices-network
+
+volumes:
+  keycloak_db_data:
+  auth_db_data:
+  academic_db_data:
+  asset_db_data:
+  learning_db_data:
+  student_db_data:
+  vocational_db_data:
