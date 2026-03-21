@@ -3,54 +3,30 @@ const cors = require("cors");
 const helmet = require("helmet");
 const morgan = require("morgan");
 
-// Import file lokal (Sesuaikan dengan nama file route Anda)
 const setupKeycloak = require("./middleware/auth");
-const studentRoutes = require("./routes/studentRoutes"); 
 const { errorHandler } = require("./middleware/errorHandler");
 
-// Inisialisasi aplikasi Express
+// PERHATIKAN: Di student-service kita tidak boleh pakai userRoutes!
+// Jika Anda belum membuat studentRoutes, kita buat sementara seperti ini agar tidak error:
+const studentRoutes = express.Router();
+studentRoutes.get("/", (req, res) => res.json({ message: "Ini data students" }));
+
 const app = express();
 
-// Middleware Global
 app.use(helmet());
-app.use(
-  cors({
-    origin: process.env.CORS_ORIGIN || "*",
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  })
-);
+app.use(cors({ origin: "*" }));
 app.use(morgan("dev"));
 app.use(express.json());
 
-// Health Check
-app.get("/health", (req, res) => {
-  res.status(200).json({
-    status: "OK",
-    service: "student-service",
-    timestamp: new Date().toISOString(),
-  });
-});
+app.get("/health", (req, res) => res.status(200).send("OK"));
 
-// Inisialisasi Keycloak & Proteksi Route
 const keycloak = setupKeycloak(app);
 
-// Gunakan studentRoutes, BUKAN userRoutes
+// PERHATIKAN: Path-nya adalah /api/students
 app.use("/api/students", keycloak.protect(), studentRoutes);
 
-// 404 Handler
-app.use((req, res) => {
-  res.status(404).json({
-    success: false,
-    message: `Route '${req.originalUrl}' tidak ditemukan`,
-  });
-});
-
-// Error Handler
+app.use((req, res) => res.status(404).json({ message: "Not found" }));
 app.use(errorHandler);
 
-// Start Server
-const PORT = process.env.PORT || 3005; // Port khusus student-service
-app.listen(PORT, () => {
-  console.log(`✅ Student Service running on port ${PORT}`);
-});
+const PORT = process.env.PORT || 3005;
+app.listen(PORT, () => console.log(`Student service running on port ${PORT}`));
