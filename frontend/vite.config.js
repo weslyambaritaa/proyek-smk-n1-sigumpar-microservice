@@ -5,18 +5,21 @@ export default defineConfig({
   plugins: [react()],
 
   server: {
-    port: 5173, // Port development server
+    // PENTING: Izinkan akses dari luar kontainer (Host OS)
+    host: "0.0.0.0", 
+    port: 5173,
 
-    /**
-     * Proxy: Meneruskan request /api dari frontend ke Nginx
-     * Ini menghindari masalah CORS saat development.
-     * Di production, frontend dan API berada di domain/port yang sama.
-     */
+    // Konfigurasi Watch agar hot-reload jalan di Docker (Windows/WSL)
+    watch: {
+      usePolling: true,
+    },
+
     proxy: {
       "/api": {
-        target: "http://localhost:80", // Nginx API Gateway
-        changeOrigin: true,            // Ubah header 'Origin' agar sesuai target
-        secure: false,                 // Tidak perlu SSL untuk localhost
+        // PENTING: Gunakan nama service docker 'api-gateway', bukan localhost
+        target: "http://api-gateway:80", 
+        changeOrigin: true,
+        secure: false,
       },
     },
   },
