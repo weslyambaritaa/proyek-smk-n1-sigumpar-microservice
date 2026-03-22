@@ -2,10 +2,10 @@ import axios from 'axios';
 import keycloak from '../keycloak';
 
 const axiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8001/api',
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8001',
 });
 
-// Interceptor untuk menyuntikkan Token JWT otomatis
+// Interceptor untuk menyisipkan Token otomatis
 axiosInstance.interceptors.request.use(
   (config) => {
     if (keycloak.token) {
@@ -18,12 +18,13 @@ axiosInstance.interceptors.request.use(
   }
 );
 
-// Interceptor untuk menangani error global (misal: token expired)
+// Interceptor untuk menangani token kadaluarsa
 axiosInstance.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error.response && error.response.status === 401) {
-      keycloak.login(); // Paksa login ulang jika unauthorized
+  async (error) => {
+    if (error.response?.status === 401) {
+      // Jika token mati, coba refresh otomatis
+      await keycloak.updateToken(30);
     }
     return Promise.reject(error);
   }
