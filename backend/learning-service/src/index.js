@@ -10,7 +10,7 @@ const PORT = process.env.PORT || 3006;
 
 // Middleware global (identik dengan users-service)
 app.use(helmet());
-app.use(cors({ origin: process.env.CORS_ORIGIN || "*" }));
+// app.use(cors({ origin: process.env.CORS_ORIGIN || "*" }));
 app.use(morgan("dev"));
 app.use(express.json());
 

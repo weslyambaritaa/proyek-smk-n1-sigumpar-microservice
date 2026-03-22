@@ -1,9 +1,10 @@
 import { BrowserRouter, Routes, Route, NavLink } from "react-router-dom";
 import { useState } from "react";
-import UsersPage from "./pages/UsersPage";
-import TodosPage from "./pages/TodosPage";
-import KelasPage from './pages/academic/kelas/KelasPage';
+// import UsersPage from "./pages/UsersPage";
+// import TodosPage from "./pages/TodosPage";
+import KelasPage from "./pages/kelas/KelasPage";
 import keycloak, { hasRole } from "./keycloak";
+
 
 /**
  * Komponen reusable untuk grup menu per role (Dropdown)
@@ -104,8 +105,8 @@ const App = () => {
                   title="Tata Usaha" icon="📂" 
                   isOpen={openMenus['tu']} onClick={() => toggleMenu('tu')}
                 >
-                  <NavLink to="/users" className={subNavClass}>Data Siswa</NavLink>
-                  <NavLink to="/todos" className={subNavClass}>Administrasi</NavLink>
+                  {/* <NavLink to="/users" className={subNavClass}>Data Siswa</NavLink>
+                  <NavLink to="/todos" className={subNavClass}>Administrasi</NavLink> */}
                   <NavLink to="/academic/kelas" className={subNavClass}>Data Kelas</NavLink>
                 </NavDropdown>
               )}
@@ -148,8 +149,8 @@ const App = () => {
         <main className="flex-1 p-8 overflow-y-auto">
           <Routes>
             <Route path="/" element={<h2 className="text-2xl font-bold">Pilih menu di samping untuk memulai</h2>} />
-            <Route path="/users" element={<UsersPage />} />
-            <Route path="/todos" element={<TodosPage />} />
+            {/* <Route path="/users" element={<UsersPage />} />
+            <Route path="/todos" element={<TodosPage />} /> */}
             <Route path="/academic/kelas" element={<KelasPage />} />
             {/* Route lainnya bisa ditambahkan di sini */}
           </Routes>

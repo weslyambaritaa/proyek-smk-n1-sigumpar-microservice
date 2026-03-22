@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { academicApi } from '../../../api/academicApi';
-import Button from '../../../components/ui/Button';
+import { academicApi } from "../../api/academicApi";
+import Button from "../../components/ui/Button";
 import KelasDialog from './dialog/KelasDialog';
 
 const KelasPage = () => {

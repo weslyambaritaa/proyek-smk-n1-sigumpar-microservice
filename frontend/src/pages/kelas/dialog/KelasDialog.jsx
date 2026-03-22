@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import Modal from '../../../../components/ui/Modal';
-import Button from '../../../../components/ui/Button';
-import Input from '../../../../components/ui/Input';
-import { academicApi } from '../../../../api/academicApi';
+import Modal from "../../../components/ui/Modal";
+import Button from "../../../components/ui/Button";
+import Input from "../../../components/ui/Input";
+import { academicApi } from "../../../api/academicApi";
 
 const KelasDialog = ({ isOpen, onClose, onSuccess, initialData }) => {
   const [formData, setFormData] = useState({ nama_kelas: '', tingkat: '', wali_kelas_id: '' });

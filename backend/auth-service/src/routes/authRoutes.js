@@ -7,7 +7,7 @@ const {
   createTodo,
   updateTodo,
   deleteTodo,
-} = require("../controllers/todoController");
+} = require("../controllers/authController");
 
 /**
  * Routes untuk resource /todos
@@ -19,8 +19,8 @@ const {
  * DELETE /todos/:id   => Hapus todo tertentu
  */
 
-router.route("/").get(getAllTodos).post(createTodo);
-router.route("/:id").get(getTodoById).put(updateTodo).delete(deleteTodo);
+// router.route("/").get(getAllTodos).post(createTodo);
+// router.route("/:id").get(getTodoById).put(updateTodo).delete(deleteTodo);
 
 router.get('/', verifyToken, controller.getAll);
 router.post('/', verifyToken, controller.create);
