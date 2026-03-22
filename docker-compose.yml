@@ -26,7 +26,6 @@ services:
   keycloak:
     image: quay.io/keycloak/keycloak:22.0.1
     container_name: keycloak
-    command: start-dev
     environment:
       KC_DB: postgres
       KC_DB_URL: jdbc:postgresql://keycloak-db:5432/keycloak
@@ -40,6 +39,9 @@ services:
       - keycloak-db
     networks:
       - microservices-network
+    volumes:
+      - ./keycloak-init/realm-export.json:/opt/keycloak/data/import/realm.json:ro
+    command: start-dev --import-realm
 
   auth-service:
     <<: *service-template
