@@ -1,9 +1,18 @@
 import axiosInstance from './axiosInstance';
 
-// CRUD SISWA
-export const getStudents = () => axiosInstance.get('/academic/students');
-export const createStudent = (data) => axiosInstance.post('/academic/students', data);
+export const academicApi = {
+  // Ambil semua kelas
+  getAllKelas: () => axiosInstance.get('/api/academic/kelas'),
+  
+  // Tambah kelas baru
+  createKelas: (data) => axiosInstance.post('/api/academic/kelas', data),
+  
+  // Update kelas
+  updateKelas: (id, data) => axiosInstance.put(`/api/academic/kelas/${id}`, data),
+  
+  // Hapus kelas
+  deleteKelas: (id) => axiosInstance.delete(`/api/academic/kelas/${id}`),
 
-// CRUD KELAS
-export const getClasses = () => axiosInstance.get('/academic/classes');
-export const createClass = (data) => axiosInstance.post('/academic/classes', data);
+  // Mencari user dengan role wali_kelas (untuk dropdown)
+  searchWaliKelas: (query) => axiosInstance.get(`/api/auth/users/search?role=wali_kelas&q=${query}`),
+};

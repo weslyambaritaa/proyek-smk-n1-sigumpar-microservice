@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import useUsers from "../hooks/useUsers";
-import UserForm from "../components/users/UserForm";
+import UserForm from "../components/kelas/Kelas";
 import Modal from "../components/ui/Modal";
 import Button from "../components/ui/Button";
 import Badge from "../components/ui/Badge";
