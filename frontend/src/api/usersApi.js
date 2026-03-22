@@ -1,4 +1,6 @@
 import axios from "axios";
+import keycloak from "../keycloak";
+const API_URL = "http://localhost:5000/api/users"; // Lewat Gateway
 
 /**
  * Instance Axios untuk Users Service
@@ -50,9 +52,14 @@ usersClient.interceptors.response.use(
  * @param {Object} params - Query params: { search, role }
  * @returns {Promise<Array>} Array of users
  */
-export const fetchUsers = async (params = {}) => {
-  const { data } = await usersClient.get("/", { params });
-  return data.data; // Ambil hanya array data dari response
+export const fetchUsers = async () => {
+  const response = await fetch(API_URL, {
+    headers: {
+      'Authorization': `Bearer ${keycloak.token}`, // Ambil token dari keycloak
+      'Content-Type': 'application/json'
+    }
+  });
+  return response.json();
 };
 
 /**
