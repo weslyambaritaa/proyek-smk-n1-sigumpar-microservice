@@ -48,7 +48,7 @@ services:
     build: ./backend/auth-service
     container_name: auth-service
     environment:
-      - PORT=3001
+      - PORT=3005
       - DB_NAME=auth_db
       - DB_USER=auth_user
       - DATABASE_URL=postgres://auth_user:password@localhost:5432/auth_db
@@ -59,10 +59,11 @@ services:
     build: ./backend/academic-service
     container_name: academic-service
     environment:
-      - PORT=3002
+      - PORT=3003
       - DB_NAME=academic_db
       - DB_USER=academic_user
       - DATABASE_URL=postgres://academic_user:password@localhost:5432/academic_db
+      - DB_PASSWORD=password
     depends_on: [keycloak]
 
   asset-service:
@@ -70,7 +71,7 @@ services:
     build: ./backend/asset-service
     container_name: asset-service
     environment:
-      - PORT=3003
+      - PORT=3004
       - DB_NAME=asset_db
       - DB_USER=asset_user
       - DATABASE_URL=postgres://asset_user:password@localhost:5432/asset_db
@@ -81,7 +82,7 @@ services:
     build: ./backend/learning-service
     container_name: learning-service
     environment:
-      - PORT=3004
+      - PORT=3006
       - DB_NAME=learning_db
       - DB_USER=learning_user
       - DATABASE_URL=postgres://learning_user:password@localhost:5432/learning_db
@@ -92,7 +93,7 @@ services:
     build: ./backend/student-service
     container_name: student-service
     environment:
-      - PORT=3005
+      - PORT=3008
       - DB_NAME=student_db
       - DB_USER=student_user
       - DATABASE_URL=postgres://student_user:password@localhost:5432/student_db
@@ -103,7 +104,7 @@ services:
     build: ./backend/vocational-service
     container_name: vocational-service
     environment:
-      - PORT=3006
+      - PORT=3007
       - DB_NAME=vocational_db
       - DB_USER=vocational_user
       - DATABASE_URL=postgres://vocational_user:password@localhost:5432/vocational_db

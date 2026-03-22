@@ -2,10 +2,9 @@ const { Pool } = require('pg');
 
 const pool = new Pool({
   user: process.env.DB_USER || 'academic_user',
-  // Ganti 'localhost' menjadi 'academic-service' (sesuai nama service DB di docker-compose)
   host: process.env.DB_HOST || 'localhost', 
   database: process.env.DB_NAME || 'academic_db',
-  password: process.env.DB_PASSWORD || 'academicpassword',
+  password: process.env.DB_PASSWORD || 'password',
   port: 5432,
 });
 module.exports = pool;

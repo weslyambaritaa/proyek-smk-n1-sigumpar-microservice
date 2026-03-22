@@ -1,3 +1,4 @@
+-- 1. Pembuatan Tabel-Tabel
 CREATE TABLE IF NOT EXISTS kelas (
     id SERIAL PRIMARY KEY,
     nama_kelas VARCHAR(50) NOT NULL,
@@ -16,3 +17,6 @@ CREATE TABLE IF NOT EXISTS arsip_surat (id SERIAL PRIMARY KEY, nomor_surat VARCH
 CREATE TABLE IF NOT EXISTS jadwal_mengajar (id SERIAL PRIMARY KEY, guru_id UUID, kelas_id INTEGER, mata_pelajaran VARCHAR(100));
 CREATE TABLE IF NOT EXISTS jadwal_piket (id SERIAL PRIMARY KEY, hari VARCHAR(20), guru_id UUID);
 CREATE TABLE IF NOT EXISTS jadwal_upacara (id SERIAL PRIMARY KEY, tanggal DATE, petugas TEXT);
+
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO academic_user;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO academic_user;
