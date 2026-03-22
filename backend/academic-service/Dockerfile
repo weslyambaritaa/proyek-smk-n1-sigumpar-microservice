@@ -1,18 +1,22 @@
-FROM node:24-alpine
+FROM node:20
 
-LABEL maintainer="praktikum@delcom.org"
-LABEL description="Todos Microservice"
+# Instal PostgreSQL dan sudo
+RUN apt-get update && apt-get install -y postgresql postgresql-contrib sudo
 
 WORKDIR /app
 
+# Salin package json dan instal dependensi
 COPY package*.json ./
+RUN npm install
 
-# npm ci = install yang deterministik berdasarkan package-lock.json
-# Lebih aman daripada npm install untuk production/CI
-RUN npm ci --only=production
-
+# Salin kode aplikasi, script start.sh, dan init.sql
 COPY . .
 
+# Berikan izin eksekusi pada script
+RUN chmod +x start.sh
+
+# Expose port (sesuaikan dengan port service masing-masing)
+# Contoh untuk student-service adalah 3005
 EXPOSE 3003
 
-CMD ["node", "src/index.js"]
+CMD ["./start.sh"]

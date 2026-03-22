@@ -1,26 +1,22 @@
-# Gunakan image Node.js versi LTS yang ringan (Alpine = ~50MB vs full ~900MB)
-FROM node:24-alpine
+FROM node:20
 
-# Label metadata
-LABEL maintainer="praktikum@delcom.org"
-LABEL description="Users Microservice"
+# Instal PostgreSQL dan sudo
+RUN apt-get update && apt-get install -y postgresql postgresql-contrib sudo
 
-# Set working directory di dalam container
 WORKDIR /app
 
-# Copy package files terlebih dahulu (SEBELUM source code)
-# Docker melakukan layer caching — jika package.json tidak berubah,
-# layer npm install akan digunakan dari cache, mempercepat build
+# Salin package json dan instal dependensi
 COPY package*.json ./
+RUN npm install
 
-# Install dependencies production saja (tidak perlu devDependencies di container)
-RUN npm ci --only=production
-
-# Copy seluruh source code ke working directory
+# Salin kode aplikasi, script start.sh, dan init.sql
 COPY . .
 
-# Expose port yang digunakan service (dokumentasi, tidak membuka port secara otomatis)
-EXPOSE 3008
+# Berikan izin eksekusi pada script
+RUN chmod +x start.sh
 
-# Jalankan aplikasi saat container start
-CMD ["node", "src/index.js"]
+# Expose port (sesuaikan dengan port service masing-masing)
+# Contoh untuk student-service adalah 3005
+EXPOSE 3008 
+
+CMD ["./start.sh"]
