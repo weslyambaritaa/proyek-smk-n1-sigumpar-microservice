@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import * as usersApi from "../api/usersApi";
+import * as authApi from "../api/authApi";
 
 /**
  * Custom Hook: useUsers
@@ -24,7 +24,7 @@ const useUsers = () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await usersApi.fetchUsers(params);
+      const data = await authApi.fetchUsers(params);
       setUsers(data);
     } catch (err) {
       setError(err.message);
@@ -42,7 +42,7 @@ const useUsers = () => {
     setLoading(true);
     setError(null);
     try {
-      const newUser = await usersApi.createUser(userData);
+      const newUser = await authApi.createUser(userData);
       // Update state lokal — tambah user baru ke array
       setUsers((prev) => [...prev, newUser]);
       return newUser;
@@ -61,7 +61,7 @@ const useUsers = () => {
     setLoading(true);
     setError(null);
     try {
-      const updated = await usersApi.updateUser(id, userData);
+      const updated = await authApi.updateUser(id, userData);
       // Ganti user yang diupdate di array state
       setUsers((prev) => prev.map((u) => (u.id === id ? updated : u)));
       return updated;
@@ -80,7 +80,7 @@ const useUsers = () => {
     setLoading(true);
     setError(null);
     try {
-      await usersApi.deleteUser(id);
+      await authApi.deleteUser(id);
       // Filter out user yang dihapus dari state
       setUsers((prev) => prev.filter((u) => u.id !== id));
     } catch (err) {

@@ -28,5 +28,5 @@ app.use("/api/students", keycloak.protect(), studentRoutes);
 app.use((req, res) => res.status(404).json({ message: "Not found" }));
 app.use(errorHandler);
 
-const PORT = process.env.PORT || 3005;
+const PORT = process.env.PORT || 3008;
 app.listen(PORT, () => console.log(`Student service running on port ${PORT}`));

@@ -6,7 +6,7 @@ const todoRoutes = require("./routes/todoRoutes");
 const { errorHandler } = require("./middleware/errorHandler");
 
 const app = express();
-const PORT = process.env.PORT || 3002;
+const PORT = process.env.PORT || 3006;
 
 // Middleware global (identik dengan users-service)
 app.use(helmet());
@@ -38,5 +38,5 @@ app.use((req, res) => {
 app.use(errorHandler);
 
 app.listen(PORT, () => {
-  console.log(`✅ Todos Service berjalan di http://localhost:${PORT}`);
+    console.log(`Learning Service running on port ${PORT}`);
 });

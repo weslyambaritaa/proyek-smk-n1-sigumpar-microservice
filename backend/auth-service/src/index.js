@@ -2,11 +2,11 @@ const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
 const morgan = require("morgan");
-const todoRoutes = require("./routes/todoRoutes");
+const authRoutes = require('./routes/authRoutes');
 const { errorHandler } = require("./middleware/errorHandler");
 
 const app = express();
-const PORT = process.env.PORT || 3002;
+const PORT = process.env.PORT || 3005;
 
 // Middleware global (identik dengan users-service)
 app.use(helmet());
@@ -24,7 +24,7 @@ app.get("/health", (req, res) => {
 });
 
 // Mount routes
-app.use("/todos", todoRoutes);
+app.use('/api/auth', authRoutes);
 
 // 404 handler
 app.use((req, res) => {
@@ -38,5 +38,5 @@ app.use((req, res) => {
 app.use(errorHandler);
 
 app.listen(PORT, () => {
-  console.log(`✅ Todos Service berjalan di http://localhost:${PORT}`);
+  console.log(`Auth Service running on port ${PORT}`);
 });
