@@ -23,6 +23,32 @@ exports.createKelas = async (req, res) => {
   }
 };
 
+// Update Kelas
+exports.updateKelas = async (req, res) => {
+    const { id } = req.params; // Ambil ID dari URL
+    const { nama_kelas, tingkat, wali_kelas_id } = req.body;
+    try {
+        await pool.query(
+            "UPDATE kelas SET nama_kelas = $1, tingkat = $2, wali_kelas_id = $3 WHERE id = $4",
+            [nama_kelas, tingkat, wali_kelas_id, id]
+        );
+        res.json({ success: true, message: "Kelas berhasil diperbarui" });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
+
+// Delete Kelas
+exports.deleteKelas = async (req, res) => {
+    const { id } = req.params;
+    try {
+        await pool.query("DELETE FROM kelas WHERE id = $1", [id]);
+        res.json({ success: true, message: "Kelas berhasil dihapus" });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
+
 // --- KONTROLLER SISWA ---
 exports.getAllSiswa = async (req, res) => {
   try {
