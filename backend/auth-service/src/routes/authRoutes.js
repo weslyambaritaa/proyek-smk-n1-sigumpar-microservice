@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const { verifyToken } = require('../middleware/auth');
-const authController = require('../controllers/authController'); // Sesuaikan nama
+const { verifyToken } = require('../middleware/auth'); 
+const authController = require('../controllers/authController');
 
-// Tambahkan rute pencarian untuk Wali Kelas
+// Rute untuk pencarian wali kelas (Dropdown)
 router.get('/users/search', verifyToken, authController.searchUsers);
 router.get('/', verifyToken, authController.getAll);
 

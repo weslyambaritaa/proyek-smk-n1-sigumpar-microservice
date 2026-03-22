@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const academicController = require('../controllers/academicController');
-const verifyToken = require('../middleware/auth');
+const { verifyToken } = require('../middleware/auth'); // Gunakan destructuring { }
 
 // Rute Kelas
 router.get('/kelas', verifyToken, academicController.getAllKelas);

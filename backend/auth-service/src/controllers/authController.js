@@ -25,8 +25,23 @@ const searchUsers = async (req, res, next) => {
     }
 };
 
+const syncUserFromToken = async (userData) => {
+  const { sub, preferred_username, name, email, role } = userData;
+  
+  // sub adalah ID unik dari Keycloak
+  await pool.query(
+    `INSERT INTO users (id, username, nama_lengkap, email, role)
+     VALUES ($1, $2, $3, $4, $5)
+     ON CONFLICT (id) DO UPDATE SET
+        nama_lengkap = EXCLUDED.nama_lengkap,
+        role = EXCLUDED.role`,
+    [sub, preferred_username, name, email, role]
+  );
+};
+
 // EKSPOR HARUS JELAS
 module.exports = {
     getAll,
-    searchUsers
+    searchUsers,
+    syncUserFromToken
 };

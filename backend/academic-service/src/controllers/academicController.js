@@ -24,15 +24,23 @@ exports.createKelas = async (req, res) => {
 };
 
 exports.updateKelas = async (req, res) => {
-    const { id } = req.params; // Pastikan mengambil ID dari params
+    const { id } = req.params; // Mengambil ID dari URL (:id)
     const { nama_kelas, tingkat, wali_kelas_id } = req.body;
+
     try {
-        await pool.query(
-            "UPDATE kelas SET nama_kelas = $1, tingkat = $2, wali_kelas_id = $3 WHERE id = $4",
-            [nama_kelas, tingkat, wali_kelas_id, id]
+        const result = await pool.query(
+            "UPDATE kelas SET nama_kelas = $1, tingkat = $2, wali_kelas_id = $3 WHERE id = $4 RETURNING *",
+            [nama_kelas, tingkat, wali_kelas_id || null, id]
         );
-        res.json({ success: true });
-    } catch (err) { res.status(500).json({ error: err.message }); }
+
+        if (result.rowCount === 0) {
+            return res.status(404).json({ message: "Kelas tidak ditemukan" });
+        }
+
+        res.json({ success: true, data: result.rows[0] });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 };
 
 exports.deleteKelas = async (req, res) => {
