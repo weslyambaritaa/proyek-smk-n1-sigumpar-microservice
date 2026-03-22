@@ -2,7 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
 const morgan = require("morgan");
-const todoRoutes = require("./routes/todoRoutes");
+const academicRoutes = require('./routes/academicRoutes'); // Pastikan nama file di folder routes adalah academicRoutes.js
 const { errorHandler } = require("./middleware/errorHandler");
 
 const app = express();
@@ -18,13 +18,13 @@ app.use(express.json());
 app.get("/health", (req, res) => {
   res.json({
     status: "OK",
-    service: "todos-service",
+    service: "academic-service",
     timestamp: new Date().toISOString(),
   });
 });
 
 // Mount routes
-app.use("/todos", todoRoutes);
+app.use('/api/academic', academicRoutes);
 
 // 404 handler
 app.use((req, res) => {

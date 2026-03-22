@@ -10,7 +10,9 @@ keycloak.init({
   checkLoginIframe: false 
 }).then((authenticated) => {
   if (authenticated) {
+    
     console.log("✅ User terautentikasi");
+    // window.keycloak = keycloak;
     
     // Render aplikasi hanya setelah login berhasil
     createRoot(document.getElementById('root')).render(

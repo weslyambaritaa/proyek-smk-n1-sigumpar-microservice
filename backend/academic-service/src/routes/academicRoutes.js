@@ -1,29 +1,15 @@
-const express = require("express");
+const express = require('express');
 const router = express.Router();
-const verifyToken = require('../middleware/auth'); // Import middleware
-const {
-  getAllTodos,
-  getTodoById,
-  createTodo,
-  updateTodo,
-  deleteTodo,
-} = require("../controllers/todoController");
+const academicController = require('../controllers/academicController');
+const verifyToken = require('../middleware/auth');
 
-/**
- * Routes untuk resource /todos
- *
- * GET    /todos       => Ambil semua todos (support filter via query params)
- * POST   /todos       => Buat todo baru
- * GET    /todos/:id   => Ambil todo tertentu
- * PUT    /todos/:id   => Update todo tertentu
- * DELETE /todos/:id   => Hapus todo tertentu
- */
+// Rute Kelas
+router.get('/kelas', verifyToken, academicController.getAllKelas);
+router.post('/kelas', verifyToken, academicController.createKelas);
 
-router.route("/").get(getAllTodos).post(createTodo);
-router.route("/:id").get(getTodoById).put(updateTodo).delete(deleteTodo);
-
-// Tambahkan verifyToken sebelum memanggil fungsi controller
-router.get('/', verifyToken, controller.getAll);
-router.post('/', verifyToken, controller.create);
+// Rute Siswa
+router.get('/siswa', verifyToken, academicController.getAllSiswa);
+router.post('/siswa', verifyToken, academicController.createSiswa);
+router.delete('/siswa/:id', verifyToken, academicController.deleteSiswa);
 
 module.exports = router;
