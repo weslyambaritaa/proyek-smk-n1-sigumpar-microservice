@@ -5,6 +5,7 @@ import { useState } from "react";
 import KelasPage from "./pages/kelas/KelasPage";
 import keycloak, { hasRole } from "./keycloak";
 import { Toaster } from 'react-hot-toast';
+import Dashboard from "./pages/Dashboard";
 
 /**
  * Komponen reusable untuk grup menu per role (Dropdown)
@@ -166,7 +167,7 @@ const App = () => {
         {/* === KONTEN UTAMA === */}
         <main className="flex-1 p-8 overflow-y-auto">
           <Routes>
-            <Route path="/" element={<h2 className="text-2xl font-bold">Pilih menu di samping untuk memulai</h2>} />
+            <Route path="/" element={<Dashboard />} />
             {/* <Route path="/users" element={<UsersPage />} />
             <Route path="/todos" element={<TodosPage />} /> */}
             <Route path="/academic/kelas" element={<KelasPage />} />
