@@ -3,6 +3,7 @@ import Modal from "../../../components/ui/Modal";
 import Button from "../../../components/ui/Button";
 import Input from "../../../components/ui/Input";
 import { academicApi } from "../../../api/academicApi";
+import toast from 'react-hot-toast';
 
 const KelasDialog = ({ isOpen, onClose, onSuccess, initialData }) => {
   const [formData, setFormData] = useState({ nama_kelas: '', tingkat: '', wali_kelas_id: '' });
@@ -33,17 +34,23 @@ const KelasDialog = ({ isOpen, onClose, onSuccess, initialData }) => {
   }, [searchQuery]);
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      if (initialData?.id) {
-        await academicApi.updateKelas(initialData.id, formData);
-      } else {
-        await academicApi.createKelas(formData);
-      }
-      onSuccess();
-      onClose();
-    } catch (error) { alert("Gagal menyimpan data"); }
-  };
+  e.preventDefault();
+  // Gunakan toast.promise untuk efek loading otomatis!
+  const savePromise = initialData?.id 
+    ? academicApi.updateKelas(initialData.id, formData)
+    : academicApi.createKelas(formData);
+
+  toast.promise(savePromise, {
+    loading: 'Menyimpan data...',
+    success: 'Data kelas berhasil disimpan!',
+    error: 'Gagal menyimpan data kelas.',
+  }).then(() => {
+    onSuccess();
+    onClose();
+  }).catch((err) => {
+    console.error(err); // Error detail tetap di console, user melihat pesan toast
+  });
+};
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={initialData ? "Edit Kelas" : "Tambah Kelas"}>

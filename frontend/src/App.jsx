@@ -4,7 +4,7 @@ import { useState } from "react";
 // import TodosPage from "./pages/TodosPage";
 import KelasPage from "./pages/kelas/KelasPage";
 import keycloak, { hasRole } from "./keycloak";
-
+import { Toaster } from 'react-hot-toast';
 
 /**
  * Komponen reusable untuk grup menu per role (Dropdown)
@@ -46,6 +46,24 @@ const App = () => {
 
   return (
     <BrowserRouter>
+    {/* === TOAST NOTIFIKASI BESAR & DI TENGAH === */}
+        <Toaster 
+          position="top-center" 
+          reverseOrder={false} 
+          toastOptions={{
+            // Styling khusus agar toast lebih besar
+            style: {
+              padding: '20px 30px',
+              fontSize: '16px',
+              maxWidth: '600px',
+              fontWeight: '500',
+              textAlign: 'center',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+            },
+            success: { duration: 3000 },
+            error: { duration: 4000 }
+          }}
+        />
       <div className="flex min-h-screen bg-gray-50">
         {/* === SIDEBAR === */}
         <aside className="w-64 bg-white border-r border-gray-200 flex flex-col sticky top-0 h-screen">

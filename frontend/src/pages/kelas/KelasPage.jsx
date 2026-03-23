@@ -1,30 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import { academicApi } from "../../api/academicApi";
-// 1. Tambahkan import axiosInstance
 import axiosInstance from "../../api/axiosInstance"; 
 import Button from "../../components/ui/Button";
+import Modal from "../../components/ui/Modal"; // Import Modal untuk konfirmasi hapus
 import KelasDialog from './dialog/KelasDialog';
+import toast from 'react-hot-toast';
 
 const KelasPage = () => {
   const [kelasData, setKelasData] = useState([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedKelas, setSelectedKelas] = useState(null);
 
+  // State khusus untuk pop-up konfirmasi hapus
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [kelasToDelete, setKelasToDelete] = useState(null);
+
   const fetchKelas = async () => {
     try {
-      // 2. Ambil data kelas dari Academic Service
       const resKelas = await academicApi.getAllKelas();
-      
-      // 3. Ambil data users (guru) dari Auth Service
       const resUsers = await axiosInstance.get('/api/auth');
-      const users = resUsers.data.data; // Asumsi response: { success: true, data: [...] }
+      const users = resUsers.data.data; 
 
-      // 4. Gabungkan (Join) data berdasarkan ID
       const kelasWithGuru = resKelas.data.map(kelas => {
         const guru = users.find(u => u.id === kelas.wali_kelas_id);
         return {
           ...kelas,
-          // Gunakan username (karena sebelumnya kita memakai kolom username Keycloak)
           nama_wali: guru ? guru.username : '-' 
         };
       });
@@ -42,10 +42,26 @@ const KelasPage = () => {
     setIsDialogOpen(true);
   };
 
-  const handleDelete = async (id) => {
-    if (window.confirm("Hapus kelas ini?")) {
-      await academicApi.deleteKelas(id);
+  // 1. Fungsi saat tombol "Hapus" di tabel diklik (Hanya membuka pop-up)
+  const handleDeleteClick = (kelas) => {
+    setKelasToDelete(kelas);
+    setIsDeleteDialogOpen(true);
+  };
+
+  // 2. Fungsi saat tombol "Ya, Hapus" di dalam pop-up diklik
+  const confirmDelete = async () => {
+    if (!kelasToDelete) return;
+    
+    try {
+      await academicApi.deleteKelas(kelasToDelete.id);
+      toast.success(`Kelas ${kelasToDelete.nama_kelas} berhasil dihapus!`);
       fetchKelas();
+    } catch (error) {
+      toast.error("Gagal menghapus kelas.");
+    } finally {
+      // Tutup modal dan reset data
+      setIsDeleteDialogOpen(false);
+      setKelasToDelete(null);
     }
   };
 
@@ -73,11 +89,11 @@ const KelasPage = () => {
               <tr key={k.id} className="hover:bg-gray-50">
                 <td className="px-6 py-4 font-medium">{k.nama_kelas}</td>
                 <td className="px-6 py-4">{k.tingkat}</td>
-                {/* 5. nama_wali sekarang akan terisi! */}
                 <td className="px-6 py-4">{k.nama_wali || '-'}</td>
                 <td className="px-6 py-4 text-center space-x-2">
                   <button onClick={() => handleEdit(k)} className="text-blue-600 hover:underline">Edit</button>
-                  <button onClick={() => handleDelete(k.id)} className="text-red-600 hover:underline">Hapus</button>
+                  {/* Ubah onClick agar memanggil handleDeleteClick */}
+                  <button onClick={() => handleDeleteClick(k)} className="text-red-600 hover:underline">Hapus</button>
                 </td>
               </tr>
             ))}
@@ -85,12 +101,39 @@ const KelasPage = () => {
         </table>
       </div>
 
+      {/* Pop-up Dialog Tambah/Edit Kelas */}
       <KelasDialog 
         isOpen={isDialogOpen} 
         onClose={() => setIsDialogOpen(false)} 
         onSuccess={fetchKelas}
         initialData={selectedKelas}
       />
+
+      {/* Pop-up Dialog Konfirmasi Hapus */}
+      <Modal 
+        isOpen={isDeleteDialogOpen} 
+        onClose={() => setIsDeleteDialogOpen(false)} 
+        title="Konfirmasi Hapus"
+      >
+        <div className="p-2">
+          <p className="text-gray-700 mb-6 text-sm">
+            Apakah Anda yakin ingin menghapus kelas <span className="font-bold text-red-600">{kelasToDelete?.nama_kelas}</span>? Data yang telah dihapus tidak dapat dikembalikan.
+          </p>
+          <div className="flex justify-end gap-3 mt-4">
+            <Button variant="secondary" onClick={() => setIsDeleteDialogOpen(false)}>
+              Batal
+            </Button>
+            {/* Tombol dengan styling merah khusus untuk aksi destruktif */}
+            <button 
+              onClick={confirmDelete} 
+              className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors"
+            >
+              Ya, Hapus
+            </button>
+          </div>
+        </div>
+      </Modal>
+
     </div>
   );
 };
