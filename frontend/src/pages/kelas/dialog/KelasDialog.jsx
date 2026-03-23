@@ -23,7 +23,8 @@ const KelasDialog = ({ isOpen, onClose, onSuccess, initialData }) => {
   // Auto-suggest Wali Kelas
   useEffect(() => {
     const delayDebounceFn = setTimeout(async () => {
-      if (searchQuery.length > 2 && !formData.wali_kelas_id) {
+      // UBAH MENJADI > 0 AGAR 1 HURUF LANGSUNG MENCARI
+      if (searchQuery.length > 0 && !formData.wali_kelas_id) {
         try {
           const res = await academicApi.searchWaliKelas(searchQuery);
           setSuggestions(res.data);
