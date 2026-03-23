@@ -5,11 +5,18 @@ const axiosInstance = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8001',
 });
 
-// Interceptor untuk menyisipkan Token otomatis
+// Interceptor Request: Cek dan refresh token SEBELUM dikirim
 axiosInstance.interceptors.request.use(
-  (config) => {
+  async (config) => {
     if (keycloak.token) {
-      config.headers.Authorization = `Bearer ${keycloak.token}`;
+      try {
+        // Update token jika sisa waktunya kurang dari 30 detik
+        await keycloak.updateToken(30);
+        config.headers.Authorization = `Bearer ${keycloak.token}`;
+      } catch (error) {
+        console.error("Sesi habis, mengarahkan ke halaman login...");
+        keycloak.login(); // Paksa login ulang jika token benar-benar mati
+      }
     }
     return config;
   },
@@ -18,16 +25,6 @@ axiosInstance.interceptors.request.use(
   }
 );
 
-// Interceptor untuk menangani token kadaluarsa
-axiosInstance.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    if (error.response?.status === 401) {
-      // Jika token mati, coba refresh otomatis
-      await keycloak.updateToken(30);
-    }
-    return Promise.reject(error);
-  }
-);
+// Hapus bagian interceptors.response karena sudah di-handle di request
 
 export default axiosInstance;

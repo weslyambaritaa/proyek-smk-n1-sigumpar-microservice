@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { academicApi } from "../../api/academicApi";
+// 1. Tambahkan import axiosInstance
+import axiosInstance from "../../api/axiosInstance"; 
 import Button from "../../components/ui/Button";
 import KelasDialog from './dialog/KelasDialog';
 
@@ -10,9 +12,27 @@ const KelasPage = () => {
 
   const fetchKelas = async () => {
     try {
-      const res = await academicApi.getAllKelas();
-      setKelasData(res.data);
-    } catch (err) { console.error(err); }
+      // 2. Ambil data kelas dari Academic Service
+      const resKelas = await academicApi.getAllKelas();
+      
+      // 3. Ambil data users (guru) dari Auth Service
+      const resUsers = await axiosInstance.get('/api/auth');
+      const users = resUsers.data.data; // Asumsi response: { success: true, data: [...] }
+
+      // 4. Gabungkan (Join) data berdasarkan ID
+      const kelasWithGuru = resKelas.data.map(kelas => {
+        const guru = users.find(u => u.id === kelas.wali_kelas_id);
+        return {
+          ...kelas,
+          // Gunakan username (karena sebelumnya kita memakai kolom username Keycloak)
+          nama_wali: guru ? guru.username : '-' 
+        };
+      });
+
+      setKelasData(kelasWithGuru);
+    } catch (err) { 
+      console.error("Gagal mengambil data:", err); 
+    }
   };
 
   useEffect(() => { fetchKelas(); }, []);
@@ -53,6 +73,7 @@ const KelasPage = () => {
               <tr key={k.id} className="hover:bg-gray-50">
                 <td className="px-6 py-4 font-medium">{k.nama_kelas}</td>
                 <td className="px-6 py-4">{k.tingkat}</td>
+                {/* 5. nama_wali sekarang akan terisi! */}
                 <td className="px-6 py-4">{k.nama_wali || '-'}</td>
                 <td className="px-6 py-4 text-center space-x-2">
                   <button onClick={() => handleEdit(k)} className="text-blue-600 hover:underline">Edit</button>

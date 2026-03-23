@@ -2,7 +2,8 @@
 CREATE TABLE IF NOT EXISTS kelas (
     id SERIAL PRIMARY KEY,
     nama_kelas VARCHAR(50) NOT NULL,
-    tingkat VARCHAR(10)
+    tingkat VARCHAR(10),
+    wali_kelas_id UUID  -- TAMBAHKAN BARIS INI
 );
 
 CREATE TABLE IF NOT EXISTS siswa (

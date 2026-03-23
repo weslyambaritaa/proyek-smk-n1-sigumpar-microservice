@@ -1,7 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const academicController = require('../controllers/academicController');
-const { verifyToken } = require('../middleware/auth'); // Gunakan destructuring { }
+
+// HAPUS kurung kurawal {} di sini (Opsi 1)
+const verifyToken = require('../middleware/auth'); 
 
 // Rute Kelas
 router.get('/kelas', verifyToken, academicController.getAllKelas);
@@ -16,4 +18,5 @@ router.get('/siswa', verifyToken, academicController.getAllSiswa);
 router.post('/siswa', verifyToken, academicController.createSiswa);
 router.delete('/siswa/:id', verifyToken, academicController.deleteSiswa);
 
+// TETAP EXPORT ROUTER, JANGAN UBAH INI
 module.exports = router;

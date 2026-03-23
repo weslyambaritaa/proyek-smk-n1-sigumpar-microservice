@@ -1,18 +1,20 @@
 const { Pool } = require('pg');
 
+// Mengubah koneksi agar langsung menembak ke keycloak-db
 const pool = new Pool({
-  user: process.env.DB_USER || 'auth_user',
-  host: process.env.DB_HOST || 'localhost', 
-  database: process.env.DB_NAME || 'auth_db',
-  password: process.env.DB_PASSWORD || 'password',
+  user: 'keycloak',
+  host: 'keycloak-db', // Nama service Keycloak DB di docker-compose
+  database: 'keycloak',
+  password: 'keycloakpassword',
   port: 5432,
 });
-module.exports = pool;
 
 pool.query('SELECT NOW()', (err, res) => {
   if (err) {
-    console.error('Koneksi Database Gagal:', err.stack);
+    console.error('Koneksi ke Keycloak DB Gagal:', err.stack);
   } else {
-    console.log('Koneksi Database Berhasil pada:', res.rows[0].now);
+    console.log('Berhasil terhubung ke Keycloak DB pada:', res.rows[0].now);
   }
 });
+
+module.exports = pool;

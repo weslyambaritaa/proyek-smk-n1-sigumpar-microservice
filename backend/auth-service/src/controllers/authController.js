@@ -1,23 +1,26 @@
 const pool = require("../config/db");
 
-// 1. Fungsi Ambil Semua
+// 1. Ambil Semua User dari Keycloak
 const getAll = async (req, res, next) => {
     try {
-        const result = await pool.query("SELECT id, username, nama_lengkap, email, role FROM users ORDER BY id ASC");
+        // Keycloak menyimpan data user di tabel "user_entity"
+        const result = await pool.query("SELECT id, username, email FROM user_entity ORDER BY username ASC");
         res.json({ success: true, data: result.rows });
     } catch (err) {
         next(err);
     }
 };
 
-// 2. Fungsi Cari Wali Kelas
+// 2. Pencarian Wali Kelas dari Keycloak
 const searchUsers = async (req, res, next) => {
-    const { q, role } = req.query;
+    const { q } = req.query;
     try {
-        if (!q || !role) return res.json([]);
+        if (!q) return res.json([]);
+        
+        // Cari berdasarkan username di tabel user_entity
         const result = await pool.query(
-            "SELECT id, nama_lengkap FROM users WHERE role = $1 AND nama_lengkap ILIKE $2 LIMIT 10",
-            [role, `%${q}%`]
+            "SELECT id, username AS nama_lengkap FROM user_entity WHERE username ILIKE $1 LIMIT 10",
+            [`%${q}%`]
         );
         res.json(result.rows);
     } catch (err) {
@@ -25,21 +28,14 @@ const searchUsers = async (req, res, next) => {
     }
 };
 
+// 3. Fungsi Sinkronisasi (Dikosongkan)
+// Karena kita sudah membaca langsung dari Keycloak DB, 
+// kita tidak perlu lagi menyimpan ulang datanya saat user login.
 const syncUserFromToken = async (userData) => {
-  const { sub, preferred_username, name, email, role } = userData;
-  
-  // sub adalah ID unik dari Keycloak
-  await pool.query(
-    `INSERT INTO users (id, username, nama_lengkap, email, role)
-     VALUES ($1, $2, $3, $4, $5)
-     ON CONFLICT (id) DO UPDATE SET
-        nama_lengkap = EXCLUDED.nama_lengkap,
-        role = EXCLUDED.role`,
-    [sub, preferred_username, name, email, role]
-  );
+    // Tidak melakukan apa-apa
+    return true; 
 };
 
-// EKSPOR HARUS JELAS
 module.exports = {
     getAll,
     searchUsers,
