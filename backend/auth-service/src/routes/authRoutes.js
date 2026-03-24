@@ -1,28 +1,23 @@
 const express = require("express");
-const verifyToken = require('../middleware/auth'); // Import middleware
-const router = express.Router();
 const {
-  getAllTodos,
-  getTodoById,
-  createTodo,
-  updateTodo,
-  deleteTodo,
-} = require("../controllers/todoController");
+  login,
+  me,
+  logout,
+  adminCreateUser,
+} = require("../controllers/authController");
+const authMiddleware = require("../middleware/auth");
+const roleMiddleware = require("../middleware/roleMiddleware");
 
-/**
- * Routes untuk resource /todos
- *
- * GET    /todos       => Ambil semua todos (support filter via query params)
- * POST   /todos       => Buat todo baru
- * GET    /todos/:id   => Ambil todo tertentu
- * PUT    /todos/:id   => Update todo tertentu
- * DELETE /todos/:id   => Hapus todo tertentu
- */
+const router = express.Router();
 
-router.route("/").get(getAllTodos).post(createTodo);
-router.route("/:id").get(getTodoById).put(updateTodo).delete(deleteTodo);
-
-router.get('/', verifyToken, controller.getAll);
-router.post('/', verifyToken, controller.create);
+router.post("/login", login);
+router.get("/me", authMiddleware, me);
+router.post("/logout", logout);
+router.post(
+  "/admin/create-user",
+  authMiddleware,
+  roleMiddleware(["admin"]),
+  adminCreateUser,
+);
 
 module.exports = router;

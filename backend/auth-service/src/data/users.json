@@ -1,0 +1,12 @@
+[
+  {
+    "id": "1",
+    "name": "Administrator",
+    "username": "admin",
+    "email": "admin@smkn1sigumpar.sch.id",
+    "password": "$2b$10$l8G8xrZEgIyNxD9QkZKYaeNuCoJoTP.JHB6HSgZvaC5FM2N2sEsw6",
+    "role": "admin",
+    "createdAt": "2025-03-22T10:00:00.000Z",
+    "updatedAt": "2025-03-22T10:00:00.000Z"
+  }
+]
