@@ -2,30 +2,37 @@ const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
 const morgan = require("morgan");
+const apiRoutes = require("./routes"); // import aggregator routes
 const { errorHandler } = require("./middleware/errorHandler");
 
 const app = express();
-const PORT = process.env.PORT || 3006;
+const PORT = process.env.PORT || 3003;
 
-// Middleware global (identik dengan users-service)
-app.use(helmet());
-// app.use(cors({ origin: process.env.CORS_ORIGIN || "*" }));
-app.use(morgan("dev"));
-app.use(express.json());
+// ==========================================
+// MIDDLEWARE GLOBAL
+// ==========================================
+app.use(helmet()); // security headers
+app.use(cors()); // enable CORS (allow all origins in dev)
+app.use(morgan("dev")); // request logging
+app.use(express.json()); // parse JSON body
+app.use(express.urlencoded({ extended: true })); // parse form-data (for file uploads)
 
-// Health check endpoint
+// ==========================================
+// ROUTES
+// ==========================================
+// Semua endpoint API akan diawali dengan /api
+app.use("/api", apiRoutes);
+
+// Health check endpoint (untuk monitoring)
 app.get("/health", (req, res) => {
   res.json({
     status: "OK",
-    service: "todos-service",
+    service: "academic-service",
     timestamp: new Date().toISOString(),
   });
 });
 
-// Mount routes
-app.use("/todos", todoRoutes);
-
-// 404 handler
+// 404 handler untuk route yang tidak ditemukan
 app.use((req, res) => {
   res.status(404).json({
     success: false,
@@ -33,9 +40,14 @@ app.use((req, res) => {
   });
 });
 
-// Error handler (selalu di akhir)
+// ==========================================
+// ERROR HANDLER (harus paling akhir)
+// ==========================================
 app.use(errorHandler);
 
+// ==========================================
+// START SERVER
+// ==========================================
 app.listen(PORT, () => {
-    console.log(`Learning Service running on port ${PORT}`);
+  console.log(`Academic service running on port ${PORT}`);
 });

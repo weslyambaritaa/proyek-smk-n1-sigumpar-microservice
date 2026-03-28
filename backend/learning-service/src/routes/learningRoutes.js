@@ -1,28 +1,38 @@
 const express = require("express");
-const verifyToken = require('../middleware/auth'); // Import middleware
 const router = express.Router();
-const {
-  getAllTodos,
-  getTodoById,
-  createTodo,
-  updateTodo,
-  deleteTodo,
-} = require("../controllers/learningController");
+const absensiGuruController = require("../controllers/absensiGuruController");
+const verifyToken = require("../middleware/auth");
+const upload = require("../middleware/upload");
 
-/**
- * Routes untuk resource /todos
- *
- * GET    /todos       => Ambil semua todos (support filter via query params)
- * POST   /todos       => Buat todo baru
- * GET    /todos/:id   => Ambil todo tertentu
- * PUT    /todos/:id   => Update todo tertentu
- * DELETE /todos/:id   => Hapus todo tertentu
- */
-
-router.route("/").get(getAllTodos).post(createTodo);
-router.route("/:id").get(getTodoById).put(updateTodo).delete(deleteTodo);
-
-router.get('/', verifyToken, controller.getAll);
-router.post('/', verifyToken, controller.create);
+// =============================================
+// Rute Absensi Guru (dengan upload foto)
+// =============================================
+router.get(
+  "/absensi-guru",
+  verifyToken,
+  absensiGuruController.getAllAbsensiGuru,
+);
+router.post(
+  "/absensi-guru",
+  verifyToken,
+  upload.single("foto"),
+  absensiGuruController.createAbsensiGuru,
+);
+router.put(
+  "/absensi-guru/:id",
+  verifyToken,
+  upload.single("foto"),
+  absensiGuruController.updateAbsensiGuru,
+);
+router.delete(
+  "/absensi-guru/:id",
+  verifyToken,
+  absensiGuruController.deleteAbsensiGuru,
+);
+router.get(
+  "/absensi-guru/:id",
+  verifyToken,
+  absensiGuruController.getAbsensiGuruById,
+);
 
 module.exports = router;
