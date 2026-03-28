@@ -9,22 +9,18 @@ const SiswaPage = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedSiswa, setSelectedSiswa] = useState(null);
 
-  // State khusus Delete Sheet
+  // State khusus Delete (SUDAH DIPERBAIKI)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [siswaToDelete, setSiswaToDelete] = useState(null);
   const [deleteConfirmation, setDeleteConfirmation] = useState("");
 
-const fetchSiswa = async () => {
+  const fetchSiswa = async () => {
     try {
       const [resSiswa, resKelas] = await Promise.all([
         academicApi.getAllSiswa(),
         academicApi.getAllKelas()
       ]);
 
-      // --- LOGIKA PERBAIKAN DI SINI ---
-      // Pastikan kita mengambil array-nya. 
-      // Jika backend mengirim { data: [...] }, maka gunakan resSiswa.data.data
-      // Jika backend mengirim [...], gunakan resSiswa.data
       const rawSiswa = Array.isArray(resSiswa.data) ? resSiswa.data : resSiswa.data.data || [];
       const rawKelas = Array.isArray(resKelas.data) ? resKelas.data : resKelas.data.data || [];
 
@@ -40,7 +36,6 @@ const fetchSiswa = async () => {
     } catch (err) {
       console.error("Gagal mengambil data:", err);
       toast.error("Gagal memuat data siswa");
-      // Set ke array kosong agar .map() di render tidak error
       setSiswaData([]); 
     }
   };
@@ -56,7 +51,7 @@ const fetchSiswa = async () => {
 
   const handleDeleteClick = (siswa) => {
     setSiswaToDelete(siswa);
-    setDeleteConfirmation(""); // Reset input konfirmasi
+    setDeleteConfirmation(""); 
     setIsDeleteDialogOpen(true);
   };
 
@@ -116,7 +111,7 @@ const fetchSiswa = async () => {
                   <td className="px-6 py-4 font-medium">{s.nama_lengkap}</td>
                   <td className="px-6 py-4">
                     <span className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs font-bold">
-                      {s.nama_kelas || "Belum ada kelas"}
+                      {s.nama_kelas}
                     </span>
                   </td>
                   <td className="px-6 py-4 text-center space-x-2">
@@ -146,15 +141,13 @@ const fetchSiswa = async () => {
         </table>
       </div>
 
-      {/* Dialog Tambah/Edit */}
       <SiswaDialog
         isOpen={isDialogOpen}
         onClose={() => setIsDialogOpen(false)}
         onSuccess={fetchSiswa}
-        selectedSiswa={selectedSiswa}
+        selectedSiswa={selectedSiswa} // Pastikan prop ini dikirim ke dialog
       />
 
-      {/* Dialog Konfirmasi Hapus */}
       {isDeleteDialogOpen && (
         <div className="fixed inset-0 z-50 flex justify-end bg-black/50 backdrop-blur-sm">
           <div className="bg-white w-full max-w-md h-full shadow-2xl flex flex-col">
