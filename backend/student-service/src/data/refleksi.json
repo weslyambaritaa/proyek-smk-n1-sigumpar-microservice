@@ -1,0 +1,18 @@
+[
+  {
+    "id_refleksi": "refleksi-001",
+    "user_id": "wali-kelas-001",
+    "perkembanganSiswa": "Secara keseluruhan siswa menunjukkan peningkatan dalam keaktifan di kelas. Beberapa siswa yang sebelumnya pasif mulai berani mengajukan pertanyaan. Rata-rata nilai harian meningkat dibanding semester lalu. Kedisiplinan masuk kelas juga membaik.",
+    "masalahKelas": "Masih ada 2-3 siswa yang sering terlambat masuk kelas pada jam pertama. Interaksi antar kelompok siswa kurang merata, terdapat kelompok yang cenderung menutup diri. Perlu pendekatan lebih personal untuk siswa dengan nilai di bawah KKM.",
+    "created_at": "2025-02-28T14:00:00.000Z",
+    "updated_at": "2025-02-28T14:00:00.000Z"
+  },
+  {
+    "id_refleksi": "refleksi-002",
+    "user_id": "wali-kelas-001",
+    "perkembanganSiswa": "Bulan Maret menunjukkan perkembangan positif. Siswa semakin kompak dalam kerja kelompok. Program literasi pagi yang diterapkan mulai menunjukkan hasil, terlihat dari kemampuan membaca kritis yang meningkat. Beberapa siswa berprestasi mewakili kelas dalam lomba debat tingkat sekolah.",
+    "masalahKelas": "Terdapat konflik kecil antar siswa terkait pembagian tugas kelompok yang sudah berhasil dimediasi. Satu siswa teridentifikasi mengalami masalah keluarga yang berdampak pada konsentrasi belajarnya, sudah dikomunikasikan dengan BK dan orang tua.",
+    "created_at": "2025-03-28T14:00:00.000Z",
+    "updated_at": "2025-03-28T14:00:00.000Z"
+  }
+]

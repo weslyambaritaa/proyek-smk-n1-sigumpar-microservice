@@ -1,9 +1,8 @@
 const jwt = require('jsonwebtoken');
 const jwksClient = require('jwks-rsa');
 
-// Konfigurasi Client untuk mengambil kunci publik dari Keycloak
 const client = jwksClient({
-  jwksUri: `http://keycloak:8080/realms/smk-sigumpar/protocol/openid-connect/certs`
+  jwksUri: `http://keycloak:8080/realms/smk-sigumpar/protocol/openid-connect/certs`,
 });
 
 function getKey(header, callback) {
@@ -19,22 +18,23 @@ const verifyToken = (req, res, next) => {
   const token = authHeader && authHeader.split(' ')[1];
 
   if (!token) {
-    return res.status(401).json({ message: 'Token tidak ditemukan' });
+    return res.status(401).json({ success: false, message: 'Token tidak ditemukan' });
   }
 
-  jwt.verify(token, getKey, {
-    issuer: `http://localhost:8080/realms/smk-sigumpar`,
-    algorithms: ['RS256']
-  }, (err, decoded) => {
-    if (err) {
-      console.error("JWT Verification Error:", err.message);
-      return res.status(403).json({ message: 'Token tidak valid' });
+  jwt.verify(
+    token,
+    getKey,
+    { issuer: `http://localhost:8080/realms/smk-sigumpar`, algorithms: ['RS256'] },
+    (err, decoded) => {
+      if (err) {
+        console.error('JWT Verification Error:', err.message);
+        return res.status(403).json({ success: false, message: 'Token tidak valid' });
+      }
+      // user_id di Keycloak token ada di field 'sub'
+      req.user = decoded;
+      next();
     }
-    
-    // Simpan data user ke request agar bisa dipakai di controller
-    req.user = decoded;
-    next();
-  });
+  );
 };
 
 module.exports = verifyToken;

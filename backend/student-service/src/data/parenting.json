@@ -1,0 +1,24 @@
+[
+  {
+    "id_parenting": "parenting-001",
+    "user_id": "wali-kelas-001",
+    "tanggal": "2025-02-10",
+    "ringkasanDiskusi": "Pertemuan wali murid membahas perkembangan akademik siswa semester genap. Orang tua dihimbau untuk lebih aktif memantau kegiatan belajar anak di rumah. Dibahas juga pentingnya disiplin waktu belajar dan pengurangan penggunaan gadget.",
+    "jumlahHadir": 28,
+    "jumlahTotal": 34,
+    "foto": null,
+    "created_at": "2025-02-10T09:00:00.000Z",
+    "updated_at": "2025-02-10T09:00:00.000Z"
+  },
+  {
+    "id_parenting": "parenting-002",
+    "user_id": "wali-kelas-001",
+    "tanggal": "2025-03-15",
+    "ringkasanDiskusi": "Diskusi mengenai persiapan Ujian Akhir Semester dan rencana kegiatan class meeting. Orang tua diberikan informasi jadwal ujian dan diminta mendukung anak dalam persiapan. Beberapa orang tua mengusulkan bimbingan belajar tambahan untuk mata pelajaran yang dianggap sulit.",
+    "jumlahHadir": 30,
+    "jumlahTotal": 34,
+    "foto": null,
+    "created_at": "2025-03-15T10:00:00.000Z",
+    "updated_at": "2025-03-15T10:00:00.000Z"
+  }
+]

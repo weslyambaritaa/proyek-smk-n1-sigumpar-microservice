@@ -1,0 +1,29 @@
+[
+  {
+    "id_kebersihanKelas": "kebersihan-001",
+    "user_id": "wali-kelas-001",
+    "tanggal": "2025-03-03",
+    "catatanKondisi": "Kelas dalam kondisi bersih dan rapi. Lantai sudah disapu dan dipel. Papan tulis bersih. Meja dan kursi tertata dengan baik. Tempat sampah sudah dikosongkan.",
+    "foto": null,
+    "created_at": "2025-03-03T07:30:00.000Z",
+    "updated_at": "2025-03-03T07:30:00.000Z"
+  },
+  {
+    "id_kebersihanKelas": "kebersihan-002",
+    "user_id": "wali-kelas-001",
+    "tanggal": "2025-03-10",
+    "catatanKondisi": "Kondisi kelas cukup bersih namun ditemukan beberapa sampah di bawah meja bagian belakang. Siswa piket sudah diingatkan untuk lebih teliti saat membersihkan. Jendela sudah dilap dan ventilasi udara berfungsi baik.",
+    "foto": null,
+    "created_at": "2025-03-10T07:30:00.000Z",
+    "updated_at": "2025-03-10T07:30:00.000Z"
+  },
+  {
+    "id_kebersihanKelas": "kebersihan-003",
+    "user_id": "wali-kelas-001",
+    "tanggal": "2025-03-17",
+    "catatanKondisi": "Kelas sangat bersih. Kelompok piket hari ini bekerja dengan sangat baik. Seluruh sudut ruangan dibersihkan, tanaman di kelas juga disiram. Papan absensi diperbarui.",
+    "foto": null,
+    "created_at": "2025-03-17T07:30:00.000Z",
+    "updated_at": "2025-03-17T07:30:00.000Z"
+  }
+]

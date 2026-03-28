@@ -1,0 +1,122 @@
+[
+  {
+    "id": "nilai-001",
+    "id_siswa": "siswa-001",
+    "namaSiswa": "Andi Pratama",
+    "NIS": "2024001",
+    "id_kelas": "kelas-001",
+    "namaKelas": "XI RPL 1",
+    "semester": "Genap",
+    "tahunAjaran": "2024/2025",
+    "nilaiMapel": [
+      { "mataPelajaran": "Matematika", "nilaiHarian": 80, "nilaiUTS": 78, "nilaiUAS": 82, "nilaiAkhir": 80 },
+      { "mataPelajaran": "Bahasa Indonesia", "nilaiHarian": 85, "nilaiUTS": 83, "nilaiUAS": 86, "nilaiAkhir": 85 },
+      { "mataPelajaran": "Bahasa Inggris", "nilaiHarian": 78, "nilaiUTS": 75, "nilaiUAS": 80, "nilaiAkhir": 78 },
+      { "mataPelajaran": "Pemrograman Web", "nilaiHarian": 90, "nilaiUTS": 88, "nilaiUAS": 92, "nilaiAkhir": 90 },
+      { "mataPelajaran": "Basis Data", "nilaiHarian": 87, "nilaiUTS": 85, "nilaiUAS": 88, "nilaiAkhir": 87 }
+    ],
+    "rataRata": 84,
+    "peringkat": 3,
+    "keterangan": "Naik Kelas"
+  },
+  {
+    "id": "nilai-002",
+    "id_siswa": "siswa-002",
+    "namaSiswa": "Bintang Ramadhan",
+    "NIS": "2024002",
+    "id_kelas": "kelas-001",
+    "namaKelas": "XI RPL 1",
+    "semester": "Genap",
+    "tahunAjaran": "2024/2025",
+    "nilaiMapel": [
+      { "mataPelajaran": "Matematika", "nilaiHarian": 92, "nilaiUTS": 90, "nilaiUAS": 94, "nilaiAkhir": 92 },
+      { "mataPelajaran": "Bahasa Indonesia", "nilaiHarian": 88, "nilaiUTS": 86, "nilaiUAS": 90, "nilaiAkhir": 88 },
+      { "mataPelajaran": "Bahasa Inggris", "nilaiHarian": 91, "nilaiUTS": 89, "nilaiUAS": 93, "nilaiAkhir": 91 },
+      { "mataPelajaran": "Pemrograman Web", "nilaiHarian": 95, "nilaiUTS": 93, "nilaiUAS": 96, "nilaiAkhir": 95 },
+      { "mataPelajaran": "Basis Data", "nilaiHarian": 93, "nilaiUTS": 91, "nilaiUAS": 94, "nilaiAkhir": 93 }
+    ],
+    "rataRata": 92,
+    "peringkat": 1,
+    "keterangan": "Naik Kelas"
+  },
+  {
+    "id": "nilai-003",
+    "id_siswa": "siswa-003",
+    "namaSiswa": "Citra Nainggolan",
+    "NIS": "2024003",
+    "id_kelas": "kelas-001",
+    "namaKelas": "XI RPL 1",
+    "semester": "Genap",
+    "tahunAjaran": "2024/2025",
+    "nilaiMapel": [
+      { "mataPelajaran": "Matematika", "nilaiHarian": 72, "nilaiUTS": 70, "nilaiUAS": 74, "nilaiAkhir": 72 },
+      { "mataPelajaran": "Bahasa Indonesia", "nilaiHarian": 76, "nilaiUTS": 74, "nilaiUAS": 78, "nilaiAkhir": 76 },
+      { "mataPelajaran": "Bahasa Inggris", "nilaiHarian": 70, "nilaiUTS": 68, "nilaiUAS": 72, "nilaiAkhir": 70 },
+      { "mataPelajaran": "Pemrograman Web", "nilaiHarian": 80, "nilaiUTS": 78, "nilaiUAS": 82, "nilaiAkhir": 80 },
+      { "mataPelajaran": "Basis Data", "nilaiHarian": 75, "nilaiUTS": 73, "nilaiUAS": 77, "nilaiAkhir": 75 }
+    ],
+    "rataRata": 75,
+    "peringkat": 5,
+    "keterangan": "Naik Kelas"
+  },
+  {
+    "id": "nilai-004",
+    "id_siswa": "siswa-004",
+    "namaSiswa": "Dedi Manurung",
+    "NIS": "2024004",
+    "id_kelas": "kelas-001",
+    "namaKelas": "XI RPL 1",
+    "semester": "Genap",
+    "tahunAjaran": "2024/2025",
+    "nilaiMapel": [
+      { "mataPelajaran": "Matematika", "nilaiHarian": 88, "nilaiUTS": 86, "nilaiUAS": 90, "nilaiAkhir": 88 },
+      { "mataPelajaran": "Bahasa Indonesia", "nilaiHarian": 84, "nilaiUTS": 82, "nilaiUAS": 86, "nilaiAkhir": 84 },
+      { "mataPelajaran": "Bahasa Inggris", "nilaiHarian": 86, "nilaiUTS": 84, "nilaiUAS": 88, "nilaiAkhir": 86 },
+      { "mataPelajaran": "Pemrograman Web", "nilaiHarian": 91, "nilaiUTS": 89, "nilaiUAS": 93, "nilaiAkhir": 91 },
+      { "mataPelajaran": "Basis Data", "nilaiHarian": 89, "nilaiUTS": 87, "nilaiUAS": 91, "nilaiAkhir": 89 }
+    ],
+    "rataRata": 88,
+    "peringkat": 2,
+    "keterangan": "Naik Kelas"
+  },
+  {
+    "id": "nilai-005",
+    "id_siswa": "siswa-005",
+    "namaSiswa": "Eka Sibarani",
+    "NIS": "2024005",
+    "id_kelas": "kelas-001",
+    "namaKelas": "XI RPL 1",
+    "semester": "Genap",
+    "tahunAjaran": "2024/2025",
+    "nilaiMapel": [
+      { "mataPelajaran": "Matematika", "nilaiHarian": 60, "nilaiUTS": 58, "nilaiUAS": 62, "nilaiAkhir": 60 },
+      { "mataPelajaran": "Bahasa Indonesia", "nilaiHarian": 65, "nilaiUTS": 63, "nilaiUAS": 67, "nilaiAkhir": 65 },
+      { "mataPelajaran": "Bahasa Inggris", "nilaiHarian": 62, "nilaiUTS": 60, "nilaiUAS": 64, "nilaiAkhir": 62 },
+      { "mataPelajaran": "Pemrograman Web", "nilaiHarian": 70, "nilaiUTS": 68, "nilaiUAS": 72, "nilaiAkhir": 70 },
+      { "mataPelajaran": "Basis Data", "nilaiHarian": 63, "nilaiUTS": 61, "nilaiUAS": 65, "nilaiAkhir": 63 }
+    ],
+    "rataRata": 64,
+    "peringkat": 6,
+    "keterangan": "Perlu Perhatian"
+  },
+  {
+    "id": "nilai-006",
+    "id_siswa": "siswa-006",
+    "namaSiswa": "Fitri Simbolon",
+    "NIS": "2024006",
+    "id_kelas": "kelas-001",
+    "namaKelas": "XI RPL 1",
+    "semester": "Genap",
+    "tahunAjaran": "2024/2025",
+    "nilaiMapel": [
+      { "mataPelajaran": "Matematika", "nilaiHarian": 83, "nilaiUTS": 81, "nilaiUAS": 85, "nilaiAkhir": 83 },
+      { "mataPelajaran": "Bahasa Indonesia", "nilaiHarian": 80, "nilaiUTS": 78, "nilaiUAS": 82, "nilaiAkhir": 80 },
+      { "mataPelajaran": "Bahasa Inggris", "nilaiHarian": 82, "nilaiUTS": 80, "nilaiUAS": 84, "nilaiAkhir": 82 },
+      { "mataPelajaran": "Pemrograman Web", "nilaiHarian": 88, "nilaiUTS": 86, "nilaiUAS": 90, "nilaiAkhir": 88 },
+      { "mataPelajaran": "Basis Data", "nilaiHarian": 85, "nilaiUTS": 83, "nilaiUAS": 87, "nilaiAkhir": 85 }
+    ],
+    "rataRata": 84,
+    "peringkat": 4,
+    "keterangan": "Naik Kelas"
+  }
+]
