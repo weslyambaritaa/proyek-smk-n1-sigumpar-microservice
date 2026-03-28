@@ -100,13 +100,13 @@ const PengumumanPage = () => {
                     <div className="absolute right-6 mt-1 w-36 bg-white border rounded-lg shadow-xl z-10 py-1">
                       {/* OPSI DETAIL WARNA HIJAU */}
                       <button onClick={() => handleDetail(p)} className="w-full text-left px-4 py-2 text-sm text-green-600 hover:bg-green-50 font-medium">
-                        📄 Detail
+                        Detail
                       </button>
                       <button onClick={() => handleEdit(p)} className="w-full text-left px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 border-t">
-                        ✎ Edit
+                        Edit
                       </button>
                       <button onClick={() => handleDeleteClick(p)} className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 border-t">
-                        🗑 Hapus
+                        Hapus
                       </button>
                     </div>
                   )}
