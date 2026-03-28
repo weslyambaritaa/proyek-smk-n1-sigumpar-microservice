@@ -29,4 +29,13 @@ export const academicApi = {
     headers: { 'Content-Type': 'multipart/form-data' }
   }),
   deleteArsipSurat: (id) => axiosInstance.delete(`/api/academic/arsip-surat/${id}`),
+
+  // Pencarian guru mapel ke auth-service (Asumsi Anda menggunakan role=guru)
+  searchGuru: (query) => axiosInstance.get(`/api/auth/users/search?role=guru&q=${query}`),
+
+  // --- MATA PELAJARAN ---
+  getAllMapel: () => axiosInstance.get('/api/academic/mapel'),
+  createMapel: (data) => axiosInstance.post('/api/academic/mapel', data),
+  updateMapel: (id, data) => axiosInstance.put(`/api/academic/mapel/${id}`, data),
+  deleteMapel: (id) => axiosInstance.delete(`/api/academic/mapel/${id}`),
 };

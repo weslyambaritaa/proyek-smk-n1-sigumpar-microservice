@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS siswa (
 CREATE TABLE IF NOT EXISTS mata_pelajaran (
     id SERIAL PRIMARY KEY,
     nama_mapel VARCHAR(20) UNIQUE NOT NULL,
-    kelas_id INTEGER REFERENCES kelas(id)
+    kelas_id INTEGER REFERENCES kelas(id),
     guru_mapel_id UUID
 );
 

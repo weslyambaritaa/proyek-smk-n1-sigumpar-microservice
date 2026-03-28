@@ -9,6 +9,7 @@ import { Toaster } from "react-hot-toast";
 import Dashboard from "./pages/Dashboard";
 import PengumumanPage from "./pages/tata-usaha/pengumuman/PengumumanPage";
 import ArsipSuratPage from "./pages/tata-usaha/arsip-surat/ArsipSuratPage";
+import MapelPage from "./pages/tata-usaha/mapel/MapelPage";
 
 /**
  * Komponen reusable untuk grup menu per role (Dropdown)
@@ -164,6 +165,9 @@ const App = () => {
                   <NavLink to="/academic/arsip-surat" className={subNavClass}>
                     Arsip Surat
                   </NavLink>
+                  <NavLink to="/academic/mapel" className={subNavClass}>
+                    Mata Pelajaran
+                  </NavLink>
                 </NavDropdown>
               )}
 
@@ -221,6 +225,7 @@ const App = () => {
             <Route path="/academic/siswa" element={<SiswaPage />} />
             <Route path="/academic/pengumuman" element={<PengumumanPage />} />
             <Route path="/academic/arsip-surat" element={<ArsipSuratPage />} />
+            <Route path="/academic/mapel" element={<MapelPage />} />
             {/* Route lainnya bisa ditambahkan di sini */}
           </Routes>
         </main>
