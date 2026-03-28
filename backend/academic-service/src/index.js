@@ -2,8 +2,9 @@ const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
 const morgan = require("morgan");
-const academicRoutes = require('./routes/academicRoutes'); // Pastikan nama file di folder routes adalah academicRoutes.js
+const academicRoutes = require("./routes/academicRoutes"); // Pastikan nama file di folder routes adalah academicRoutes.js
 const { errorHandler } = require("./middleware/errorHandler");
+const absensiSiswaRoutes = require("./routes/absensiSiswaRoutes");
 
 const app = express();
 const PORT = process.env.PORT || 3003;
@@ -13,6 +14,9 @@ app.use(helmet());
 // app.use(cors({ origin: process.env.CORS_ORIGIN || "*" }));
 app.use(morgan("dev"));
 app.use(express.json());
+
+//routes absesnsi siswa
+app.use("/absensi-siswa", absensiSiswaRoutes);
 
 // Health check endpoint
 app.get("/health", (req, res) => {
@@ -24,7 +28,7 @@ app.get("/health", (req, res) => {
 });
 
 // Mount routes
-app.use('/api/academic', academicRoutes);
+app.use("/api/academic", academicRoutes);
 
 // 404 handler
 app.use((req, res) => {
@@ -38,5 +42,5 @@ app.use((req, res) => {
 app.use(errorHandler);
 
 app.listen(PORT, () => {
-    console.log(`Academic Service running on port ${PORT}`);
+  console.log(`Academic Service running on port ${PORT}`);
 });
