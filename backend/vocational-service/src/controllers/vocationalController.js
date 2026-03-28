@@ -1,180 +1,175 @@
-const fs = require("fs");
-const path = require("path");
-const { v4: uuidv4 } = require("uuid");
-const { createError } = require("../middleware/errorHandler");
+const pool = require("../config/db");
 
-const DATA_FILE = path.join(__dirname, "../data/todos.json");
+// --- VALIDASI & PERSETUJUAN PKL ---
+exports.validateAndApprovePKL = async (req, res) => {
+  const { id } = req.params;
+  const { status_validasi, keterangan_layak } = req.body;
 
-// Helper untuk baca dan tulis file JSON
-const readTodos = () => JSON.parse(fs.readFileSync(DATA_FILE, "utf-8"));
-const writeTodos = (todos) =>
-  fs.writeFileSync(DATA_FILE, JSON.stringify(todos, null, 2), "utf-8");
-
-/**
- * GET /todos
- * Mengambil semua todo dengan filter opsional:
- * - ?userId=xxx     => filter milik user tertentu
- * - ?status=pending => filter berdasarkan status
- * - ?priority=high  => filter berdasarkan prioritas
- * - ?search=keyword => cari di title atau description
- */
-const getAllTodos = (req, res, next) => {
   try {
-    let todos = readTodos();
-    const { userId, status, priority, search } = req.query;
+    // Jika divalidasi 'validated', maka otomatis status_persetujuan menjadi 'approved' (Logic Include)
+    const statusPersetujuan =
+      status_validasi === "validated" ? "approved" : "pending";
 
-    // Terapkan semua filter secara berantai
-    if (userId) todos = todos.filter((t) => t.userId === userId);
-    if (status) todos = todos.filter((t) => t.status === status);
-    if (priority) todos = todos.filter((t) => t.priority === priority);
+    const result = await pool.query(
+      `UPDATE pkl_submissions 
+             SET status_validasi = $1, keterangan_layak = $2, status_persetujuan = $3 
+             WHERE id = $4 RETURNING *`,
+      [status_validasi, keterangan_layak, statusPersetujuan, id],
+    );
 
-    if (search) {
-      const keyword = search.toLowerCase();
-      todos = todos.filter(
-        (t) =>
-          t.title.toLowerCase().includes(keyword) ||
-          t.description?.toLowerCase().includes(keyword)
-      );
-    }
-
-    res.json({ success: true, count: todos.length, data: todos });
+    if (result.rowCount === 0)
+      return res.status(404).json({ message: "Data PKL tidak ditemukan" });
+    res.json({
+      success: true,
+      message: "Validasi dan Persetujuan berhasil diperbarui",
+      data: result.rows[0],
+    });
   } catch (err) {
-    next(err);
+    res.status(500).json({ error: err.message });
   }
 };
 
-/**
- * GET /todos/:id
- * Mengambil satu todo berdasarkan ID.
- */
-const getTodoById = (req, res, next) => {
+// --- MONITORING & PROGRES SISWA ---
+exports.createMonitoring = async (req, res) => {
+  const {
+    submission_id,
+    catatan_monitoring,
+    progres_siswa,
+    tanggal_kunjungan,
+  } = req.body;
+  const file_laporan = req.file ? req.file.path : null;
+
   try {
-    const todos = readTodos();
-    const todo = todos.find((t) => t.id === req.params.id);
-
-    if (!todo) {
-      throw createError(404, `Todo dengan ID '${req.params.id}' tidak ditemukan`);
-    }
-
-    res.json({ success: true, data: todo });
+    const result = await pool.query(
+      `INSERT INTO pkl_monitoring (submission_id, tanggal_kunjungan, catatan_monitoring, progres_siswa, file_laporan) 
+             VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+      [
+        submission_id,
+        tanggal_kunjungan,
+        catatan_monitoring,
+        progres_siswa,
+        file_laporan,
+      ],
+    );
+    res.status(201).json({
+      success: true,
+      message: "Laporan monitoring dan progres berhasil disimpan",
+      data: result.rows[0],
+    });
   } catch (err) {
-    next(err);
+    res.status(500).json({ error: err.message });
   }
 };
 
-/**
- * POST /todos
- * Membuat todo baru.
- *
- * Body yang diharapkan:
- * {
- *   "userId": "string (wajib)",
- *   "title": "string (wajib)",
- *   "description": "string (opsional)",
- *   "priority": "low | medium | high (default: medium)"
- * }
- */
-const createTodo = (req, res, next) => {
+// --- REKAPITULASI PKL ---
+exports.getAllPKL = async (req, res) => {
+  const { nama } = req.query; // Fitur pencarian nama
   try {
-    const { userId, title, description = "", priority = "medium" } = req.body;
+    let query = `SELECT ps.*, s.nama_lengkap FROM pkl_submissions ps 
+                     JOIN siswa s ON ps.siswa_id = s.id`;
+    const params = [];
 
-    // Validasi field wajib
-    if (!userId || !title) {
-      throw createError(400, "Field 'userId' dan 'title' wajib diisi");
+    if (nama) {
+      query += ` WHERE s.nama_lengkap ILIKE $1`;
+      params.push(`%${nama}%`);
     }
 
-    // Validasi nilai priority
-    const allowedPriorities = ["low", "medium", "high"];
-    if (!allowedPriorities.includes(priority)) {
-      throw createError(400, `Priority harus salah satu dari: ${allowedPriorities.join(", ")}`);
-    }
-
-    const todos = readTodos();
-
-    const newTodo = {
-      id: uuidv4(),
-      userId,
-      title: title.trim(),
-      description: description.trim(),
-      status: "pending",      // Status default selalu 'pending' saat dibuat
-      priority,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    todos.push(newTodo);
-    writeTodos(todos);
-
-    res.status(201).json({ success: true, data: newTodo });
+    const result = await pool.query(query, params);
+    res.json(result.rows);
   } catch (err) {
-    next(err);
+    res.status(500).json({ error: err.message });
   }
 };
 
-/**
- * PUT /todos/:id
- * Mengupdate todo. Mendukung update status workflow:
- * pending => in-progress => done
- */
-const updateTodo = (req, res, next) => {
+// --- Penilaaian PKL ---
+exports.upsertPenilaian = async (req, res) => {
+  const {
+    submission_id,
+    disiplin,
+    teknis,
+    komunikasi,
+    laporan,
+    presentasi,
+    catatan_guru,
+    status_penilaian,
+  } = req.body;
+
+  // Logika Perhitungan Nilai Akhir (Contoh Bobot Rata-rata)
+  const nilai_akhir = (
+    (parseInt(disiplin) +
+      parseInt(teknis) +
+      parseInt(komunikasi) +
+      parseInt(laporan) +
+      parseInt(presentasi)) /
+    5
+  ).toFixed(2);
+
+  // Logika Penentuan Grade
+  let grade = "E";
+  if (nilai_akhir >= 85) grade = "A";
+  else if (nilai_akhir >= 75) grade = "B";
+  else if (nilai_akhir >= 65) grade = "C";
+  else if (nilai_akhir >= 50) grade = "D";
+
   try {
-    const { title, description, status, priority } = req.body;
-    const todos = readTodos();
+    const query = `
+            INSERT INTO pkl_penilaian (submission_id, disiplin, teknis, komunikasi, laporan, presentasi, nilai_akhir, grade, catatan_guru, status_penilaian)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+            ON CONFLICT (submission_id) 
+            DO UPDATE SET 
+                disiplin = EXCLUDED.disiplin,
+                teknis = EXCLUDED.teknis,
+                komunikasi = EXCLUDED.komunikasi,
+                laporan = EXCLUDED.laporan,
+                presentasi = EXCLUDED.presentasi,
+                nilai_akhir = EXCLUDED.nilai_akhir,
+                grade = EXCLUDED.grade,
+                catatan_guru = EXCLUDED.catatan_guru,
+                status_penilaian = EXCLUDED.status_penilaian,
+                updated_at = CURRENT_TIMESTAMP
+            RETURNING *;
+        `;
 
-    const index = todos.findIndex((t) => t.id === req.params.id);
-    if (index === -1) {
-      throw createError(404, `Todo dengan ID '${req.params.id}' tidak ditemukan`);
-    }
+    const result = await pool.query(query, [
+      submission_id,
+      disiplin,
+      teknis,
+      komunikasi,
+      laporan,
+      presentasi,
+      nilai_akhir,
+      grade,
+      catatan_guru,
+      status_penilaian,
+    ]);
 
-    // Validasi status jika dikirim
-    const allowedStatuses = ["pending", "in-progress", "done"];
-    if (status && !allowedStatuses.includes(status)) {
-      throw createError(400, `Status harus salah satu dari: ${allowedStatuses.join(", ")}`);
-    }
-
-    // Update hanya field yang dikirim
-    todos[index] = {
-      ...todos[index],
-      ...(title && { title: title.trim() }),
-      ...(description !== undefined && { description: description.trim() }),
-      ...(status && { status }),
-      ...(priority && { priority }),
-      updatedAt: new Date().toISOString(),
-    };
-
-    writeTodos(todos);
-    res.json({ success: true, data: todos[index] });
+    res.json({
+      success: true,
+      message:
+        status_penilaian === "Simpan"
+          ? "Nilai berhasil difinalisasi"
+          : "Draft nilai disimpan",
+      data: result.rows[0],
+    });
   } catch (err) {
-    next(err);
+    res.status(500).json({ error: err.message });
   }
 };
 
-/**
- * DELETE /todos/:id
- * Menghapus todo berdasarkan ID.
- */
-const deleteTodo = (req, res, next) => {
+// Mendapatkan Statistik Ringkasan (Box di bagian atas Mockup)
+exports.getPenilaianStats = async (req, res) => {
   try {
-    const todos = readTodos();
-    const index = todos.findIndex((t) => t.id === req.params.id);
-
-    if (index === -1) {
-      throw createError(404, `Todo dengan ID '${req.params.id}' tidak ditemukan`);
-    }
-
-    const deleted = todos.splice(index, 1)[0];
-    writeTodos(todos);
-
-    res.json({ success: true, message: "Todo berhasil dihapus", data: deleted });
+    const stats = await pool.query(`
+            SELECT 
+                COUNT(*) as total_siswa,
+                COUNT(CASE WHEN status_penilaian = 'Simpan' THEN 1 END) as nilai_sudah_diisi,
+                COUNT(CASE WHEN status_penilaian = 'Draft' OR status_penilaian IS NULL THEN 1 END) as nilai_belum_diisi,
+                AVG(nilai_akhir)::NUMERIC(10,2) as rata_rata_nilai
+            FROM pkl_submissions ps
+            LEFT JOIN pkl_penilaian pp ON ps.id = pp.submission_id
+        `);
+    res.json(stats.rows[0]);
   } catch (err) {
-    next(err);
+    res.status(500).json({ error: err.message });
   }
-};
-
-module.exports = {
-  getAllTodos,
-  getTodoById,
-  createTodo,
-  updateTodo,
-  deleteTodo,
 };

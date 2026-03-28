@@ -1,41 +1,19 @@
 const express = require("express");
-const cors = require("cors");
-const helmet = require("helmet");
-const morgan = require("morgan");
+const vocationalRoutes = require("./routes/vocationalRoutes");
 const { errorHandler } = require("./middleware/errorHandler");
+const path = require("path");
 
 const app = express();
-const PORT = process.env.PORT || 3007;
+const PORT = process.env.PORT || 3004;
 
-// Middleware global (identik dengan users-service)
-app.use(helmet());
-// app.use(cors({ origin: process.env.CORS_ORIGIN || "*" }));
-app.use(morgan("dev"));
 app.use(express.json());
-
-// Health check endpoint
-app.get("/health", (req, res) => {
-  res.json({
-    status: "OK",
-    service: "todos-service",
-    timestamp: new Date().toISOString(),
-  });
-});
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // Mount routes
-app.use("/todos", todoRoutes);
+app.use("/api/vocational", vocationalRoutes);
 
-// 404 handler
-app.use((req, res) => {
-  res.status(404).json({
-    success: false,
-    message: `Route '${req.originalUrl}' tidak ditemukan`,
-  });
-});
-
-// Error handler (selalu di akhir)
 app.use(errorHandler);
 
 app.listen(PORT, () => {
-  console.log(`Vocational Service berjalan di http://localhost:${PORT}`);
+  console.log(`Vocational Service running on port ${PORT}`);
 });
