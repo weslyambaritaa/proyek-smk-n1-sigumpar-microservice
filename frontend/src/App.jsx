@@ -3,9 +3,14 @@ import { useState } from "react";
 // import UsersPage from "./pages/UsersPage";
 // import TodosPage from "./pages/TodosPage";
 import KelasPage from "./pages/tata-usaha/kelas/KelasPage";
+import SiswaPage from "./pages/tata-usaha/siswa/SiswaPage";
 import keycloak, { hasRole } from "./keycloak";
 import { Toaster } from "react-hot-toast";
 import Dashboard from "./pages/Dashboard";
+import PengumumanPage from "./pages/tata-usaha/pengumuman/PengumumanPage";
+import ArsipSuratPage from "./pages/tata-usaha/arsip-surat/ArsipSuratPage";
+import MapelPage from "./pages/tata-usaha/mapel/MapelPage";
+import JadwalPage from "./pages/tata-usaha/jadwal/JadwalPage";
 
 /**
  * Komponen reusable untuk grup menu per role (Dropdown)
@@ -152,6 +157,21 @@ const App = () => {
                   <NavLink to="/academic/kelas" className={subNavClass}>
                     Data Kelas
                   </NavLink>
+                  <NavLink to="/academic/siswa" className={subNavClass}>
+                    Data Siswa
+                  </NavLink>
+                  <NavLink to="/academic/pengumuman" className={subNavClass}>
+                    Pengumuman
+                  </NavLink>
+                  <NavLink to="/academic/arsip-surat" className={subNavClass}>
+                    Arsip Surat
+                  </NavLink>
+                  <NavLink to="/academic/mapel" className={subNavClass}>
+                    Mata Pelajaran
+                  </NavLink>
+                  <NavLink to="/academic/jadwal" className={subNavClass}>
+                    Jadwal Mengajar
+                  </NavLink>
                 </NavDropdown>
               )}
 
@@ -206,6 +226,11 @@ const App = () => {
             {/* <Route path="/users" element={<UsersPage />} />
             <Route path="/todos" element={<TodosPage />} /> */}
             <Route path="/academic/kelas" element={<KelasPage />} />
+            <Route path="/academic/siswa" element={<SiswaPage />} />
+            <Route path="/academic/pengumuman" element={<PengumumanPage />} />
+            <Route path="/academic/arsip-surat" element={<ArsipSuratPage />} />
+            <Route path="/academic/mapel" element={<MapelPage />} />
+            <Route path="/academic/jadwal" element={<JadwalPage />} />
             {/* Route lainnya bisa ditambahkan di sini */}
           </Routes>
         </main>
