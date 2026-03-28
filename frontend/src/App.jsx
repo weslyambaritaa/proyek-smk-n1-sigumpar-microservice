@@ -8,6 +8,7 @@ import keycloak, { hasRole } from "./keycloak";
 import { Toaster } from "react-hot-toast";
 import Dashboard from "./pages/Dashboard";
 import PengumumanPage from "./pages/tata-usaha/pengumuman/PengumumanPage";
+import NilaiPage from "./pages/guru-mapel/nilai/NilaiPage";
 
 /**
  * Komponen reusable untuk grup menu per role (Dropdown)
@@ -216,6 +217,7 @@ const App = () => {
             <Route path="/academic/kelas" element={<KelasPage />} />
             <Route path="/academic/siswa" element={<SiswaPage />} />
             <Route path="/academic/pengumuman" element={<PengumumanPage />} />
+            <Route path="/input-nilai" element={<NilaiPage />} />
             {/* Route lainnya bisa ditambahkan di sini */}
           </Routes>
         </main>
