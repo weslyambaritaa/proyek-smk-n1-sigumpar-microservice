@@ -19,4 +19,4 @@ RUN chmod +x start.sh
 # Contoh untuk student-service adalah 3005
 EXPOSE 3005
 
-CMD ["./start.sh"]
+CMD ["bash","./start.sh"]
