@@ -37,8 +37,12 @@ const NilaiPage = () => {
     } catch (_) {}
   };
 
-  const handleReset = () => {
+  const handleReset = async () => {
     setFilters(initialFilters);
+
+    try {
+      await loadGrades(initialFilters);
+    } catch (_) {}
   };
 
   const handleSave = async () => {
@@ -167,11 +171,7 @@ const NilaiPage = () => {
             </span>
           </div>
 
-          {error && (
-            <div className="px-6 pb-4 text-sm text-red-600">
-              {error}
-            </div>
-          )}
+          {error && <div className="px-6 pb-4 text-sm text-red-600">{error}</div>}
 
           {loading ? (
             <div className="px-6 pb-6 text-gray-500">Memuat data nilai...</div>

@@ -1,15 +1,35 @@
 const pool = require("../config/db");
 const { createError } = require("../middleware/errorHandler");
 
-/**
- * GET /api/students
- * Ambil semua user/student
- */
 const getAllUsers = async (req, res, next) => {
   try {
-    const result = await pool.query(
-      "SELECT * FROM users ORDER BY created_at DESC"
-    );
+    const { kelas, search } = req.query;
+
+    let query = `
+      SELECT id, username, email, nis, kelas, created_at
+      FROM users
+      WHERE 1=1
+    `;
+    const values = [];
+    let idx = 1;
+
+    if (kelas) {
+      query += ` AND kelas = $${idx++}`;
+      values.push(kelas);
+    }
+
+    if (search) {
+      query += ` AND (
+        LOWER(username) LIKE LOWER($${idx})
+        OR LOWER(COALESCE(nis, '')) LIKE LOWER($${idx})
+      )`;
+      values.push(`%${search}%`);
+      idx++;
+    }
+
+    query += ` ORDER BY created_at DESC`;
+
+    const result = await pool.query(query, values);
 
     res.status(200).json({
       success: true,
@@ -20,14 +40,10 @@ const getAllUsers = async (req, res, next) => {
   }
 };
 
-/**
- * GET /api/students/:id
- * Ambil satu user berdasarkan ID
- */
 const getUserById = async (req, res, next) => {
   try {
     const result = await pool.query(
-      "SELECT * FROM users WHERE id = $1",
+      "SELECT id, username, email, nis, kelas, created_at FROM users WHERE id = $1",
       [req.params.id]
     );
 
@@ -44,12 +60,8 @@ const getUserById = async (req, res, next) => {
   }
 };
 
-/**
- * POST /api/students
- * Buat user baru
- */
 const createUser = async (req, res, next) => {
-  const { id, username, email } = req.body;
+  const { id, username, email, nis, kelas } = req.body;
 
   try {
     if (!id || !username || !email) {
@@ -57,8 +69,12 @@ const createUser = async (req, res, next) => {
     }
 
     const result = await pool.query(
-      "INSERT INTO users (id, username, email) VALUES ($1, $2, $3) RETURNING *",
-      [id, username, email]
+      `
+      INSERT INTO users (id, username, email, nis, kelas)
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING id, username, email, nis, kelas, created_at
+      `,
+      [id, username, email, nis || null, kelas || null]
     );
 
     res.status(201).json({
@@ -73,12 +89,8 @@ const createUser = async (req, res, next) => {
   }
 };
 
-/**
- * PUT /api/students/:id
- * Update user
- */
 const updateUser = async (req, res, next) => {
-  const { username, email } = req.body;
+  const { username, email, nis, kelas } = req.body;
 
   try {
     const existing = await pool.query(
@@ -91,17 +103,25 @@ const updateUser = async (req, res, next) => {
     }
 
     const currentUser = existing.rows[0];
-    const updatedUsername = username || currentUser.username;
-    const updatedEmail = email || currentUser.email;
 
     const result = await pool.query(
       `
       UPDATE users
-      SET username = $1, email = $2
-      WHERE id = $3
-      RETURNING *
+      SET
+        username = $1,
+        email = $2,
+        nis = $3,
+        kelas = $4
+      WHERE id = $5
+      RETURNING id, username, email, nis, kelas, created_at
       `,
-      [updatedUsername, updatedEmail, req.params.id]
+      [
+        username || currentUser.username,
+        email || currentUser.email,
+        nis ?? currentUser.nis,
+        kelas ?? currentUser.kelas,
+        req.params.id,
+      ]
     );
 
     res.status(200).json({
@@ -116,14 +136,10 @@ const updateUser = async (req, res, next) => {
   }
 };
 
-/**
- * DELETE /api/students/:id
- * Hapus user
- */
 const deleteUser = async (req, res, next) => {
   try {
     const result = await pool.query(
-      "DELETE FROM users WHERE id = $1 RETURNING *",
+      "DELETE FROM users WHERE id = $1 RETURNING id, username, email, nis, kelas, created_at",
       [req.params.id]
     );
 

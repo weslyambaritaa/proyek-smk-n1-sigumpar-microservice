@@ -1,15 +1,6 @@
 const pool = require("../config/db");
 const { createError } = require("../middleware/errorHandler");
 
-/**
- * Hitung nilai akhir
- * Bobot:
- * tugas   = 20%
- * kuis    = 15%
- * uts     = 20%
- * uas     = 25%
- * praktik = 20%
- */
 const calculateFinalScore = ({
   tugas = 0,
   kuis = 0,
@@ -27,14 +18,6 @@ const calculateFinalScore = ({
   return Number(finalScore.toFixed(2));
 };
 
-/**
- * GET /api/grades
- * Query params:
- * - mapel
- * - kelas
- * - tahunAjar
- * - search
- */
 const getGrades = async (req, res, next) => {
   try {
     const { mapel, kelas, tahunAjar, search } = req.query;
@@ -84,9 +67,6 @@ const getGrades = async (req, res, next) => {
   }
 };
 
-/**
- * GET /api/grades/:id
- */
 const getGradeById = async (req, res, next) => {
   try {
     const result = await pool.query(
@@ -107,10 +87,6 @@ const getGradeById = async (req, res, next) => {
   }
 };
 
-/**
- * POST /api/grades/save
- * Simpan banyak nilai sekaligus
- */
 const saveGrades = async (req, res, next) => {
   const client = await pool.connect();
 
