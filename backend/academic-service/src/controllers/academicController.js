@@ -56,11 +56,11 @@ exports.deleteKelas = async (req, res) => {
 exports.getAllSiswa = async (req, res) => {
     try {
         const result = await pool.query(`
-             blond SELECT s.*, k.nama_kelas 
-            FROM siswa s 
-            LEFT JOIN kelas k ON s.kelas_id = k.id 
-            ORDER BY s.id DESC
-        `);
+    SELECT s.*, k.nama_kelas 
+    FROM siswa s 
+    LEFT JOIN kelas k ON s.kelas_id = k.id 
+    ORDER BY s.id DESC
+`);
         res.json(result.rows);
     } catch (err) {
         res.status(500).json({ error: err.message });

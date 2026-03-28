@@ -9,8 +9,8 @@ export const academicApi = {
   // Pencarian wali kelas ke auth-service melalui gateway
   searchWaliKelas: (query) => axiosInstance.get(`/api/auth/users/search?role=wali_kelas&q=${query}`),
 
-  getAllSiswa: () => axiosInstance.get('/academic/siswa'),
-  createSiswa: (data) => axiosInstance.post('/academic/siswa', data),
-  updateSiswa: (id, data) => axiosInstance.put(`/academic/siswa/${id}`, data),
-  deleteSiswa: (id) => axiosInstance.delete(`/academic/siswa/${id}`),
+  getAllSiswa: () => axiosInstance.get('/api/academic/siswa'),
+  createSiswa: (data) => axiosInstance.post('/api/academic/siswa', data),
+  updateSiswa: (id, data) => axiosInstance.put(`/api/academic/siswa/${id}`, data),
+  deleteSiswa: (id) => axiosInstance.delete(`/api/academic/siswa/${id}`),
 };
