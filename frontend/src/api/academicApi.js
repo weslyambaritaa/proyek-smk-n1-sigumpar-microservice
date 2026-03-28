@@ -13,4 +13,10 @@ export const academicApi = {
   createSiswa: (data) => axiosInstance.post('/api/academic/siswa', data),
   updateSiswa: (id, data) => axiosInstance.put(`/api/academic/siswa/${id}`, data),
   deleteSiswa: (id) => axiosInstance.delete(`/api/academic/siswa/${id}`),
+
+  // --- PENGUMUMAN ---
+  getAllPengumuman: () => axiosInstance.get('/api/academic/pengumuman'),
+  createPengumuman: (data) => axiosInstance.post('/api/academic/pengumuman', data),
+  updatePengumuman: (id, data) => axiosInstance.put(`/api/academic/pengumuman/${id}`, data),
+  deletePengumuman: (id) => axiosInstance.delete(`/api/academic/pengumuman/${id}`),
 };

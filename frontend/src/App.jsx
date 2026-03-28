@@ -7,6 +7,7 @@ import SiswaPage from "./pages/tata-usaha/siswa/SiswaPage";
 import keycloak, { hasRole } from "./keycloak";
 import { Toaster } from "react-hot-toast";
 import Dashboard from "./pages/Dashboard";
+import PengumumanPage from "./pages/tata-usaha/pengumuman/PengumumanPage";
 
 /**
  * Komponen reusable untuk grup menu per role (Dropdown)
@@ -156,6 +157,9 @@ const App = () => {
                   <NavLink to="/academic/siswa" className={subNavClass}>
                     Data Siswa
                   </NavLink>
+                  <NavLink to="/academic/pengumuman" className={subNavClass}>
+                    Pengumuman
+                  </NavLink>
                 </NavDropdown>
               )}
 
@@ -211,6 +215,7 @@ const App = () => {
             <Route path="/todos" element={<TodosPage />} /> */}
             <Route path="/academic/kelas" element={<KelasPage />} />
             <Route path="/academic/siswa" element={<SiswaPage />} />
+            <Route path="/academic/pengumuman" element={<PengumumanPage />} />
             {/* Route lainnya bisa ditambahkan di sini */}
           </Routes>
         </main>
