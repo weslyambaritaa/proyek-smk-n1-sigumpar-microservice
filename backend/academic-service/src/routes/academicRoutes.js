@@ -16,6 +16,7 @@ router.delete('/kelas/:id', verifyToken, academicController.deleteKelas);
 // Rute Siswa
 router.get('/siswa', verifyToken, academicController.getAllSiswa);
 router.post('/siswa', verifyToken, academicController.createSiswa);
+router.put('/siswa/:id', verifyToken, academicController.updateSiswa);
 router.delete('/siswa/:id', verifyToken, academicController.deleteSiswa);
 
 // TETAP EXPORT ROUTER, JANGAN UBAH INI
