@@ -4,6 +4,7 @@ const arsipSuratController = require('../controllers/arsipSuratController');
 const kelasController = require('../controllers/kelasController');
 const pengumumanController = require('../controllers/pengumumanController');
 const siswaController = require('../controllers/siswaController');
+const mapelController = require('../controllers/mapelController');
 const verifyToken = require('../middleware/auth'); 
 const upload = require('../middleware/upload');
 
@@ -34,5 +35,10 @@ router.post('/arsip-surat', verifyToken, upload.single('file'), arsipSuratContro
 router.put('/arsip-surat/:id', verifyToken, upload.single('file'), arsipSuratController.updateArsipSurat);
 router.delete('/arsip-surat/:id', verifyToken, arsipSuratController.deleteArsipSurat);
 
-// TETAP EXPORT ROUTER, JANGAN UBAH INI
+// Rute Mata Pelajaran
+router.get('/mapel', verifyToken, mapelController.getAllMapel);
+router.post('/mapel', verifyToken, mapelController.createMapel);
+router.put('/mapel/:id', verifyToken, mapelController.updateMapel);
+router.delete('/mapel/:id', verifyToken, mapelController.deleteMapel);
+
 module.exports = router;
