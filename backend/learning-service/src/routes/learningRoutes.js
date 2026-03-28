@@ -1,38 +1,24 @@
 const express = require("express");
 const router = express.Router();
 const absensiGuruController = require("../controllers/absensiGuruController");
-const verifyToken = require("../middleware/auth");
-const upload = require("../middleware/upload");
+const verifyToken = require("../middleware/auth"); // sesuaikan path middleware auth
+const upload = require("../middleware/upload"); // jika ada upload foto
 
-// =============================================
-// Rute Absensi Guru (dengan upload foto)
-// =============================================
-router.get(
-  "/absensi-guru",
-  verifyToken,
-  absensiGuruController.getAllAbsensiGuru,
-);
+// Terapkan auth untuk semua endpoint di sini
+router.use(verifyToken);
+
+router.get("/", absensiGuruController.getAllAbsensiGuru);
+router.get("/:id", absensiGuruController.getAbsensiGuruById);
 router.post(
-  "/absensi-guru",
-  verifyToken,
+  "/",
   upload.single("foto"),
   absensiGuruController.createAbsensiGuru,
 );
 router.put(
-  "/absensi-guru/:id",
-  verifyToken,
+  "/:id",
   upload.single("foto"),
   absensiGuruController.updateAbsensiGuru,
 );
-router.delete(
-  "/absensi-guru/:id",
-  verifyToken,
-  absensiGuruController.deleteAbsensiGuru,
-);
-router.get(
-  "/absensi-guru/:id",
-  verifyToken,
-  absensiGuruController.getAbsensiGuruById,
-);
+router.delete("/:id", absensiGuruController.deleteAbsensiGuru);
 
 module.exports = router;

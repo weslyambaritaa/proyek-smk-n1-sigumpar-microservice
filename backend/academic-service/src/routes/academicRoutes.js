@@ -1,25 +1,22 @@
 const express = require("express");
 const router = express.Router();
-const absensiGuruController = require("../controllers/absensiGuruController");
+const academicController = require("../controllers/academicController");
+
+// HAPUS kurung kurawal {} di sini (Opsi 1)
 const verifyToken = require("../middleware/auth");
-const upload = require("../middleware/upload");
 
-// Middleware auth untuk semua endpoint di sini
-router.use(verifyToken);
+// Rute Kelas
+router.get("/kelas", verifyToken, academicController.getAllKelas);
+router.post("/kelas", verifyToken, academicController.createKelas);
 
-// Rute untuk absensi guru
-router.get("/", absensiGuruController.getAllAbsensiGuru);
-router.get("/:id", absensiGuruController.getAbsensiGuruById);
-router.post(
-  "/",
-  upload.single("foto"),
-  absensiGuruController.createAbsensiGuru,
-);
-router.put(
-  "/:id",
-  upload.single("foto"),
-  absensiGuruController.updateAbsensiGuru,
-);
-router.delete("/:id", absensiGuruController.deleteAbsensiGuru);
+// Tambahkan :id di rute bawah ini
+router.put("/kelas/:id", verifyToken, academicController.updateKelas);
+router.delete("/kelas/:id", verifyToken, academicController.deleteKelas);
 
+// Rute Siswa
+router.get("/siswa", verifyToken, academicController.getAllSiswa);
+router.post("/siswa", verifyToken, academicController.createSiswa);
+router.delete("/siswa/:id", verifyToken, academicController.deleteSiswa);
+
+// TETAP EXPORT ROUTER, JANGAN UBAH INI
 module.exports = router;

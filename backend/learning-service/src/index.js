@@ -2,7 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
 const morgan = require("morgan");
-const apiRoutes = require("./routes"); // import aggregator routes
+const apiRoutes = require("./learningRoutes"); // import aggregator routes
 const { errorHandler } = require("./middleware/errorHandler");
 
 const app = express();
