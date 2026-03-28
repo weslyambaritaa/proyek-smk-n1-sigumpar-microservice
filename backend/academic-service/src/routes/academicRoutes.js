@@ -5,6 +5,7 @@ const kelasController = require('../controllers/kelasController');
 const pengumumanController = require('../controllers/pengumumanController');
 const siswaController = require('../controllers/siswaController');
 const mapelController = require('../controllers/mapelController');
+const jadwalController = require('../controllers/jadwalController');
 const verifyToken = require('../middleware/auth'); 
 const upload = require('../middleware/upload');
 
@@ -40,5 +41,10 @@ router.get('/mapel', verifyToken, mapelController.getAllMapel);
 router.post('/mapel', verifyToken, mapelController.createMapel);
 router.put('/mapel/:id', verifyToken, mapelController.updateMapel);
 router.delete('/mapel/:id', verifyToken, mapelController.deleteMapel);
+
+router.get('/jadwal', verifyToken, jadwalController.getAllJadwal);
+router.post('/jadwal', verifyToken, jadwalController.createJadwal);
+router.put('/jadwal/:id', verifyToken, jadwalController.updateJadwal);
+router.delete('/jadwal/:id', verifyToken, jadwalController.deleteJadwal);
 
 module.exports = router;
