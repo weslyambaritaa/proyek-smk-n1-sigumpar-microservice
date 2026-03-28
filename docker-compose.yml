@@ -53,6 +53,12 @@ services:
       - DB_USER=auth_user
       - DATABASE_URL=postgres://auth_user:password@localhost:5432/auth_db
     depends_on: [keycloak]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3005/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
 
   academic-service:
     <<: *service-template
@@ -65,6 +71,12 @@ services:
       - DATABASE_URL=postgres://academic_user:password@localhost:5432/academic_db
       - DB_PASSWORD=password
     depends_on: [keycloak]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3003/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
 
   asset-service:
     <<: *service-template
@@ -76,6 +88,12 @@ services:
       - DB_USER=asset_user
       - DATABASE_URL=postgres://asset_user:password@localhost:5432/asset_db
     depends_on: [keycloak]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3004/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
 
   learning-service:
     <<: *service-template
@@ -87,6 +105,12 @@ services:
       - DB_USER=learning_user
       - DATABASE_URL=postgres://learning_user:password@localhost:5432/learning_db
     depends_on: [keycloak]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3006/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
 
   student-service:
     <<: *service-template
@@ -98,6 +122,12 @@ services:
       - DB_USER=student_user
       - DATABASE_URL=postgres://student_user:password@localhost:5432/student_db
     depends_on: [keycloak]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3008/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
 
   vocational-service:
     <<: *service-template
@@ -109,12 +139,31 @@ services:
       - DB_USER=vocational_user
       - DATABASE_URL=postgres://vocational_user:password@localhost:5432/vocational_db
     depends_on: [keycloak]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3007/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
 
   api-gateway:
     image: nginx:alpine
     container_name: api-gateway
     ports:
       - "8001:80"
+    depends_on:
+      auth-service:
+        condition: service_healthy
+      academic-service:
+        condition: service_healthy
+      asset-service:
+        condition: service_healthy
+      learning-service:
+        condition: service_healthy
+      student-service:
+        condition: service_healthy
+      vocational-service:
+        condition: service_healthy
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
     networks:

@@ -1,6 +1,6 @@
 # ── Stage 1: Build ────────────────────────────────────────────
 # Gunakan Node untuk build aplikasi React menjadi file statis
-FROM node:24-alpine AS builder
+FROM node:24-bullseye-slim AS builder
 
 WORKDIR /app
 
