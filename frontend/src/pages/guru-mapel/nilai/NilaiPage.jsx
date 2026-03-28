@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import useGrades from "../../../hooks/useGrades";
+import useGrades from "../../../hooks/userGrades";
 
 const mapelOptions = ["Pemrograman Web", "Basis Data", "Jaringan Komputer"];
 const kelasOptions = ["XII RPL 1", "XII RPL 2", "XI RPL 1", "XI RPL 2"];
