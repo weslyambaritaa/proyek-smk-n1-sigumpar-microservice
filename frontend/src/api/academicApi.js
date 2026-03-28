@@ -38,4 +38,10 @@ export const academicApi = {
   createMapel: (data) => axiosInstance.post('/api/academic/mapel', data),
   updateMapel: (id, data) => axiosInstance.put(`/api/academic/mapel/${id}`, data),
   deleteMapel: (id) => axiosInstance.delete(`/api/academic/mapel/${id}`),
+
+  // --- JADWAL MENGAJAR ---
+  getAllJadwal: () => axiosInstance.get('/api/academic/jadwal'),
+  createJadwal: (data) => axiosInstance.post('/api/academic/jadwal', data),
+  updateJadwal: (id, data) => axiosInstance.put(`/api/academic/jadwal/${id}`, data),
+  deleteJadwal: (id) => axiosInstance.delete(`/api/academic/jadwal/${id}`),
 };

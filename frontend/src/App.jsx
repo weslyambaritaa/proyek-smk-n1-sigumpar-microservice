@@ -10,6 +10,7 @@ import Dashboard from "./pages/Dashboard";
 import PengumumanPage from "./pages/tata-usaha/pengumuman/PengumumanPage";
 import ArsipSuratPage from "./pages/tata-usaha/arsip-surat/ArsipSuratPage";
 import MapelPage from "./pages/tata-usaha/mapel/MapelPage";
+import JadwalPage from "./pages/tata-usaha/jadwal/JadwalPage";
 
 /**
  * Komponen reusable untuk grup menu per role (Dropdown)
@@ -168,6 +169,9 @@ const App = () => {
                   <NavLink to="/academic/mapel" className={subNavClass}>
                     Mata Pelajaran
                   </NavLink>
+                  <NavLink to="/academic/jadwal" className={subNavClass}>
+                    Jadwal Mengajar
+                  </NavLink>
                 </NavDropdown>
               )}
 
@@ -226,6 +230,7 @@ const App = () => {
             <Route path="/academic/pengumuman" element={<PengumumanPage />} />
             <Route path="/academic/arsip-surat" element={<ArsipSuratPage />} />
             <Route path="/academic/mapel" element={<MapelPage />} />
+            <Route path="/academic/jadwal" element={<JadwalPage />} />
             {/* Route lainnya bisa ditambahkan di sini */}
           </Routes>
         </main>
