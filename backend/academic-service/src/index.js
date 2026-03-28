@@ -4,7 +4,6 @@ const helmet = require("helmet");
 const morgan = require("morgan");
 const academicRoutes = require("./routes/academicRoutes"); // Pastikan nama file di folder routes adalah academicRoutes.js
 const { errorHandler } = require("./middleware/errorHandler");
-const absensiSiswaRoutes = require("./routes/absensiSiswaRoutes");
 
 const app = express();
 const PORT = process.env.PORT || 3003;
@@ -14,9 +13,6 @@ app.use(helmet());
 // app.use(cors({ origin: process.env.CORS_ORIGIN || "*" }));
 app.use(morgan("dev"));
 app.use(express.json());
-
-//routes absesnsi siswa
-app.use("/absensi-siswa", absensiSiswaRoutes);
 
 // Health check endpoint
 app.get("/health", (req, res) => {
