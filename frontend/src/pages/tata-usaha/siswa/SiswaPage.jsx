@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { academicApi } from "../../../api/academicApi";
 import Button from "../../../components/ui/Button";
 import SiswaDialog from "./dialog/SiswaDialog";
@@ -9,10 +9,14 @@ const SiswaPage = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedSiswa, setSelectedSiswa] = useState(null);
 
-  // State khusus Delete (SUDAH DIPERBAIKI)
+  // State khusus Delete Sheet
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [siswaToDelete, setSiswaToDelete] = useState(null);
   const [deleteConfirmation, setDeleteConfirmation] = useState("");
+
+  // --- STATE BARU UNTUK DROPDOWN MENU ---
+  const [openMenuId, setOpenMenuId] = useState(null); // Menyimpan ID baris yang menunya terbuka
+  const menuRef = useRef(null); // Ref untuk mendeteksi klik di luar menu
 
   const fetchSiswa = async () => {
     try {
@@ -44,15 +48,44 @@ const SiswaPage = () => {
     fetchSiswa();
   }, []);
 
+  // --- LOGIKA UNTUK MENUTUP MENU SAAT KLIK DI LUAR ---
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setOpenMenuId(null); // Tutup semua menu jika klik di luar area menu
+      }
+    };
+
+    if (openMenuId !== null) {
+      document.addEventListener("mousedown", handleClickOutside);
+    } else {
+      document.removeEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [openMenuId]);
+
+  const toggleMenu = (id) => {
+    if (openMenuId === id) {
+      setOpenMenuId(null); // Tutup jika klik ulang baris yang sama
+    } else {
+      setOpenMenuId(id); // Buka menu untuk baris ini
+    }
+  };
+
   const handleEdit = (siswa) => {
     setSelectedSiswa(siswa);
     setIsDialogOpen(true);
+    setOpenMenuId(null); // Tutup menu setelah opsi dipilih
   };
 
   const handleDeleteClick = (siswa) => {
     setSiswaToDelete(siswa);
     setDeleteConfirmation(""); 
     setIsDeleteDialogOpen(true);
+    setOpenMenuId(null); // Tutup menu setelah opsi dipilih
   };
 
   const confirmDelete = async () => {
@@ -93,14 +126,15 @@ const SiswaPage = () => {
         </Button>
       </div>
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="bg-white rounded-lg shadow overflow-visible"> {/* overflow-visible agar menu tidak terpotong */}
         <table className="w-full text-left border-collapse">
           <thead className="bg-gray-50 text-gray-600 uppercase text-xs font-semibold">
             <tr>
               <th className="px-6 py-4">NISN</th>
               <th className="px-6 py-4">Nama Lengkap</th>
               <th className="px-6 py-4">Kelas</th>
-              <th className="px-6 py-4 text-center">Aksi</th>
+              {/* --- HEADER KOLOM DIUBAH MENJADI 'TINDAKAN' --- */}
+              <th className="px-6 py-4 text-center w-20">Tindakan</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
@@ -114,19 +148,35 @@ const SiswaPage = () => {
                       {s.nama_kelas}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-center space-x-2">
+                  {/* --- KOLOM TINDAKAN DENGAN MENU TITIK TIGA --- */}
+                  <td className="px-6 py-4 text-center relative" ref={openMenuId === s.id ? menuRef : null}>
                     <button
-                      onClick={() => handleEdit(s)}
-                      className="text-blue-600 hover:underline text-sm font-semibold"
+                      onClick={() => toggleMenu(s.id)}
+                      className="text-gray-500 hover:text-gray-800 p-2 rounded-full hover:bg-gray-100 transition-colors"
+                      aria-label="Tampilkan opsi"
                     >
-                      Edit
+                      <span className="font-bold text-lg">⋮</span> {/* Karakter titik tiga vertikal */}
                     </button>
-                    <button
-                      onClick={() => handleDeleteClick(s)}
-                      className="text-red-600 hover:underline text-sm font-semibold"
-                    >
-                      Hapus
-                    </button>
+
+                    {/* --- DROPDOWN OPSI (MUNCUL JIKA ID COCOK) --- */}
+                    {openMenuId === s.id && (
+                      <div className="absolute right-6 mt-1 w-32 bg-white border border-gray-200 rounded-lg shadow-xl z-10 animate-fade-in-down overflow-hidden">
+                        <div className="py-1">
+                          <button
+                            onClick={() => handleEdit(s)}
+                            className="w-full text-left px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 font-medium flex items-center gap-2"
+                          >
+                            <span></span> Edit
+                          </button>
+                          <button
+                            onClick={() => handleDeleteClick(s)}
+                            className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 font-medium flex items-center gap-2 border-t border-gray-100"
+                          >
+                            <span></span> Hapus
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))
@@ -145,12 +195,12 @@ const SiswaPage = () => {
         isOpen={isDialogOpen}
         onClose={() => setIsDialogOpen(false)}
         onSuccess={fetchSiswa}
-        selectedSiswa={selectedSiswa} // Pastikan prop ini dikirim ke dialog
+        selectedSiswa={selectedSiswa}
       />
 
       {isDeleteDialogOpen && (
-        <div className="fixed inset-0 z-50 flex justify-end bg-black/50 backdrop-blur-sm">
-          <div className="bg-white w-full max-w-md h-full shadow-2xl flex flex-col">
+        <div className="fixed inset-0 z-50 flex justify-end bg-black/50 backdrop-blur-sm transition-opacity">
+          <div className="bg-white w-full max-w-md h-full shadow-2xl flex flex-col animate-slide-right">
             <div className="px-6 py-4 border-b">
               <h2 className="text-xl font-bold text-red-600">Hapus Data Siswa</h2>
               <p className="text-sm text-gray-500 mt-1">Tindakan ini bersifat permanen.</p>
