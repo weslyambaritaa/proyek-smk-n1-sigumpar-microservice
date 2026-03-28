@@ -22,7 +22,15 @@ CREATE TABLE IF NOT EXISTS mata_pelajaran (
 
 CREATE TABLE IF NOT EXISTS pengumuman (id SERIAL PRIMARY KEY, judul VARCHAR(255), isi TEXT);
 CREATE TABLE IF NOT EXISTS arsip_surat (id SERIAL PRIMARY KEY, nomor_surat VARCHAR(100), file_url TEXT);
-CREATE TABLE IF NOT EXISTS jadwal_mengajar (id SERIAL PRIMARY KEY, guru_id UUID, kelas_id INTEGER, mata_pelajaran VARCHAR(100));
+CREATE TABLE IF NOT EXISTS jadwal_mengajar (
+    id SERIAL PRIMARY KEY, 
+    guru_id UUID, 
+    kelas_id INTEGER, 
+    mata_pelajaran VARCHAR(100),
+    hari VARCHAR(20),
+    waktu_mulai TIME,
+    waktu_berakhir TIME
+);
 CREATE TABLE IF NOT EXISTS jadwal_piket (id SERIAL PRIMARY KEY, hari VARCHAR(20), guru_id UUID);
 CREATE TABLE IF NOT EXISTS jadwal_upacara (id SERIAL PRIMARY KEY, tanggal DATE, petugas TEXT);
 
