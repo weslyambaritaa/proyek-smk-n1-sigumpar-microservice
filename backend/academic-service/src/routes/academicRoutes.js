@@ -1,35 +1,38 @@
 const express = require('express');
 const router = express.Router();
-const academicController = require('../controllers/academicController');
+const arsipSuratController = require('../controllers/arsipSuratController');
+const kelasController = require('../controllers/kelasController');
+const pengumumanController = require('../controllers/pengumumanController');
+const siswaController = require('../controllers/siswaController');
 const verifyToken = require('../middleware/auth'); 
 const upload = require('../middleware/upload');
 
 // Rute Kelas
-router.get('/kelas', verifyToken, academicController.getAllKelas);
-router.post('/kelas', verifyToken, academicController.createKelas);
+router.get('/kelas', verifyToken, kelasController.getAllKelas);
+router.post('/kelas', verifyToken, kelasController.createKelas);
 
 // Tambahkan :id di rute bawah ini
-router.put('/kelas/:id', verifyToken, academicController.updateKelas);
-router.delete('/kelas/:id', verifyToken, academicController.deleteKelas);
+router.put('/kelas/:id', verifyToken, kelasController.updateKelas);
+router.delete('/kelas/:id', verifyToken, kelasController.deleteKelas);
 
 // Rute Siswa
-router.get('/siswa', verifyToken, academicController.getAllSiswa);
-router.post('/siswa', verifyToken, academicController.createSiswa);
-router.put('/siswa/:id', verifyToken, academicController.updateSiswa);
-router.delete('/siswa/:id', verifyToken, academicController.deleteSiswa);
+router.get('/siswa', verifyToken, siswaController.getAllSiswa);
+router.post('/siswa', verifyToken, siswaController.createSiswa);
+router.put('/siswa/:id', verifyToken, siswaController.updateSiswa);
+router.delete('/siswa/:id', verifyToken, siswaController.deleteSiswa);
 
 // Rute Pengumuman
-router.get('/pengumuman', verifyToken, academicController.getAllPengumuman);
-router.post('/pengumuman', verifyToken, academicController.createPengumuman);
-router.put('/pengumuman/:id', verifyToken, academicController.updatePengumuman);
-router.delete('/pengumuman/:id', verifyToken, academicController.deletePengumuman);
+router.get('/pengumuman', verifyToken, pengumumanController.getAllPengumuman);
+router.post('/pengumuman', verifyToken, pengumumanController.createPengumuman);
+router.put('/pengumuman/:id', verifyToken, pengumumanController.updatePengumuman);
+router.delete('/pengumuman/:id', verifyToken, pengumumanController.deletePengumuman);
 
 // Rute Arsip Surat
-router.get('/arsip-surat', verifyToken, academicController.getAllArsipSurat);
+router.get('/arsip-surat', verifyToken, arsipSuratController.getAllArsipSurat);
 // Gunakan upload.single('file') untuk memproses form-data yang memiliki input field bernama 'file'
-router.post('/arsip-surat', verifyToken, upload.single('file'), academicController.createArsipSurat);
-router.put('/arsip-surat/:id', verifyToken, upload.single('file'), academicController.updateArsipSurat);
-router.delete('/arsip-surat/:id', verifyToken, academicController.deleteArsipSurat);
+router.post('/arsip-surat', verifyToken, upload.single('file'), arsipSuratController.createArsipSurat);
+router.put('/arsip-surat/:id', verifyToken, upload.single('file'), arsipSuratController.updateArsipSurat);
+router.delete('/arsip-surat/:id', verifyToken, arsipSuratController.deleteArsipSurat);
 
 // TETAP EXPORT ROUTER, JANGAN UBAH INI
 module.exports = router;
