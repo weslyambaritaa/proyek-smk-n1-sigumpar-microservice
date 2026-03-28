@@ -19,5 +19,11 @@ router.post('/siswa', verifyToken, academicController.createSiswa);
 router.put('/siswa/:id', verifyToken, academicController.updateSiswa);
 router.delete('/siswa/:id', verifyToken, academicController.deleteSiswa);
 
+// Rute Pengumuman
+router.get('/pengumuman', verifyToken, academicController.getAllPengumuman);
+router.post('/pengumuman', verifyToken, academicController.createPengumuman);
+router.put('/pengumuman/:id', verifyToken, academicController.updatePengumuman);
+router.delete('/pengumuman/:id', verifyToken, academicController.deletePengumuman);
+
 // TETAP EXPORT ROUTER, JANGAN UBAH INI
 module.exports = router;
