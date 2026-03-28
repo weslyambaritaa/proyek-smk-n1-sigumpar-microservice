@@ -19,4 +19,14 @@ export const academicApi = {
   createPengumuman: (data) => axiosInstance.post('/api/academic/pengumuman', data),
   updatePengumuman: (id, data) => axiosInstance.put(`/api/academic/pengumuman/${id}`, data),
   deletePengumuman: (id) => axiosInstance.delete(`/api/academic/pengumuman/${id}`),
+
+  // --- ARSIP SURAT ---
+  getAllArsipSurat: () => axiosInstance.get('/api/academic/arsip-surat'),
+  createArsipSurat: (formData) => axiosInstance.post('/api/academic/arsip-surat', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }),
+  updateArsipSurat: (id, formData) => axiosInstance.put(`/api/academic/arsip-surat/${id}`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }),
+  deleteArsipSurat: (id) => axiosInstance.delete(`/api/academic/arsip-surat/${id}`),
 };

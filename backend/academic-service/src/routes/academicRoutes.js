@@ -1,9 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const academicController = require('../controllers/academicController');
-
-// HAPUS kurung kurawal {} di sini (Opsi 1)
 const verifyToken = require('../middleware/auth'); 
+const upload = require('../middleware/upload');
 
 // Rute Kelas
 router.get('/kelas', verifyToken, academicController.getAllKelas);
@@ -24,6 +23,13 @@ router.get('/pengumuman', verifyToken, academicController.getAllPengumuman);
 router.post('/pengumuman', verifyToken, academicController.createPengumuman);
 router.put('/pengumuman/:id', verifyToken, academicController.updatePengumuman);
 router.delete('/pengumuman/:id', verifyToken, academicController.deletePengumuman);
+
+// Rute Arsip Surat
+router.get('/arsip-surat', verifyToken, academicController.getAllArsipSurat);
+// Gunakan upload.single('file') untuk memproses form-data yang memiliki input field bernama 'file'
+router.post('/arsip-surat', verifyToken, upload.single('file'), academicController.createArsipSurat);
+router.put('/arsip-surat/:id', verifyToken, upload.single('file'), academicController.updateArsipSurat);
+router.delete('/arsip-surat/:id', verifyToken, academicController.deleteArsipSurat);
 
 // TETAP EXPORT ROUTER, JANGAN UBAH INI
 module.exports = router;
