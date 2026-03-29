@@ -6,7 +6,15 @@ import keycloak, { hasRole } from "./keycloak";
 import { Toaster } from "react-hot-toast";
 import Dashboard from "./pages/Dashboard";
 import PengumumanPage from "./pages/tata-usaha/pengumuman/PengumumanPage";
+<<<<<<< HEAD
 import NilaiPage from "./pages/guru-mapel/nilai/NilaiPage";
+=======
+import ArsipSuratPage from "./pages/tata-usaha/arsip-surat/ArsipSuratPage";
+import MapelPage from "./pages/tata-usaha/mapel/MapelPage";
+import JadwalPage from "./pages/tata-usaha/jadwal/JadwalPage";
+import PiketPage from "./pages/tata-usaha/piket/PiketPage";
+import UpacaraPage from "./pages/tata-usaha/upacara/UpacaraPage";
+>>>>>>> main
 
 const NavDropdown = ({ title, icon, children, isOpen, onClick }) => {
   return (
@@ -144,6 +152,21 @@ const App = () => {
                   <NavLink to="/academic/pengumuman" className={subNavClass}>
                     Pengumuman
                   </NavLink>
+                  <NavLink to="/academic/arsip-surat" className={subNavClass}>
+                    Arsip Surat
+                  </NavLink>
+                  <NavLink to="/academic/mapel" className={subNavClass}>
+                    Mata Pelajaran
+                  </NavLink>
+                  <NavLink to="/academic/jadwal" className={subNavClass}>
+                    Jadwal Mengajar
+                  </NavLink>
+                  <NavLink to="/academic/piket" className={subNavClass}>
+                    Jadwal Piket
+                  </NavLink>
+                  <NavLink to="/academic/upacara" className={subNavClass}>
+                    Jadwal Upacara
+                  </NavLink>
                 </NavDropdown>
               )}
 
@@ -194,7 +217,16 @@ const App = () => {
             <Route path="/academic/kelas" element={<KelasPage />} />
             <Route path="/academic/siswa" element={<SiswaPage />} />
             <Route path="/academic/pengumuman" element={<PengumumanPage />} />
+<<<<<<< HEAD
             <Route path="/input-nilai" element={<NilaiPage />} />
+=======
+            <Route path="/academic/arsip-surat" element={<ArsipSuratPage />} />
+            <Route path="/academic/mapel" element={<MapelPage />} />
+            <Route path="/academic/jadwal" element={<JadwalPage />} />
+            <Route path="/academic/piket" element={<PiketPage />} />
+            <Route path="/academic/upacara" element={<UpacaraPage />} />
+            {/* Route lainnya bisa ditambahkan di sini */}
+>>>>>>> main
           </Routes>
         </main>
       </div>
