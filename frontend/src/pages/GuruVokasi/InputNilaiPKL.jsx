@@ -1,419 +1,431 @@
-export default function MockupInputNilaiPKL() {
-    const students = [
-        {
-            nisn: "0087612345",
-            nama: "Aulia Rahman",
-            kelas: "XI RPL 1",
-            industri: "PT Digital Nusantara",
-            pembimbing: "Budi Santoso",
-            disiplin: 88,
-            teknis: 90,
-            komunikasi: 86,
-            laporan: 89,
-            presentasi: 87,
-        },
-        {
-            nisn: "0087612346",
-            nama: "Nabila Sari",
-            kelas: "XI TKJ 2",
-            industri: "CV Jaringan Cerdas",
-            pembimbing: "Rina Wulandari",
-            disiplin: 92,
-            teknis: 94,
-            komunikasi: 90,
-            laporan: 91,
-            presentasi: 93,
-        },
-        {
-            nisn: "0087612347",
-            nama: "Fikri Maulana",
-            kelas: "XI TBSM 1",
-            industri: "Bengkel Prima Motor",
-            pembimbing: "Agus Setiawan",
-            disiplin: 85,
-            teknis: 88,
-            komunikasi: 82,
-            laporan: 84,
-            presentasi: 83,
-        },
-    ];
+import AppLayout from "@/Layouts/app-layout";
+import { Head, usePage } from "@inertiajs/react";
+import { useState, useEffect, useCallback } from "react";
+import { getAllPKL, getPenilaianStats, upsertPenilaian } from "@/lib/api";
 
-    const finalScore = (s) =>
-        Math.round(
-            s.disiplin * 0.15 +
-                s.teknis * 0.35 +
-                s.komunikasi * 0.15 +
-                s.laporan * 0.2 +
-                s.presentasi * 0.15,
-        );
+// ── Konstanta bobot penilaian ─────────────────────────────────
+const BOBOT = {
+  disiplin: { label: "Disiplin", pct: 15, weight: 0.15 },
+  teknis: { label: "Kompetensi Teknis", pct: 35, weight: 0.35 },
+  komunikasi: { label: "Komunikasi", pct: 15, weight: 0.15 },
+  laporan: { label: "Laporan PKL", pct: 20, weight: 0.2 },
+  presentasi: { label: "Presentasi / Ujian", pct: 15, weight: 0.15 },
+};
 
-    const grade = (score) => {
-        if (score >= 90) return "A";
-        if (score >= 80) return "B";
-        if (score >= 70) return "C";
-        if (score >= 60) return "D";
-        return "E";
-    };
+const hitungNilai = (s) =>
+  Object.keys(BOBOT).reduce(
+    (sum, k) => sum + Number(s[k] || 0) * BOBOT[k].weight,
+    0,
+  );
 
-    return (
-        <div className="min-h-screen bg-slate-100 text-slate-800">
-            <div className="flex min-h-screen">
-                <aside className="w-72 bg-sky-900 text-white p-6 flex flex-col">
-                    <div className="mb-8">
-                        <div className="text-sm opacity-80">Pengguna Aktif</div>
-                        <div className="mt-2 text-xl font-semibold">
-                            Ivana Pasaribu (DEMO)
-                        </div>
-                        <div className="text-sm text-sky-100">Guru Vokasi</div>
-                    </div>
+const getGrade = (n) => {
+  if (n >= 85) return "A";
+  if (n >= 75) return "B";
+  if (n >= 65) return "C";
+  if (n >= 50) return "D";
+  return "E";
+};
 
-                    <nav className="space-y-2">
-                        <div className="rounded-2xl px-4 py-3 hover:bg-sky-800/70 cursor-pointer">
-                            Beranda
-                        </div>
-                        <div className="rounded-2xl px-4 py-3 hover:bg-sky-800/70 cursor-pointer">
-                            Pelaporan Lokasi PKL
-                        </div>
-                        <div className="rounded-2xl px-4 py-3 hover:bg-sky-800/70 cursor-pointer">
-                            Pelaporan Progres PKL
-                        </div>
-                        <div className="rounded-2xl bg-white text-sky-900 px-4 py-3 font-semibold shadow">
-                            Input Nilai PKL
-                        </div>
-                    </nav>
+const gradeBadge = {
+  A: "bg-emerald-50 text-emerald-700 border border-emerald-200",
+  B: "bg-sky-50 text-sky-700 border border-sky-200",
+  C: "bg-amber-50 text-amber-700 border border-amber-200",
+  D: "bg-orange-50 text-orange-700 border border-orange-200",
+  E: "bg-rose-50 text-rose-700 border border-rose-200",
+};
 
-                    <div className="mt-auto pt-8 text-xs text-sky-100/80">
-                        Sistem Monitoring PKL / Magang SMK
-                    </div>
-                </aside>
+const statusBadge = {
+  Simpan: "bg-emerald-50 text-emerald-700 border border-emerald-200",
+  Draft: "bg-slate-100 text-slate-500 border border-slate-200",
+};
 
-                <main className="flex-1 p-8">
-                    <div className="max-w-7xl mx-auto space-y-6">
-                        <div className="flex items-start justify-between gap-4">
-                            <div>
-                                <h1 className="text-3xl font-bold tracking-tight">
-                                    Input Nilai PKL
-                                </h1>
-                                <p className="text-slate-600 mt-2">
-                                    Halaman ini digunakan Guru Vokasi untuk
-                                    menginput, meninjau, dan finalisasi nilai
-                                    siswa peserta PKL / magang.
-                                </p>
-                            </div>
-                            <button className="rounded-2xl bg-sky-900 text-white px-5 py-3 shadow hover:opacity-95">
-                                Simpan Semua Nilai
-                            </button>
-                        </div>
+export default function InputNilaiPKL() {
+  const { auth } = usePage().props;
+  const user = auth?.user;
 
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                            <div className="rounded-2xl bg-white p-5 shadow-sm border border-slate-200">
-                                <div className="text-sm text-slate-500">
-                                    Total Siswa PKL
-                                </div>
-                                <div className="text-3xl font-bold mt-2">
-                                    36
-                                </div>
-                            </div>
-                            <div className="rounded-2xl bg-white p-5 shadow-sm border border-slate-200">
-                                <div className="text-sm text-slate-500">
-                                    Nilai Sudah Diisi
-                                </div>
-                                <div className="text-3xl font-bold mt-2">
-                                    28
-                                </div>
-                            </div>
-                            <div className="rounded-2xl bg-white p-5 shadow-sm border border-slate-200">
-                                <div className="text-sm text-slate-500">
-                                    Menunggu Finalisasi
-                                </div>
-                                <div className="text-3xl font-bold mt-2">6</div>
-                            </div>
-                            <div className="rounded-2xl bg-white p-5 shadow-sm border border-slate-200">
-                                <div className="text-sm text-slate-500">
-                                    Rata-rata Nilai
-                                </div>
-                                <div className="text-3xl font-bold mt-2">
-                                    88
-                                </div>
-                            </div>
-                        </div>
+  const [pklList, setPklList] = useState([]);
+  const [stats, setStats] = useState({
+    total_siswa: 0,
+    nilai_sudah_diisi: 0,
+    nilai_belum_diisi: 0,
+    rata_rata_nilai: 0,
+  });
+  const [nilaiMap, setNilaiMap] = useState({}); // { submission_id: { disiplin, teknis, ... } }
+  const [catatanMap, setCatatanMap] = useState({}); // { submission_id: string }
+  const [statusMap, setStatusMap] = useState({}); // { submission_id: 'Draft' | 'Simpan' }
+  const [saving, setSaving] = useState(null); // submission_id yang sedang disimpan
+  const [searchNama, setSearchNama] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-                        <div className="rounded-2xl bg-white p-5 shadow-sm border border-slate-200">
-                            <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium mb-2">
-                                        Tahun Ajaran
-                                    </label>
-                                    <select className="w-full rounded-xl border border-slate-300 px-3 py-2 bg-white">
-                                        <option>2025/2026</option>
-                                        <option>2024/2025</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium mb-2">
-                                        Semester
-                                    </label>
-                                    <select className="w-full rounded-xl border border-slate-300 px-3 py-2 bg-white">
-                                        <option>Genap</option>
-                                        <option>Ganjil</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium mb-2">
-                                        Jurusan
-                                    </label>
-                                    <select className="w-full rounded-xl border border-slate-300 px-3 py-2 bg-white">
-                                        <option>Semua Jurusan</option>
-                                        <option>RPL</option>
-                                        <option>TKJ</option>
-                                        <option>TBSM</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium mb-2">
-                                        Kelas
-                                    </label>
-                                    <select className="w-full rounded-xl border border-slate-300 px-3 py-2 bg-white">
-                                        <option>Semua Kelas</option>
-                                        <option>XI RPL 1</option>
-                                        <option>XI TKJ 2</option>
-                                        <option>XI TBSM 1</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium mb-2">
-                                        Status
-                                    </label>
-                                    <select className="w-full rounded-xl border border-slate-300 px-3 py-2 bg-white">
-                                        <option>Semua Status</option>
-                                        <option>Belum Dinilai</option>
-                                        <option>Draft</option>
-                                        <option>Terverifikasi</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium mb-2">
-                                        Cari Siswa
-                                    </label>
-                                    <input
-                                        className="w-full rounded-xl border border-slate-300 px-3 py-2"
-                                        placeholder="Nama / NISN"
-                                    />
-                                </div>
-                            </div>
-                        </div>
+  // ── Fetch data ──────────────────────────────────────────────
+  const fetchData = useCallback(async (nama = "") => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [pklRes, statsRes] = await Promise.all([
+        getAllPKL(nama),
+        getPenilaianStats(),
+      ]);
 
-                        <div className="rounded-2xl bg-white shadow-sm border border-slate-200 overflow-hidden">
-                            <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between">
-                                <div>
-                                    <h2 className="font-semibold text-lg">
-                                        Daftar Penilaian Siswa PKL
-                                    </h2>
-                                    <p className="text-sm text-slate-500 mt-1">
-                                        Komponen nilai dapat disesuaikan dengan
-                                        kebijakan sekolah.
-                                    </p>
-                                </div>
-                                <button className="rounded-xl border border-slate-300 px-4 py-2 text-sm">
-                                    Export Rekap
-                                </button>
-                            </div>
+      const list = pklRes.data || [];
+      setPklList(list);
+      setStats(statsRes.data || {});
 
-                            <div className="overflow-x-auto">
-                                <table className="w-full min-w-[1200px] text-sm">
-                                    <thead className="bg-slate-50">
-                                        <tr className="text-left text-slate-600">
-                                            <th className="px-4 py-3 font-semibold">
-                                                Siswa
-                                            </th>
-                                            <th className="px-4 py-3 font-semibold">
-                                                Kelas
-                                            </th>
-                                            <th className="px-4 py-3 font-semibold">
-                                                Tempat PKL
-                                            </th>
-                                            <th className="px-4 py-3 font-semibold">
-                                                Pembimbing
-                                            </th>
-                                            <th className="px-4 py-3 font-semibold">
-                                                Disiplin
-                                            </th>
-                                            <th className="px-4 py-3 font-semibold">
-                                                Teknis
-                                            </th>
-                                            <th className="px-4 py-3 font-semibold">
-                                                Komunikasi
-                                            </th>
-                                            <th className="px-4 py-3 font-semibold">
-                                                Laporan
-                                            </th>
-                                            <th className="px-4 py-3 font-semibold">
-                                                Presentasi
-                                            </th>
-                                            <th className="px-4 py-3 font-semibold">
-                                                Nilai Akhir
-                                            </th>
-                                            <th className="px-4 py-3 font-semibold">
-                                                Grade
-                                            </th>
-                                            <th className="px-4 py-3 font-semibold">
-                                                Status
-                                            </th>
-                                            <th className="px-4 py-3 font-semibold">
-                                                Aksi
-                                            </th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {students.map((s, idx) => {
-                                            const score = finalScore(s);
-                                            return (
-                                                <tr
-                                                    key={idx}
-                                                    className="border-t border-slate-200 align-top"
-                                                >
-                                                    <td className="px-4 py-4">
-                                                        <div className="font-semibold">
-                                                            {s.nama}
-                                                        </div>
-                                                        <div className="text-slate-500 text-xs">
-                                                            NISN {s.nisn}
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-4 py-4">
-                                                        {s.kelas}
-                                                    </td>
-                                                    <td className="px-4 py-4">
-                                                        {s.industri}
-                                                    </td>
-                                                    <td className="px-4 py-4">
-                                                        {s.pembimbing}
-                                                    </td>
-                                                    <td className="px-4 py-4">
-                                                        <input
-                                                            defaultValue={
-                                                                s.disiplin
-                                                            }
-                                                            className="w-20 rounded-lg border border-slate-300 px-2 py-2"
-                                                        />
-                                                    </td>
-                                                    <td className="px-4 py-4">
-                                                        <input
-                                                            defaultValue={
-                                                                s.teknis
-                                                            }
-                                                            className="w-20 rounded-lg border border-slate-300 px-2 py-2"
-                                                        />
-                                                    </td>
-                                                    <td className="px-4 py-4">
-                                                        <input
-                                                            defaultValue={
-                                                                s.komunikasi
-                                                            }
-                                                            className="w-20 rounded-lg border border-slate-300 px-2 py-2"
-                                                        />
-                                                    </td>
-                                                    <td className="px-4 py-4">
-                                                        <input
-                                                            defaultValue={
-                                                                s.laporan
-                                                            }
-                                                            className="w-20 rounded-lg border border-slate-300 px-2 py-2"
-                                                        />
-                                                    </td>
-                                                    <td className="px-4 py-4">
-                                                        <input
-                                                            defaultValue={
-                                                                s.presentasi
-                                                            }
-                                                            className="w-20 rounded-lg border border-slate-300 px-2 py-2"
-                                                        />
-                                                    </td>
-                                                    <td className="px-4 py-4">
-                                                        <div className="font-semibold">
-                                                            {score}
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-4 py-4">
-                                                        <span className="inline-flex rounded-full bg-sky-100 text-sky-800 px-3 py-1 font-medium">
-                                                            {grade(score)}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-4 py-4">
-                                                        <span className="inline-flex rounded-full bg-amber-100 text-amber-800 px-3 py-1 font-medium">
-                                                            Draft
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-4 py-4">
-                                                        <div className="flex gap-2">
-                                                            <button className="rounded-lg bg-sky-900 text-white px-3 py-2 text-xs">
-                                                                Simpan
-                                                            </button>
-                                                            <button className="rounded-lg border border-slate-300 px-3 py-2 text-xs">
-                                                                Detail
-                                                            </button>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
+      // Inisialisasi nilai dari data yang sudah ada
+      const initNilai = {};
+      const initCatatan = {};
+      const initStatus = {};
+      list.forEach((item) => {
+        initNilai[item.id] = {
+          disiplin: item.disiplin ?? "",
+          teknis: item.teknis ?? "",
+          komunikasi: item.komunikasi ?? "",
+          laporan: item.laporan ?? "",
+          presentasi: item.presentasi ?? "",
+        };
+        initCatatan[item.id] = item.catatan_guru || "";
+        initStatus[item.id] = item.status_penilaian || "Draft";
+      });
+      setNilaiMap(initNilai);
+      setCatatanMap(initCatatan);
+      setStatusMap(initStatus);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                            <div className="rounded-2xl bg-white p-5 shadow-sm border border-slate-200">
-                                <h3 className="font-semibold text-lg">
-                                    Catatan Guru Vokasi
-                                </h3>
-                                <textarea
-                                    className="mt-4 w-full min-h-[160px] rounded-2xl border border-slate-300 p-4"
-                                    placeholder="Tambahkan catatan umum penilaian, rekomendasi, atau evaluasi untuk siswa..."
-                                />
-                            </div>
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
-                            <div className="rounded-2xl bg-white p-5 shadow-sm border border-slate-200">
-                                <h3 className="font-semibold text-lg">
-                                    Bobot Penilaian
-                                </h3>
-                                <div className="mt-4 space-y-3 text-sm">
-                                    <div className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3">
-                                        <span>Disiplin</span>
-                                        <span className="font-semibold">
-                                            15%
-                                        </span>
-                                    </div>
-                                    <div className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3">
-                                        <span>Kompetensi Teknis</span>
-                                        <span className="font-semibold">
-                                            35%
-                                        </span>
-                                    </div>
-                                    <div className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3">
-                                        <span>Komunikasi</span>
-                                        <span className="font-semibold">
-                                            15%
-                                        </span>
-                                    </div>
-                                    <div className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3">
-                                        <span>Laporan PKL</span>
-                                        <span className="font-semibold">
-                                            20%
-                                        </span>
-                                    </div>
-                                    <div className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3">
-                                        <span>Presentasi / Ujian</span>
-                                        <span className="font-semibold">
-                                            15%
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </main>
-            </div>
+  // ── Handler perubahan nilai input ──────────────────────────
+  const handleNilaiChange = (submissionId, field, value) => {
+    const clamped = Math.min(100, Math.max(0, Number(value)));
+    setNilaiMap((prev) => ({
+      ...prev,
+      [submissionId]: { ...prev[submissionId], [field]: clamped },
+    }));
+  };
+
+  // ── Simpan satu baris ──────────────────────────────────────
+  const handleSimpan = async (submissionId, status = "Draft") => {
+    setSaving(submissionId);
+    try {
+      const nilai = nilaiMap[submissionId] || {};
+      await upsertPenilaian({
+        submission_id: submissionId,
+        disiplin: nilai.disiplin || 0,
+        teknis: nilai.teknis || 0,
+        komunikasi: nilai.komunikasi || 0,
+        laporan: nilai.laporan || 0,
+        presentasi: nilai.presentasi || 0,
+        catatan_guru: catatanMap[submissionId] || "",
+        status_penilaian: status,
+      });
+      setStatusMap((prev) => ({ ...prev, [submissionId]: status }));
+      // Refresh stats
+      const statsRes = await getPenilaianStats();
+      setStats(statsRes.data || {});
+      alert(
+        `Nilai berhasil ${status === "Simpan" ? "disimpan & difinalisasi" : "disimpan sebagai draft"}!`,
+      );
+    } catch (err) {
+      alert(`Gagal menyimpan: ${err.message}`);
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    fetchData(searchNama);
+  };
+
+  return (
+    <AppLayout title="Input Nilai PKL">
+      <Head title="Input Nilai PKL" />
+
+      <div className="max-w-screen-2xl mx-auto py-8 px-4 sm:px-6 lg:px-8 space-y-8 pb-24">
+        {/* ── Header ─────────────────────────────────────── */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+          <div>
+            <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest">
+              Sistem Monitoring PKL
+            </p>
+            <h1 className="text-3xl font-black text-slate-900 tracking-tighter uppercase mt-1">
+              INPUT NILAI PKL
+            </h1>
+            <p className="text-sm text-slate-500 font-bold mt-1">
+              Guru Vokasi: {user?.name}
+            </p>
+          </div>
+
+          {/* Search */}
+          <form onSubmit={handleSearch} className="flex gap-2">
+            <input
+              type="text"
+              value={searchNama}
+              onChange={(e) => setSearchNama(e.target.value)}
+              placeholder="Cari nama siswa..."
+              className="border-slate-200 rounded-xl text-sm font-bold px-4 py-2.5 focus:ring-2 focus:ring-blue-500 w-56"
+            />
+            <button
+              type="submit"
+              className="bg-blue-600 hover:bg-blue-700 text-white font-black px-5 py-2.5 rounded-xl text-xs uppercase tracking-widest"
+            >
+              Cari
+            </button>
+          </form>
         </div>
-    );
+
+        {/* ── Stats Cards ────────────────────────────────── */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {[
+            {
+              label: "Total Siswa PKL",
+              value: stats.total_siswa,
+              color: "blue",
+            },
+            {
+              label: "Nilai Sudah Diisi",
+              value: stats.nilai_sudah_diisi,
+              color: "emerald",
+            },
+            {
+              label: "Belum Diisi",
+              value: stats.nilai_belum_diisi,
+              color: "amber",
+            },
+            {
+              label: "Rata-rata Nilai",
+              value: Number(stats.rata_rata_nilai || 0).toFixed(1),
+              color: "violet",
+            },
+          ].map((s) => (
+            <div
+              key={s.label}
+              className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 hover:shadow-md transition"
+            >
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                {s.label}
+              </p>
+              <p className={`text-3xl font-black mt-2 text-${s.color}-600`}>
+                {loading ? "—" : s.value}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        {/* ── Error ──────────────────────────────────────── */}
+        {error && (
+          <div className="bg-rose-50 border border-rose-200 text-rose-700 rounded-2xl p-4 text-sm font-bold">
+            ⚠ Gagal memuat data: {error}. Pastikan backend berjalan dan token
+            valid.
+          </div>
+        )}
+
+        {/* ── Tabel Nilai ────────────────────────────────── */}
+        <div className="bg-white rounded-3xl shadow-xl border border-slate-100 overflow-hidden">
+          <div className="p-6 border-b border-slate-50 bg-slate-50/50 flex items-center justify-between">
+            <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">
+              Daftar Siswa & Input Nilai
+            </h3>
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+              {pklList.length} siswa
+            </span>
+          </div>
+
+          {loading ? (
+            <div className="p-16 text-center text-slate-400 font-bold text-sm">
+              Memuat data...
+            </div>
+          ) : pklList.length === 0 ? (
+            <div className="p-16 text-center text-slate-400 font-bold text-sm">
+              Tidak ada data PKL ditemukan.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-blue-50/40 border-b border-blue-50">
+                  <tr>
+                    {[
+                      "Siswa",
+                      "Industri",
+                      "Disiplin\n(15%)",
+                      "Teknis\n(35%)",
+                      "Komunikasi\n(15%)",
+                      "Laporan\n(20%)",
+                      "Presentasi\n(15%)",
+                      "Nilai Akhir",
+                      "Grade",
+                      "Status",
+                      "Aksi",
+                    ].map((h) => (
+                      <th
+                        key={h}
+                        className="px-4 py-4 text-[9px] font-black text-blue-400 uppercase tracking-widest whitespace-pre-line text-center"
+                      >
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {pklList.map((item) => {
+                    const n = nilaiMap[item.id] || {};
+                    const nilaiAkhir = hitungNilai(n);
+                    const grade = getGrade(nilaiAkhir);
+                    const status = statusMap[item.id] || "Draft";
+                    const isSaving = saving === item.id;
+
+                    return (
+                      <tr
+                        key={item.id}
+                        className="hover:bg-blue-50/20 transition-colors"
+                      >
+                        {/* Siswa */}
+                        <td className="px-4 py-5 min-w-[150px]">
+                          <p className="font-black text-slate-800 uppercase text-[10px]">
+                            {item.nama_lengkap}
+                          </p>
+                          <p className="text-[9px] text-slate-400 font-bold mt-0.5">
+                            {item.nisn} · {item.kelas}
+                          </p>
+                        </td>
+
+                        {/* Industri */}
+                        <td className="px-4 py-5 min-w-[130px]">
+                          <p className="text-[10px] font-bold text-blue-600 uppercase">
+                            {item.nama_perusahaan}
+                          </p>
+                          <p className="text-[9px] text-slate-400 mt-0.5">
+                            {item.judul_penempatan}
+                          </p>
+                        </td>
+
+                        {/* Input Nilai */}
+                        {[
+                          "disiplin",
+                          "teknis",
+                          "komunikasi",
+                          "laporan",
+                          "presentasi",
+                        ].map((field) => (
+                          <td key={field} className="px-2 py-5 text-center">
+                            <input
+                              type="number"
+                              min="0"
+                              max="100"
+                              value={n[field] ?? ""}
+                              onChange={(e) =>
+                                handleNilaiChange(
+                                  item.id,
+                                  field,
+                                  e.target.value,
+                                )
+                              }
+                              disabled={status === "Simpan" || isSaving}
+                              className="w-16 text-center border border-slate-200 rounded-lg py-1.5 font-black text-xs focus:ring-2 focus:ring-blue-500 disabled:bg-slate-50 disabled:text-slate-400"
+                            />
+                          </td>
+                        ))}
+
+                        {/* Nilai Akhir */}
+                        <td className="px-4 py-5 text-center">
+                          <span className="font-black text-slate-800 text-sm">
+                            {nilaiAkhir.toFixed(1)}
+                          </span>
+                        </td>
+
+                        {/* Grade */}
+                        <td className="px-4 py-5 text-center">
+                          <span
+                            className={`px-2.5 py-1 rounded-lg text-[10px] font-black ${gradeBadge[grade]}`}
+                          >
+                            {grade}
+                          </span>
+                        </td>
+
+                        {/* Status */}
+                        <td className="px-4 py-5 text-center">
+                          <span
+                            className={`px-2 py-1 rounded-lg text-[9px] font-black ${statusBadge[status] || statusBadge.Draft}`}
+                          >
+                            {status}
+                          </span>
+                        </td>
+
+                        {/* Aksi */}
+                        <td className="px-4 py-5 text-center">
+                          <div className="flex gap-1.5 justify-center">
+                            <button
+                              onClick={() => handleSimpan(item.id, "Draft")}
+                              disabled={isSaving || status === "Simpan"}
+                              className="bg-slate-100 hover:bg-slate-200 text-slate-600 font-black px-2.5 py-1.5 rounded-lg text-[9px] uppercase disabled:opacity-40"
+                            >
+                              {isSaving ? "..." : "Draft"}
+                            </button>
+                            <button
+                              onClick={() => handleSimpan(item.id, "Simpan")}
+                              disabled={isSaving || status === "Simpan"}
+                              className="bg-blue-600 hover:bg-blue-700 text-white font-black px-2.5 py-1.5 rounded-lg text-[9px] uppercase disabled:opacity-40"
+                            >
+                              {isSaving ? "..." : "Simpan"}
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* ── Bobot Penilaian (Info) ─────────────────────── */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 space-y-3">
+            <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">
+              Bobot Penilaian
+            </h3>
+            {Object.entries(BOBOT).map(([, v]) => (
+              <div
+                key={v.label}
+                className="flex items-center justify-between bg-slate-50 rounded-xl px-4 py-3"
+              >
+                <span className="text-xs font-bold text-slate-600">
+                  {v.label}
+                </span>
+                <div className="flex items-center gap-3">
+                  <div className="w-24 h-1.5 rounded-full bg-slate-200 overflow-hidden">
+                    <div
+                      className="h-full bg-blue-500 rounded-full"
+                      style={{ width: `${v.pct}%` }}
+                    />
+                  </div>
+                  <span className="text-xs font-black text-slate-800 w-8 text-right">
+                    {v.pct}%
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+            <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest mb-4">
+              Catatan Guru Vokasi
+            </h3>
+            <textarea
+              className="w-full min-h-[160px] border-slate-200 rounded-2xl font-bold text-sm p-4 focus:ring-2 focus:ring-blue-500 resize-none"
+              placeholder="Tambahkan catatan umum penilaian, rekomendasi, atau evaluasi batch untuk semua siswa..."
+            />
+          </div>
+        </div>
+      </div>
+    </AppLayout>
+  );
 }

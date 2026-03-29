@@ -4,7 +4,7 @@ const vocationalController = require("../controllers/vocationalController");
 const verifyToken = require("../middleware/auth");
 const upload = require("../middleware/upload");
 
-// Rute PKL
+// ── REKAPITULASI PKL ──────────────────────────────────────────
 router.get("/pkl", verifyToken, vocationalController.getAllPKL);
 router.put(
   "/pkl/validate/:id",
@@ -12,7 +12,12 @@ router.put(
   vocationalController.validateAndApprovePKL,
 );
 
-// Rute Monitoring (Include Progres + Upload)
+// ── MONITORING & PROGRES ──────────────────────────────────────
+router.get(
+  "/pkl/monitoring",
+  verifyToken,
+  vocationalController.getAllMonitoring,
+);
 router.post(
   "/pkl/monitoring",
   verifyToken,
@@ -20,8 +25,22 @@ router.post(
   vocationalController.createMonitoring,
 );
 
-// Rute Penilaian PKL
-router.get("/penilaian/stats", verifyToken, penilaianCtrl.getPenilaianStats);
-router.post("/penilaian/upsert", verifyToken, penilaianCtrl.upsertPenilaian);
+// ── PENILAIAN PKL ──────────────────────────────────────────────
+// PERBAIKAN: semua menggunakan vocationalController (bukan penilaianCtrl yang undefined)
+router.get(
+  "/penilaian/stats",
+  verifyToken,
+  vocationalController.getPenilaianStats,
+);
+router.post(
+  "/penilaian/upsert",
+  verifyToken,
+  vocationalController.upsertPenilaian,
+);
+router.get(
+  "/penilaian/:submission_id",
+  verifyToken,
+  vocationalController.getPenilaianById,
+);
 
 module.exports = router;
