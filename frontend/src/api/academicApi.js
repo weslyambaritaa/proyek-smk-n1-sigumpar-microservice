@@ -50,4 +50,10 @@ export const academicApi = {
   createPiket: (data) => axiosInstance.post('/api/academic/piket', data),
   updatePiket: (id, data) => axiosInstance.put(`/api/academic/piket/${id}`, data),
   deletePiket: (id) => axiosInstance.delete(`/api/academic/piket/${id}`),
+
+  // --- JADWAL UPACARA ---
+  getAllUpacara: () => axiosInstance.get('/api/academic/upacara'),
+  createUpacara: (data) => axiosInstance.post('/api/academic/upacara', data),
+  updateUpacara: (id, data) => axiosInstance.put(`/api/academic/upacara/${id}`, data),
+  deleteUpacara: (id) => axiosInstance.delete(`/api/academic/upacara/${id}`),
 };

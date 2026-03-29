@@ -1,7 +1,5 @@
 import { BrowserRouter, Routes, Route, NavLink } from "react-router-dom";
 import { useState } from "react";
-// import UsersPage from "./pages/UsersPage";
-// import TodosPage from "./pages/TodosPage";
 import KelasPage from "./pages/tata-usaha/kelas/KelasPage";
 import SiswaPage from "./pages/tata-usaha/siswa/SiswaPage";
 import keycloak, { hasRole } from "./keycloak";
@@ -12,6 +10,7 @@ import ArsipSuratPage from "./pages/tata-usaha/arsip-surat/ArsipSuratPage";
 import MapelPage from "./pages/tata-usaha/mapel/MapelPage";
 import JadwalPage from "./pages/tata-usaha/jadwal/JadwalPage";
 import PiketPage from "./pages/tata-usaha/piket/PiketPage";
+import UpacaraPage from "./pages/tata-usaha/upacara/UpacaraPage";
 
 /**
  * Komponen reusable untuk grup menu per role (Dropdown)
@@ -176,6 +175,9 @@ const App = () => {
                   <NavLink to="/academic/piket" className={subNavClass}>
                     Jadwal Piket
                   </NavLink>
+                  <NavLink to="/academic/upacara" className={subNavClass}>
+                    Jadwal Upacara
+                  </NavLink>
                 </NavDropdown>
               )}
 
@@ -236,6 +238,7 @@ const App = () => {
             <Route path="/academic/mapel" element={<MapelPage />} />
             <Route path="/academic/jadwal" element={<JadwalPage />} />
             <Route path="/academic/piket" element={<PiketPage />} />
+            <Route path="/academic/upacara" element={<UpacaraPage />} />
             {/* Route lainnya bisa ditambahkan di sini */}
           </Routes>
         </main>

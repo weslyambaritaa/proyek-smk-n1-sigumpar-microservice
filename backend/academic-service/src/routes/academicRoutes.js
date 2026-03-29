@@ -9,6 +9,7 @@ const jadwalController = require('../controllers/jadwalController');
 const piketController = require('../controllers/piketController');
 const verifyToken = require('../middleware/auth'); 
 const upload = require('../middleware/upload');
+const upacaraController = require('../controllers/upacaraController');
 
 // Rute Kelas
 router.get('/kelas', verifyToken, kelasController.getAllKelas);
@@ -53,5 +54,11 @@ router.get('/piket', verifyToken, piketController.getAllPiket);
 router.post('/piket', verifyToken, piketController.createPiket);
 router.put('/piket/:id', verifyToken, piketController.updatePiket);
 router.delete('/piket/:id', verifyToken, piketController.deletePiket);
+
+// Rute Jadwal Upacara
+router.get('/upacara', verifyToken, upacaraController.getAllUpacara);
+router.post('/upacara', verifyToken, upacaraController.createUpacara);
+router.put('/upacara/:id', verifyToken, upacaraController.updateUpacara);
+router.delete('/upacara/:id', verifyToken, upacaraController.deleteUpacara);
 
 module.exports = router;
