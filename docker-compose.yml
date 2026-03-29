@@ -7,7 +7,7 @@ x-service-template: &service-template
     - NODE_ENV=development
     - KEYCLOAK_URL=http://keycloak:8080
     - KEYCLOAK_REALM=smk-sigumpar
-    - KEYCLOAK_CLIENT_ID=backend-client
+    - KEYCLOAK_CLIENT_ID=smk-sigumpar
     - DB_PASSWORD=password
 
 services:
