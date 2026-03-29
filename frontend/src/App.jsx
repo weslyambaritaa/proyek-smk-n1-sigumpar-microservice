@@ -11,6 +11,7 @@ import PengumumanPage from "./pages/tata-usaha/pengumuman/PengumumanPage";
 import ArsipSuratPage from "./pages/tata-usaha/arsip-surat/ArsipSuratPage";
 import MapelPage from "./pages/tata-usaha/mapel/MapelPage";
 import JadwalPage from "./pages/tata-usaha/jadwal/JadwalPage";
+import PiketPage from "./pages/tata-usaha/piket/PiketPage";
 
 /**
  * Komponen reusable untuk grup menu per role (Dropdown)
@@ -172,6 +173,9 @@ const App = () => {
                   <NavLink to="/academic/jadwal" className={subNavClass}>
                     Jadwal Mengajar
                   </NavLink>
+                  <NavLink to="/academic/piket" className={subNavClass}>
+                    Jadwal Piket
+                  </NavLink>
                 </NavDropdown>
               )}
 
@@ -231,6 +235,7 @@ const App = () => {
             <Route path="/academic/arsip-surat" element={<ArsipSuratPage />} />
             <Route path="/academic/mapel" element={<MapelPage />} />
             <Route path="/academic/jadwal" element={<JadwalPage />} />
+            <Route path="/academic/piket" element={<PiketPage />} />
             {/* Route lainnya bisa ditambahkan di sini */}
           </Routes>
         </main>
