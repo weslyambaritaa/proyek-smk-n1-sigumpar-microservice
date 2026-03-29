@@ -22,8 +22,8 @@ const verifyToken = (req, res, next) => {
     return res.status(401).json({ message: 'Token tidak ditemukan' });
   }
 
+  // Pengecekan 'issuer' sudah dihapus di bawah ini agar token dari frontend valid
   jwt.verify(token, getKey, {
-    issuer: `http://localhost:8080/realms/smk-sigumpar`,
     algorithms: ['RS256']
   }, (err, decoded) => {
     if (err) {

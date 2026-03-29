@@ -37,6 +37,6 @@ app.use((req, res) => {
 // Error handler (selalu di akhir)
 app.use(errorHandler);
 
-app.listen(PORT, () => {
-  console.log(`Auth Service running on port ${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Auth Service running on port ${PORT} (0.0.0.0)`);
 });
