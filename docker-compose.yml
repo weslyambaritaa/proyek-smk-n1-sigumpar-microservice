@@ -47,6 +47,8 @@ services:
     <<: *service-template
     build: ./backend/auth-service
     container_name: auth-service
+    ports:
+      - "3005:3005"
     environment:
       - PORT=3005
       - DB_NAME=auth_db
@@ -58,6 +60,8 @@ services:
     <<: *service-template
     build: ./backend/academic-service
     container_name: academic-service
+    ports:
+      - "3003:3003"
     environment:
       - PORT=3003
       - DB_NAME=academic_db
@@ -70,6 +74,8 @@ services:
     <<: *service-template
     build: ./backend/asset-service
     container_name: asset-service
+    ports:
+      - "3004:3004"
     environment:
       - PORT=3004
       - DB_NAME=asset_db
@@ -81,6 +87,8 @@ services:
     <<: *service-template
     build: ./backend/learning-service
     container_name: learning-service
+    ports:
+      - "3006:3006"
     environment:
       - PORT=3006
       - DB_NAME=learning_db
@@ -92,6 +100,8 @@ services:
     <<: *service-template
     build: ./backend/student-service
     container_name: student-service
+    ports:
+      - "3008:3008"
     environment:
       - PORT=3008
       - DB_NAME=student_db
@@ -103,6 +113,8 @@ services:
     <<: *service-template
     build: ./backend/vocational-service
     container_name: vocational-service
+    ports:
+      - "3007:3007"
     environment:
       - PORT=3007
       - DB_NAME=vocational_db
