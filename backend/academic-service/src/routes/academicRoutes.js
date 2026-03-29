@@ -7,15 +7,6 @@ const {
   deleteAbsensiSiswa,
 } = require("../controllers/absensiSiswaController");
 
-const router = express.Router();
-
-router.post("/", createAbsensiSiswa);
-router.get("/", getAllAbsensiSiswa);
-router.get("/:id", getAbsensiSiswaById);
-router.put("/:id", updateAbsensiSiswa);
-router.delete("/:id", deleteAbsensiSiswa);
-
-module.exports = router;
 const arsipSuratController = require("../controllers/arsipSuratController");
 const kelasController = require("../controllers/kelasController");
 const pengumumanController = require("../controllers/pengumumanController");
@@ -25,11 +16,18 @@ const jadwalController = require("../controllers/jadwalController");
 const verifyToken = require("../middleware/auth");
 const upload = require("../middleware/upload");
 
+const router = express.Router();
+
+// Rute Absensi Siswa
+router.post("/absensi-siswa", verifyToken, createAbsensiSiswa);
+router.get("/absensi-siswa", verifyToken, getAllAbsensiSiswa);
+router.get("/absensi-siswa/:id", verifyToken, getAbsensiSiswaById);
+router.put("/absensi-siswa/:id", verifyToken, updateAbsensiSiswa);
+router.delete("/absensi-siswa/:id", verifyToken, deleteAbsensiSiswa);
+
 // Rute Kelas
 router.get("/kelas", verifyToken, kelasController.getAllKelas);
 router.post("/kelas", verifyToken, kelasController.createKelas);
-
-// Tambahkan :id di rute bawah ini
 router.put("/kelas/:id", verifyToken, kelasController.updateKelas);
 router.delete("/kelas/:id", verifyToken, kelasController.deleteKelas);
 
@@ -55,7 +53,6 @@ router.delete(
 
 // Rute Arsip Surat
 router.get("/arsip-surat", verifyToken, arsipSuratController.getAllArsipSurat);
-// Gunakan upload.single('file') untuk memproses form-data yang memiliki input field bernama 'file'
 router.post(
   "/arsip-surat",
   verifyToken,

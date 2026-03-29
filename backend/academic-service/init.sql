@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS siswa (
 );
 
 -- Tabel absensi
-CREATE TABLE IF NOT EXISTS absensi (
+CREATE TABLE IF NOT EXISTS absensi_siswa (
     id_absensi UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     id_siswa UUID NOT NULL REFERENCES siswa(id_siswa) ON DELETE CASCADE,
     tanggal DATE NOT NULL,
@@ -30,26 +30,6 @@ CREATE TABLE IF NOT EXISTS absensi (
 -- Indeks untuk mempercepat pencarian berdasarkan id_siswa dan tanggal
 CREATE INDEX idx_absensi_id_siswa ON absensi(id_siswa);
 CREATE INDEX idx_absensi_tanggal ON absensi(tanggal);
-
--- Data dummy siswa
-INSERT INTO siswa (id_siswa, id_kelas, namaSiswa, NIS) VALUES
-    ('11111111-1111-1111-1111-111111111111', 'kelas-1', 'Budi Santoso', '12345'),
-    ('22222222-2222-2222-2222-222222222222', 'kelas-1', 'Siti Rahayu', '12346'),
-    ('33333333-3333-3333-3333-333333333333', 'kelas-2', 'Ahmad Wijaya', '12347'),
-    ('44444444-4444-4444-4444-444444444444', 'kelas-2', 'Dewi Lestari', '12348'),
-    ('55555555-5555-5555-5555-555555555555', 'kelas-3', 'Eko Prasetyo', '12349')
-ON CONFLICT (NIS) DO NOTHING;
-
--- Data dummy absensi_siswa
-INSERT INTO absensi_siswa (id_siswa, tanggal, status, keterangan) VALUES
-    ('11111111-1111-1111-1111-111111111111', '2025-03-28', 'hadir', 'Tepat waktu'),
-    ('11111111-1111-1111-1111-111111111111', '2025-03-27', 'hadir', 'Tepat waktu'),
-    ('22222222-2222-2222-2222-222222222222', '2025-03-28', 'izin', 'Sakit'),
-    ('22222222-2222-2222-2222-222222222222', '2025-03-27', 'sakit', 'Demam'),
-    ('33333333-3333-3333-3333-333333333333', '2025-03-28', 'alpa', 'Tidak hadir tanpa kabar'),
-    ('44444444-4444-4444-4444-444444444444', '2025-03-28', 'terlambat', 'Datang jam 08:15'),
-    ('55555555-5555-5555-5555-555555555555', '2025-03-28', 'hadir', 'Tepat waktu')
-ON CONFLICT (id_siswa, tanggal) DO NOTHING;
 
 CREATE TABLE IF NOT EXISTS mata_pelajaran (
     id SERIAL PRIMARY KEY,

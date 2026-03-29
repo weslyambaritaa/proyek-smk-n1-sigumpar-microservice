@@ -2,8 +2,8 @@ const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
 const morgan = require("morgan");
-const path = require('path'); // Posisikan import di atas
-const academicRoutes = require('./routes/academicRoutes'); 
+const path = require("path"); // Posisikan import di atas
+const academicRoutes = require("./routes/academicRoutes");
 const { errorHandler } = require("./middleware/errorHandler");
 
 const app = express();
@@ -19,7 +19,10 @@ app.use(express.json());
 // POSISI YANG BENAR UNTUK FOLDER UPLOADS
 // Harus di atas 404 handler!
 // =======================================================
-app.use('/api/academic/uploads', express.static(path.join(__dirname, '../uploads')));
+app.use(
+  "/api/academic/uploads",
+  express.static(path.join(__dirname, "../uploads")),
+);
 
 // Health check endpoint
 app.get("/health", (req, res) => {
