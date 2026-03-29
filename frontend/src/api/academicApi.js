@@ -29,6 +29,7 @@ export const academicApi = {
     headers: { 'Content-Type': 'multipart/form-data' }
   }),
   deleteArsipSurat: (id) => axiosInstance.delete(`/api/academic/arsip-surat/${id}`),
+  downloadFile: (fileUrl) => axiosInstance.get(fileUrl, { responseType: 'blob' }),
 
   // Pencarian guru mapel ke auth-service (Asumsi Anda menggunakan role=guru)
   searchGuru: (query) => axiosInstance.get(`/api/auth/users/search?role=guru&q=${query}`),
