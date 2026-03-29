@@ -6,6 +6,7 @@ const pengumumanController = require('../controllers/pengumumanController');
 const siswaController = require('../controllers/siswaController');
 const mapelController = require('../controllers/mapelController');
 const jadwalController = require('../controllers/jadwalController');
+const piketController = require('../controllers/piketController');
 const verifyToken = require('../middleware/auth'); 
 const upload = require('../middleware/upload');
 
@@ -46,5 +47,11 @@ router.get('/jadwal', verifyToken, jadwalController.getAllJadwal);
 router.post('/jadwal', verifyToken, jadwalController.createJadwal);
 router.put('/jadwal/:id', verifyToken, jadwalController.updateJadwal);
 router.delete('/jadwal/:id', verifyToken, jadwalController.deleteJadwal);
+
+// Rute Jadwal Piket
+router.get('/piket', verifyToken, piketController.getAllPiket);
+router.post('/piket', verifyToken, piketController.createPiket);
+router.put('/piket/:id', verifyToken, piketController.updatePiket);
+router.delete('/piket/:id', verifyToken, piketController.deletePiket);
 
 module.exports = router;
