@@ -1,10 +1,7 @@
 const pool = require("../config/db");
 const { createError } = require("../middleware/errorHandler");
 
-<<<<<<< Updated upstream
-=======
 // 🔢 HITUNG NILAI AKHIR
->>>>>>> Stashed changes
 const calculateFinalScore = ({
   tugas = 0,
   kuis = 0,
@@ -12,22 +9,13 @@ const calculateFinalScore = ({
   uas = 0,
   praktik = 0,
 }) => {
-<<<<<<< Updated upstream
-  const finalScore =
-=======
   const total =
->>>>>>> Stashed changes
     Number(tugas) * 0.2 +
     Number(kuis) * 0.15 +
     Number(uts) * 0.2 +
     Number(uas) * 0.25 +
     Number(praktik) * 0.2;
 
-<<<<<<< Updated upstream
-  return Number(finalScore.toFixed(2));
-};
-
-=======
   return Number(total.toFixed(2));
 };
 
@@ -39,20 +27,11 @@ const validateScore = (value, name) => {
 };
 
 // 📥 GET ALL (FILTER + SEARCH)
->>>>>>> Stashed changes
 const getGrades = async (req, res, next) => {
   try {
     const { mapel, kelas, tahunAjar, search } = req.query;
 
-<<<<<<< Updated upstream
-    let query = `
-      SELECT *
-      FROM student_grades
-      WHERE 1=1
-    `;
-=======
     let query = `SELECT * FROM student_grades WHERE 1=1`;
->>>>>>> Stashed changes
     const values = [];
     let idx = 1;
 
@@ -93,10 +72,7 @@ const getGrades = async (req, res, next) => {
   }
 };
 
-<<<<<<< Updated upstream
-=======
 // 📥 GET BY ID
->>>>>>> Stashed changes
 const getGradeById = async (req, res, next) => {
   try {
     const result = await pool.query(
@@ -105,11 +81,7 @@ const getGradeById = async (req, res, next) => {
     );
 
     if (result.rows.length === 0) {
-<<<<<<< Updated upstream
-      throw createError(404, `Nilai dengan ID '${req.params.id}' tidak ditemukan`);
-=======
       throw createError(404, "Data tidak ditemukan");
->>>>>>> Stashed changes
     }
 
     res.status(200).json({
@@ -121,10 +93,7 @@ const getGradeById = async (req, res, next) => {
   }
 };
 
-<<<<<<< Updated upstream
-=======
 // 💾 CREATE + UPDATE (ON CONFLICT)
->>>>>>> Stashed changes
 const saveGrades = async (req, res, next) => {
   const client = await pool.connect();
 
@@ -153,8 +122,6 @@ const saveGrades = async (req, res, next) => {
         throw createError(400, "student_id dan student_name wajib diisi");
       }
 
-<<<<<<< Updated upstream
-=======
       // 🔒 VALIDASI NILAI
       validateScore(tugas, "tugas");
       validateScore(kuis, "kuis");
@@ -162,7 +129,6 @@ const saveGrades = async (req, res, next) => {
       validateScore(uas, "uas");
       validateScore(praktik, "praktik");
 
->>>>>>> Stashed changes
       const nilai_akhir = calculateFinalScore({
         tugas,
         kuis,
@@ -173,26 +139,6 @@ const saveGrades = async (req, res, next) => {
 
       await client.query(
         `
-<<<<<<< Updated upstream
-        INSERT INTO student_grades
-          (
-            student_id,
-            student_name,
-            nis,
-            mapel,
-            kelas,
-            tahun_ajar,
-            tugas,
-            kuis,
-            uts,
-            uas,
-            praktik,
-            nilai_akhir,
-            updated_at
-          )
-        VALUES
-          ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, CURRENT_TIMESTAMP)
-=======
         INSERT INTO student_grades (
           student_id, student_name, nis,
           mapel, kelas, tahun_ajar,
@@ -200,7 +146,6 @@ const saveGrades = async (req, res, next) => {
           nilai_akhir, updated_at
         )
         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,CURRENT_TIMESTAMP)
->>>>>>> Stashed changes
         ON CONFLICT (student_id, mapel, kelas, tahun_ajar)
         DO UPDATE SET
           student_name = EXCLUDED.student_name,
@@ -244,8 +189,6 @@ const saveGrades = async (req, res, next) => {
   }
 };
 
-<<<<<<< Updated upstream
-=======
 // ✏️ UPDATE MANUAL
 const updateGrade = async (req, res, next) => {
   try {
@@ -310,14 +253,10 @@ const deleteGrade = async (req, res, next) => {
   }
 };
 
->>>>>>> Stashed changes
 module.exports = {
   getGrades,
   getGradeById,
   saveGrades,
-<<<<<<< Updated upstream
-=======
   updateGrade,
   deleteGrade,
->>>>>>> Stashed changes
 };

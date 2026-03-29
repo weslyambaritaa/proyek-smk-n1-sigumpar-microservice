@@ -17,11 +17,7 @@
     "jwks-rsa": "^4.0.1",
     "keycloak-connect": "^26.1.1",
     "morgan": "^1.10.1",
-<<<<<<< Updated upstream
-    "pg": "^8.12.0",
-=======
     "pg": "^8.11.0",
->>>>>>> Stashed changes
     "uuid": "^13.0.0"
   },
   "devDependencies": {
