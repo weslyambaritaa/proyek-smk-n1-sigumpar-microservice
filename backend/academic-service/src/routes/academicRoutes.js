@@ -12,6 +12,12 @@ const upload = require('../middleware/upload');
 const upacaraController = require('../controllers/upacaraController');
 const extractIdentity = require('../middleware/extractIdentity');
 
+// === WALI KELAS ===
+const parentingController = require('../controllers/parentingController');
+const kebersihanController = require('../controllers/kebersihanController');
+const refleksiController = require('../controllers/refleksiController');
+const berandaWaliKelasController = require('../controllers/berandaWaliKelasController');
+
 // Rute Kelas
 router.get('/kelas', extractIdentity, kelasController.getAllKelas);
 router.post('/kelas', extractIdentity, kelasController.createKelas);
@@ -60,5 +66,34 @@ router.get('/upacara', extractIdentity, upacaraController.getAllUpacara);
 router.post('/upacara', extractIdentity, upacaraController.createUpacara);
 router.put('/upacara/:id', extractIdentity, upacaraController.updateUpacara);
 router.delete('/upacara/:id', extractIdentity, upacaraController.deleteUpacara);
+
+// ==========================================
+// === RUTE WALI KELAS ===
+// ==========================================
+
+// Beranda (dashboard ringkasan)
+router.get('/walas/beranda', extractIdentity, berandaWaliKelasController.getBerandaData);
+
+// Parenting
+router.get('/walas/parenting', extractIdentity, parentingController.getAllParenting);
+router.get('/walas/parenting/:id', extractIdentity, parentingController.getParentingById);
+router.post('/walas/parenting', extractIdentity, parentingController.createParenting);
+router.put('/walas/parenting/:id', extractIdentity, parentingController.updateParenting);
+router.delete('/walas/parenting/:id', extractIdentity, parentingController.deleteParenting);
+
+// Kebersihan Kelas
+router.get('/walas/kebersihan', extractIdentity, kebersihanController.getAllKebersihan);
+router.get('/walas/kebersihan/rekap/:kelas_id', extractIdentity, kebersihanController.getRekapKebersihan);
+router.get('/walas/kebersihan/:id', extractIdentity, kebersihanController.getKebersihanById);
+router.post('/walas/kebersihan', extractIdentity, kebersihanController.createKebersihan);
+router.put('/walas/kebersihan/:id', extractIdentity, kebersihanController.updateKebersihan);
+router.delete('/walas/kebersihan/:id', extractIdentity, kebersihanController.deleteKebersihan);
+
+// Refleksi Kelas
+router.get('/walas/refleksi', extractIdentity, refleksiController.getAllRefleksi);
+router.get('/walas/refleksi/:id', extractIdentity, refleksiController.getRefleksiById);
+router.post('/walas/refleksi', extractIdentity, refleksiController.createRefleksi);
+router.put('/walas/refleksi/:id', extractIdentity, refleksiController.updateRefleksi);
+router.delete('/walas/refleksi/:id', extractIdentity, refleksiController.deleteRefleksi);
 
 module.exports = router;

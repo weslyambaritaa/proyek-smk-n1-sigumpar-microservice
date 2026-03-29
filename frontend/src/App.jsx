@@ -12,6 +12,12 @@ import JadwalPage from "./pages/tata-usaha/jadwal/JadwalPage";
 import PiketPage from "./pages/tata-usaha/piket/PiketPage";
 import UpacaraPage from "./pages/tata-usaha/upacara/UpacaraPage";
 
+// === WALI KELAS ===
+import BerandaWaliKelas from "./pages/wali-kelas/beranda/BerandaWaliKelas";
+import ParentingPage from "./pages/wali-kelas/parenting/ParentingPage";
+import KebersihanPage from "./pages/wali-kelas/kebersihan/KebersihanPage";
+import RefleksiPage from "./pages/wali-kelas/refleksi/RefleksiPage";
+
 /**
  * Komponen reusable untuk grup menu per role (Dropdown)
  */
@@ -138,8 +144,20 @@ const App = () => {
                   isOpen={openMenus["walas"]}
                   onClick={() => toggleMenu("walas")}
                 >
-                  <NavLink to="/presensi-kelas" className={subNavClass}>
-                    Presensi Kelas
+                  <NavLink to="/walas/beranda" className={subNavClass}>
+                    Beranda
+                  </NavLink>
+                  <NavLink to="/walas/parenting" className={subNavClass}>
+                    Parenting
+                  </NavLink>
+                  <NavLink to="/walas/kebersihan" className={subNavClass}>
+                    Kebersihan Kelas
+                  </NavLink>
+                  <NavLink to="/walas/refleksi" className={subNavClass}>
+                    Refleksi
+                  </NavLink>
+                  <NavLink to="/academic/pengumuman" className={subNavClass}>
+                    Pengumuman
                   </NavLink>
                 </NavDropdown>
               )}
@@ -239,6 +257,11 @@ const App = () => {
             <Route path="/academic/jadwal" element={<JadwalPage />} />
             <Route path="/academic/piket" element={<PiketPage />} />
             <Route path="/academic/upacara" element={<UpacaraPage />} />
+            {/* === WALI KELAS === */}
+            <Route path="/walas/beranda" element={<BerandaWaliKelas />} />
+            <Route path="/walas/parenting" element={<ParentingPage />} />
+            <Route path="/walas/kebersihan" element={<KebersihanPage />} />
+            <Route path="/walas/refleksi" element={<RefleksiPage />} />
             {/* Route lainnya bisa ditambahkan di sini */}
           </Routes>
         </main>
