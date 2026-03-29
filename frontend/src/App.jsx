@@ -10,6 +10,8 @@ import ArsipSuratPage from "./pages/tata-usaha/arsip-surat/ArsipSuratPage";
 import MapelPage from "./pages/tata-usaha/mapel/MapelPage";
 import JadwalPage from "./pages/tata-usaha/jadwal/JadwalPage";
 import AbsensiSiswa from "./pages/guru-mapel/absensi-siswa/AbsensiSiswa"; // <-- import halaman absensi siswa
+import PiketPage from "./pages/tata-usaha/piket/PiketPage";
+import UpacaraPage from "./pages/tata-usaha/upacara/UpacaraPage";
 
 const NavDropdown = ({ title, icon, children, isOpen, onClick }) => {
   return (
@@ -157,6 +159,12 @@ const App = () => {
                   <NavLink to="/academic/jadwal" className={subNavClass}>
                     Jadwal Mengajar
                   </NavLink>
+                  <NavLink to="/academic/piket" className={subNavClass}>
+                    Jadwal Piket
+                  </NavLink>
+                  <NavLink to="/academic/upacara" className={subNavClass}>
+                    Jadwal Upacara
+                  </NavLink>
                 </NavDropdown>
               )}
 
@@ -210,6 +218,9 @@ const App = () => {
             <Route path="/academic/jadwal" element={<JadwalPage />} />
             {/* ===== TAMBAH ROUTE ABSENSI SISWA ===== */}
             <Route path="/absensi-siswa" element={<AbsensiSiswa />} />
+            <Route path="/academic/piket" element={<PiketPage />} />
+            <Route path="/academic/upacara" element={<UpacaraPage />} />
+            {/* Route lainnya bisa ditambahkan di sini */}
           </Routes>
         </main>
       </div>
