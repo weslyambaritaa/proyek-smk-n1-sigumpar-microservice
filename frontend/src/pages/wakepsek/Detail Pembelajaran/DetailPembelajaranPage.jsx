@@ -73,7 +73,7 @@ function FileRow({ label, url, base }) {
   return (
     <div className="flex items-center justify-between py-2 border-b border-gray-100">
       <span className="text-gray-700 font-medium">{label}</span>
-      
+      <a
         href={`${base}${url}`}
         target="_blank"
         rel="noreferrer"

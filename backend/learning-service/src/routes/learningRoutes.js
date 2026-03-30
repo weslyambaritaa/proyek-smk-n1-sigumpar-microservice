@@ -5,16 +5,14 @@ const extractIdentity = require("../middleware/extractIdentity");
 const roleGuard = require("../middleware/roleGuard");
 const { uploadPerangkat, uploadFoto } = require("../middleware/upload");
 
-const absensiCtrl     = require("../controllers/absensiGuruController");
-const catatanCtrl     = require("../controllers/catatanMengajarController");
-const evaluasiCtrl    = require("../controllers/evaluasiGuruController");
-const perangkatCtrl   = require("../controllers/perangkatController");
+const absensiCtrl       = require("../controllers/absensiGuruController");
+const catatanCtrl       = require("../controllers/catatanMengajarController");
+const evaluasiCtrl      = require("../controllers/evaluasiGuruController");
+const perangkatCtrl     = require("../controllers/perangkatController");
 const reviewKepsekCtrl  = require("../controllers/reviewKepsekController");
 const reviewWakasekCtrl = require("../controllers/reviewWakasekController");
 
-// ================================================================
-// FITUR 5.1 — ABSENSI GURU
-// ================================================================
+// ABSENSI GURU
 router.get("/absensi/rekap",     extractIdentity, roleGuard("kepala-sekolah", "waka-sekolah"), absensiCtrl.getRekapAbsensi);
 router.get("/absensi/guru-saya", extractIdentity, roleGuard("guru-mapel"), absensiCtrl.getAbsensiSaya);
 router.get("/absensi",           extractIdentity, roleGuard("kepala-sekolah", "waka-sekolah"), absensiCtrl.getAllAbsensi);
@@ -23,9 +21,7 @@ router.post("/absensi",          extractIdentity, roleGuard("guru-mapel"), uploa
 router.put("/absensi/:id",       extractIdentity, roleGuard("guru-mapel"), uploadFoto, absensiCtrl.updateAbsensi);
 router.delete("/absensi/:id",    extractIdentity, roleGuard("guru-mapel"), absensiCtrl.deleteAbsensi);
 
-// ================================================================
-// FITUR 5.2 — CATATAN MENGAJAR
-// ================================================================
+// CATATAN MENGAJAR
 router.get("/catatan-mengajar/guru-saya", extractIdentity, roleGuard("guru-mapel"), catatanCtrl.getCatatanSaya);
 router.get("/catatan-mengajar",           extractIdentity, roleGuard("kepala-sekolah", "waka-sekolah"), catatanCtrl.getAllCatatan);
 router.get("/catatan-mengajar/:id",       extractIdentity, roleGuard("guru-mapel", "kepala-sekolah", "waka-sekolah"), catatanCtrl.getCatatanById);
@@ -33,19 +29,14 @@ router.post("/catatan-mengajar",          extractIdentity, roleGuard("guru-mapel
 router.put("/catatan-mengajar/:id",       extractIdentity, roleGuard("guru-mapel"), catatanCtrl.updateCatatan);
 router.delete("/catatan-mengajar/:id",    extractIdentity, roleGuard("guru-mapel"), catatanCtrl.deleteCatatan);
 
-// ================================================================
-// FITUR 5.3 — EVALUASI GURU
-// ================================================================
+// EVALUASI GURU
 router.get("/evaluasi",        extractIdentity, roleGuard("kepala-sekolah", "waka-sekolah"), evaluasiCtrl.getAllEvaluasi);
 router.get("/evaluasi/:id",    extractIdentity, roleGuard("kepala-sekolah", "waka-sekolah"), evaluasiCtrl.getEvaluasiById);
 router.post("/evaluasi",       extractIdentity, roleGuard("kepala-sekolah", "waka-sekolah"), evaluasiCtrl.createEvaluasi);
 router.put("/evaluasi/:id",    extractIdentity, roleGuard("kepala-sekolah", "waka-sekolah"), evaluasiCtrl.updateEvaluasi);
 router.delete("/evaluasi/:id", extractIdentity, roleGuard("kepala-sekolah"), evaluasiCtrl.deleteEvaluasi);
 
-// ================================================================
-// FITUR 5.4 — PERANGKAT PEMBELAJARAN
-// Route spesifik harus di atas /:id
-// ================================================================
+// PERANGKAT PEMBELAJARAN
 router.get("/perangkat/dashboard-wakasek",   extractIdentity, roleGuard("waka-sekolah", "kepala-sekolah"), perangkatCtrl.getDashboardWakasek);
 router.get("/perangkat/daftar-guru",         extractIdentity, roleGuard("waka-sekolah", "kepala-sekolah"), perangkatCtrl.getDaftarGuruStatus);
 router.get("/perangkat/detail-guru/:userId", extractIdentity, roleGuard("waka-sekolah", "kepala-sekolah"), perangkatCtrl.getDetailGuruById);
@@ -56,18 +47,14 @@ router.post("/perangkat",                    extractIdentity, roleGuard("guru-ma
 router.put("/perangkat/:id",                 extractIdentity, roleGuard("guru-mapel"), uploadPerangkat, perangkatCtrl.updatePerangkat);
 router.delete("/perangkat/:id",              extractIdentity, roleGuard("guru-mapel", "waka-sekolah", "kepala-sekolah"), perangkatCtrl.deletePerangkat);
 
-// ================================================================
-// FITUR 5.5 — REVIEW KEPALA SEKOLAH
-// ================================================================
-router.get("/review-kepsek",       extractIdentity, roleGuard("kepala-sekolah", "waka-sekolah"), reviewKepsekCtrl.getAllReviewKepsek);
-router.get("/review-kepsek/:id",   extractIdentity, roleGuard("kepala-sekolah", "waka-sekolah"), reviewKepsekCtrl.getReviewKepsekById);
-router.post("/review-kepsek",      extractIdentity, roleGuard("kepala-sekolah"), reviewKepsekCtrl.createReviewKepsek);
-router.put("/review-kepsek/:id",   extractIdentity, roleGuard("kepala-sekolah"), reviewKepsekCtrl.updateReviewKepsek);
-router.delete("/review-kepsek/:id",extractIdentity, roleGuard("kepala-sekolah"), reviewKepsekCtrl.deleteReviewKepsek);
+// REVIEW KEPALA SEKOLAH
+router.get("/review-kepsek",        extractIdentity, roleGuard("kepala-sekolah", "waka-sekolah"), reviewKepsekCtrl.getAllReviewKepsek);
+router.get("/review-kepsek/:id",    extractIdentity, roleGuard("kepala-sekolah", "waka-sekolah"), reviewKepsekCtrl.getReviewKepsekById);
+router.post("/review-kepsek",       extractIdentity, roleGuard("kepala-sekolah"), reviewKepsekCtrl.createReviewKepsek);
+router.put("/review-kepsek/:id",    extractIdentity, roleGuard("kepala-sekolah"), reviewKepsekCtrl.updateReviewKepsek);
+router.delete("/review-kepsek/:id", extractIdentity, roleGuard("kepala-sekolah"), reviewKepsekCtrl.deleteReviewKepsek);
 
-// ================================================================
-// FITUR 5.6 — REVIEW / INSTRUKSI WAKASEK
-// ================================================================
+// REVIEW WAKASEK
 router.get("/review-wakasek",        extractIdentity, roleGuard("waka-sekolah", "kepala-sekolah"), reviewWakasekCtrl.getAllReviewWakasek);
 router.get("/review-wakasek/:id",    extractIdentity, roleGuard("waka-sekolah", "kepala-sekolah"), reviewWakasekCtrl.getReviewWakasekById);
 router.post("/review-wakasek",       extractIdentity, roleGuard("waka-sekolah"), reviewWakasekCtrl.createReviewWakasek);
