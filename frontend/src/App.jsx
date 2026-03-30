@@ -11,6 +11,10 @@ import MapelPage from "./pages/tata-usaha/mapel/MapelPage";
 import JadwalPage from "./pages/tata-usaha/jadwal/JadwalPage";
 import PiketPage from "./pages/tata-usaha/piket/PiketPage";
 import UpacaraPage from "./pages/tata-usaha/upacara/UpacaraPage";
+import DashboardWakasek from "./pages/wakepsek/Dashboard/DashboarPage";
+import DaftarGuruPage from "./pages/wakepsek/Daftar Guru/DaftarGuruPage";
+import DetailPembelajaranPage from "./pages/wakepsek/Detail Pembelajaran/DetailPembelajaranPage";
+import FormInstruksi from "./pages/wakepsek/Form Instruksi/FormInstruksi";
 
 /**
  * Komponen reusable untuk grup menu per role (Dropdown)
@@ -110,8 +114,14 @@ const App = () => {
                   isOpen={openMenus["waka"]}
                   onClick={() => toggleMenu("waka")}
                 >
-                  <NavLink to="/kurikulum" className={subNavClass}>
-                    Kurikulum
+                  <NavLink to="/wakepsek/dashboard" className={subNavClass}>
+                    Dashboard
+                  </NavLink>
+                  <NavLink to="/wakepsek/daftar-guru" className={subNavClass}>
+                    Daftar Guru
+                  </NavLink>
+                  <NavLink to="/wakepsek/form-instruksi" className={subNavClass}>
+                    Form Instruksi
                   </NavLink>
                 </NavDropdown>
               )}
@@ -239,6 +249,14 @@ const App = () => {
             <Route path="/academic/jadwal" element={<JadwalPage />} />
             <Route path="/academic/piket" element={<PiketPage />} />
             <Route path="/academic/upacara" element={<UpacaraPage />} />
+            {/* Route Wakasek */}
+            <Route path="/wakepsek/dashboard" element={<DashboardWakasek />} />
+            <Route path="/wakepsek/daftar-guru" element={<DaftarGuruPage />} />
+            <Route
+              path="/wakepsek/detail-pembelajaran/:userId"
+              element={<DetailPembelajaranPage />}
+            />
+            <Route path="/wakepsek/form-instruksi" element={<FormInstruksi />} />
             {/* Route lainnya bisa ditambahkan di sini */}
           </Routes>
         </main>
