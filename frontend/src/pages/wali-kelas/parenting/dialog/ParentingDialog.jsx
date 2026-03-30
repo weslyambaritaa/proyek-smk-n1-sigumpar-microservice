@@ -1,41 +1,29 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
-const JENIS_KOMUNIKASI = [
-  { value: 'tatap_muka', label: 'Tatap Muka' },
-  { value: 'telepon',    label: 'Telepon'    },
-  { value: 'whatsapp',   label: 'WhatsApp'   },
-  { value: 'surat',      label: 'Surat'      },
-];
-
-const ParentingDialog = ({ isOpen, onClose, onSubmit, editData, siswaDiKelas }) => {
+const ParentingDialog = ({ isOpen, onClose, onSubmit, kelasId }) => {
   const [form, setForm] = useState({
-    siswa_id: '',
     tanggal: new Date().toISOString().split('T')[0],
-    topik: '',
-    catatan: '',
-    jenis_komunikasi: 'tatap_muka',
+    kehadiran_ortu: '',
+    agenda_utama: '',
+    ringkasan_hasil: '',
   });
+  const [foto, setFoto] = useState(null);
+  const [fotoPreview, setFotoPreview] = useState(null);
   const [loading, setLoading] = useState(false);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
-    if (editData) {
+    if (isOpen) {
       setForm({
-        siswa_id:         String(editData.siswa_id),
-        tanggal:          editData.tanggal?.split('T')[0] ?? '',
-        topik:            editData.topik ?? '',
-        catatan:          editData.catatan ?? '',
-        jenis_komunikasi: editData.jenis_komunikasi ?? 'tatap_muka',
-      });
-    } else {
-      setForm({
-        siswa_id: '',
         tanggal: new Date().toISOString().split('T')[0],
-        topik: '',
-        catatan: '',
-        jenis_komunikasi: 'tatap_muka',
+        kehadiran_ortu: '',
+        agenda_utama: '',
+        ringkasan_hasil: '',
       });
+      setFoto(null);
+      setFotoPreview(null);
     }
-  }, [editData, isOpen]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -43,42 +31,49 @@ const ParentingDialog = ({ isOpen, onClose, onSubmit, editData, siswaDiKelas }) 
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
+  const handleFotoChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setFoto(file);
+    setFotoPreview(URL.createObjectURL(file));
+  };
+
   const handleSubmit = async () => {
-    if (!form.siswa_id || !form.tanggal || !form.topik.trim()) return;
+    if (!form.tanggal || !form.agenda_utama.trim()) return;
+
     setLoading(true);
-    await onSubmit({ ...form, siswa_id: parseInt(form.siswa_id) });
+
+    // Wajib pakai FormData karena ada upload foto
+    const formData = new FormData();
+    formData.append('kelas_id', kelasId);
+    formData.append('tanggal', form.tanggal);
+    formData.append('kehadiran_ortu', form.kehadiran_ortu || 0);
+    formData.append('agenda_utama', form.agenda_utama);
+    formData.append('ringkasan_hasil', form.ringkasan_hasil);
+    if (foto) {
+      formData.append('foto', foto);
+    }
+
+    await onSubmit(formData);
     setLoading(false);
   };
 
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
+
+        {/* Header */}
         <div className="p-6 border-b border-gray-100">
-          <h2 className="text-lg font-bold text-gray-800">
-            {editData ? 'Edit Catatan Parenting' : 'Tambah Catatan Parenting'}
-          </h2>
+          <h2 className="text-lg font-bold text-gray-800">Tambah Catatan Parenting</h2>
         </div>
 
-        <div className="p-6 space-y-4">
-          {/* Siswa */}
-          <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Siswa *</label>
-            <select
-              name="siswa_id"
-              value={form.siswa_id}
-              onChange={handleChange}
-              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">— Pilih siswa —</option>
-              {siswaDiKelas.map(s => (
-                <option key={s.id} value={s.id}>{s.nama_lengkap} ({s.nisn})</option>
-              ))}
-            </select>
-          </div>
+        <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
 
           {/* Tanggal */}
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Tanggal *</label>
+            <label className="block text-xs font-semibold text-gray-600 mb-1.5">
+              Tanggal <span className="text-red-500">*</span>
+            </label>
             <input
               type="date"
               name="tanggal"
@@ -88,54 +83,83 @@ const ParentingDialog = ({ isOpen, onClose, onSubmit, editData, siswaDiKelas }) 
             />
           </div>
 
-          {/* Jenis Komunikasi */}
+          {/* Jumlah Kehadiran Ortu */}
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Jenis Komunikasi</label>
-            <div className="flex flex-wrap gap-2">
-              {JENIS_KOMUNIKASI.map(j => (
-                <button
-                  key={j.value}
-                  type="button"
-                  onClick={() => setForm(prev => ({ ...prev, jenis_komunikasi: j.value }))}
-                  className={`text-xs px-3 py-1.5 rounded-full border transition-all ${
-                    form.jenis_komunikasi === j.value
-                      ? 'bg-blue-600 text-white border-blue-600'
-                      : 'border-gray-200 text-gray-600 hover:border-blue-300'
-                  }`}
-                >
-                  {j.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Topik */}
-          <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Topik Pembicaraan *</label>
+            <label className="block text-xs font-semibold text-gray-600 mb-1.5">
+              Jumlah Kehadiran Orang Tua
+            </label>
             <input
-              type="text"
-              name="topik"
-              value={form.topik}
+              type="number"
+              name="kehadiran_ortu"
+              value={form.kehadiran_ortu}
               onChange={handleChange}
-              placeholder="mis. Perkembangan belajar siswa"
+              min={0}
+              placeholder="mis. 25"
               className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
-          {/* Catatan */}
+          {/* Agenda Utama */}
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Catatan</label>
+            <label className="block text-xs font-semibold text-gray-600 mb-1.5">
+              Agenda Utama <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              name="agenda_utama"
+              value={form.agenda_utama}
+              onChange={handleChange}
+              placeholder="mis. Pembahasan hasil belajar siswa"
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          {/* Ringkasan Hasil */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1.5">
+              Ringkasan Hasil
+            </label>
             <textarea
-              name="catatan"
-              value={form.catatan}
+              name="ringkasan_hasil"
+              value={form.ringkasan_hasil}
               onChange={handleChange}
               rows={3}
-              placeholder="Catatan hasil pertemuan/komunikasi..."
+              placeholder="Ringkasan hasil pertemuan parenting..."
               className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
             />
           </div>
+
+          {/* Upload Foto */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1.5">
+              Foto Kegiatan (opsional)
+            </label>
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              className="w-full border-2 border-dashed border-gray-200 rounded-xl p-4 text-center cursor-pointer hover:border-blue-400 transition-colors"
+            >
+              {fotoPreview ? (
+                <img
+                  src={fotoPreview}
+                  alt="preview"
+                  className="mx-auto max-h-32 rounded-lg object-cover"
+                />
+              ) : (
+                <p className="text-sm text-gray-400">Klik untuk upload foto</p>
+              )}
+            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleFotoChange}
+              className="hidden"
+            />
+          </div>
+
         </div>
 
+        {/* Footer */}
         <div className="p-6 border-t border-gray-100 flex justify-end gap-3">
           <button
             onClick={onClose}
@@ -145,12 +169,13 @@ const ParentingDialog = ({ isOpen, onClose, onSubmit, editData, siswaDiKelas }) 
           </button>
           <button
             onClick={handleSubmit}
-            disabled={loading || !form.siswa_id || !form.topik.trim()}
+            disabled={loading || !form.tanggal || !form.agenda_utama.trim()}
             className="px-4 py-2 text-sm bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50"
           >
-            {loading ? 'Menyimpan...' : editData ? 'Simpan Perubahan' : 'Tambah'}
+            {loading ? 'Menyimpan...' : 'Tambah'}
           </button>
         </div>
+
       </div>
     </div>
   );

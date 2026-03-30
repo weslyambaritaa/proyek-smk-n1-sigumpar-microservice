@@ -3,10 +3,7 @@ const pool = require('../config/db');
 // ==========================================
 // --- KONTROLLER PARENTING KELAS MASSAL ---
 // ==========================================
-// Mencatat riwayat pertemuan wali kelas dengan orang tua secara massal per kelas
 
-// GET semua catatan parenting
-// Query param opsional: ?kelas_id=1
 exports.getAllParenting = async (req, res) => {
     const { kelas_id } = req.query;
     try {
@@ -26,12 +23,10 @@ exports.getAllParenting = async (req, res) => {
     }
 };
 
-// GET satu catatan parenting by ID
 exports.getParentingById = async (req, res) => {
     const { id } = req.params;
     try {
         const result = await pool.query(`SELECT * FROM parenting WHERE id = $1`, [id]);
-
         if (result.rowCount === 0) {
             return res.status(404).json({ message: 'Catatan parenting tidak ditemukan' });
         }
@@ -41,12 +36,19 @@ exports.getParentingById = async (req, res) => {
     }
 };
 
-// POST buat catatan parenting massal baru
 exports.createParenting = async (req, res) => {
+    // ===== DEBUG LOG - HAPUS SETELAH MASALAH TERSELESAIKAN =====
+    console.log('=== CREATE PARENTING DEBUG ===');
+    console.log('BODY:', req.body);
+    console.log('FILE:', req.file);
+    console.log('HEADERS content-type:', req.headers['content-type']);
+    // ===========================================================
+
     const { kelas_id, tanggal, kehadiran_ortu, agenda_utama, ringkasan_hasil } = req.body;
     const foto_url = req.file ? `/uploads/${req.file.filename}` : (req.body.foto_url || '');
 
     if (!kelas_id || !tanggal || !agenda_utama) {
+        console.log('VALIDASI GAGAL:', { kelas_id, tanggal, agenda_utama }); // DEBUG
         return res.status(400).json({ message: 'kelas_id, tanggal, dan agenda_utama wajib diisi' });
     }
 
@@ -62,7 +64,6 @@ exports.createParenting = async (req, res) => {
     }
 };
 
-// PUT update catatan parenting
 exports.updateParenting = async (req, res) => {
     const { id } = req.params;
     const { kelas_id, tanggal, kehadiran_ortu, agenda_utama, ringkasan_hasil } = req.body;
@@ -85,7 +86,6 @@ exports.updateParenting = async (req, res) => {
     }
 };
 
-// DELETE catatan parenting
 exports.deleteParenting = async (req, res) => {
     const { id } = req.params;
     try {

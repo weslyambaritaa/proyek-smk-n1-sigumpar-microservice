@@ -9,6 +9,7 @@ const ParentingPage = () => {
   const [selectedKelasId, setSelectedKelasId] = useState('');
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [isKelasLoaded, setIsKelasLoaded] = useState(false); // ✅ Track loading kelas
 
   const today = new Date().toISOString().split('T')[0];
   const [form, setForm] = useState({
@@ -19,32 +20,84 @@ const ParentingPage = () => {
     foto: null,
   });
 
+  // 🔹 Fetch daftar kelas
   useEffect(() => {
-    academicApi.getAllKelas()
-      .then(res => {
-        setKelasList(res.data);
-        if (res.data.length > 0) setSelectedKelasId(String(res.data[0].id));
-      })
-      .catch(() => toast.error('Gagal memuat daftar kelas'));
+    const loadKelas = async () => {
+      try {
+        console.log('📡 Fetching kelas list...');
+        const res = await academicApi.getAllKelas();
+        console.log('✅ Kelas response:', res.data);
+        
+        const kelasData = res.data || [];
+        setKelasList(kelasData);
+        
+        if (kelasData.length > 0) {
+          // ✅ Pastikan ID dikonversi ke string untuk konsistensi
+          const firstId = String(kelasData[0].id);
+          console.log('🎯 Set selectedKelasId:', firstId);
+          setSelectedKelasId(firstId);
+        } else {
+          console.warn('⚠️ Tidak ada data kelas ditemukan');
+          toast.error('Daftar kelas kosong');
+        }
+      } catch (err) {
+        console.error('❌ Gagal memuat daftar kelas:', err);
+        toast.error('Gagal memuat daftar kelas. Cek koneksi atau API.');
+      } finally {
+        setIsKelasLoaded(true); // ✅ Mark as loaded (even if failed)
+      }
+    };
+    
+    loadKelas();
   }, []);
 
+  // 🔹 Fetch data parenting ketika kelas dipilih
   useEffect(() => {
-    if (selectedKelasId) fetchData();
+    if (selectedKelasId) {
+      console.log('🔄 selectedKelasId berubah, fetch parenting:', selectedKelasId);
+      fetchData();
+    }
   }, [selectedKelasId]);
 
   const fetchData = () => {
     setLoading(true);
     waliKelasApi.getAllParenting(selectedKelasId)
-      .then(res => setData(res.data.data))
-      .catch(() => toast.error('Gagal memuat data parenting'))
+      .then(res => {
+        console.log('✅ Parenting data:', res.data?.data);
+        setData(res.data?.data || []);
+      })
+      .catch((err) => {
+        console.error('❌ Gagal memuat data parenting:', err.response?.data || err);
+        toast.error('Gagal memuat data parenting');
+      })
       .finally(() => setLoading(false));
   };
 
   const handleSubmit = async () => {
-    if (!form.tanggal || !form.agenda_utama.trim()) {
-      toast.error('Tanggal dan agenda utama wajib diisi');
+    // 🔍 Validasi 1: Pastikan kelas sudah loaded
+    if (!isKelasLoaded) {
+      toast.error('Masih memuat daftar kelas, tunggu sebentar...');
+      console.warn('⚠️ Submit ditolak: kelas belum loaded');
       return;
     }
+    
+    // 🔍 Validasi 2: selectedKelasId harus ada
+    if (!selectedKelasId) {
+      toast.error('Pilih kelas terlebih dahulu');
+      console.error('❌ Validation Error: selectedKelasId kosong');
+      console.error('   - kelasList:', kelasList);
+      console.error('   - selectedKelasId:', selectedKelasId);
+      console.error('   - isKelasLoaded:', isKelasLoaded);
+      return;
+    }
+    
+    // 🔍 Validasi 3: Field wajib form
+    if (!form.tanggal || !form.agenda_utama.trim()) {
+      toast.error('Tanggal dan agenda utama wajib diisi');
+      console.error('❌ Validation Error: tanggal/agenda_utama kosong');
+      return;
+    }
+
     setSaving(true);
     try {
       const fd = new FormData();
@@ -55,12 +108,47 @@ const ParentingPage = () => {
       fd.append('ringkasan_hasil', form.ringkasan_hasil);
       if (form.foto) fd.append('foto', form.foto);
 
-      await waliKelasApi.createParenting(fd);
+      // 🔍 DEBUG: Log FormData
+      console.log('📤 [DEBUG] FormData entries:');
+      for (let [key, value] of fd.entries()) {
+        if (value instanceof File) {
+          console.log(`  ${key}: File { name: "${value.name}", size: ${value.size} bytes }`);
+        } else {
+          console.log(`  ${key}:`, value);
+        }
+      }
+
+      console.log('📤 Sending POST to /api/academic/walas/parenting');
+      const response = await waliKelasApi.createParenting(fd);
+      
+      console.log('✅ Response success:', response.data);
       toast.success('Laporan parenting berhasil disimpan');
-      setForm({ tanggal: today, kehadiran_ortu: '', agenda_utama: '', ringkasan_hasil: '', foto: null });
+      
+      // Reset form
+      setForm({ 
+        tanggal: today, 
+        kehadiran_ortu: '', 
+        agenda_utama: '', 
+        ringkasan_hasil: '', 
+        foto: null 
+      });
       fetchData();
-    } catch {
-      toast.error('Gagal menyimpan laporan parenting');
+      
+    } catch (err) {
+      // 🔍 Detail error logging
+      console.error('❌❌❌ [ERROR DETAIL] ❌❌❌');
+      console.error('├─ Status:', err.response?.status);
+      console.error('├─ Message:', err.response?.data?.message);
+      console.error('├─ Errors:', err.response?.data?.errors);
+      console.error('└─ Full:', err);
+      
+      const validationErrors = err.response?.data?.errors;
+      if (validationErrors) {
+        const msgs = Object.values(validationErrors).flat().join('\n');
+        toast.error(`Validasi gagal:\n${msgs}`);
+      } else {
+        toast.error(err.response?.data?.message || 'Gagal menyimpan laporan parenting');
+      }
     } finally {
       setSaving(false);
     }
@@ -72,8 +160,9 @@ const ParentingPage = () => {
       await waliKelasApi.deleteParenting(id);
       toast.success('Catatan berhasil dihapus');
       fetchData();
-    } catch {
-      toast.error('Gagal menghapus catatan');
+    } catch (err) {
+      console.error('❌ Gagal menghapus:', err.response?.data || err);
+      toast.error(err.response?.data?.message || 'Gagal menghapus catatan');
     }
   };
 
@@ -85,20 +174,38 @@ const ParentingPage = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">Parenting Kelas Massal</h1>
-          {selectedKelas && (
+          {selectedKelas ? (
             <p className="text-sm text-blue-600 font-medium mt-0.5">
               Wali Kelas | {selectedKelas.nama_kelas}
             </p>
+          ) : (
+            <p className="text-sm text-gray-400 mt-0.5">
+              {isKelasLoaded ? 'Pilih kelas dari dropdown →' : 'Memuat daftar kelas...'}
+            </p>
           )}
         </div>
+        
+        {/* ✅ Disable select jika kelas belum loaded */}
         <select
           value={selectedKelasId}
-          onChange={e => setSelectedKelasId(e.target.value)}
-          className="border border-gray-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          onChange={e => {
+            const val = e.target.value;
+            console.log('🔄 Kelas diubah ke:', val);
+            setSelectedKelasId(val);
+          }}
+          disabled={!isKelasLoaded || kelasList.length === 0}
+          className={`border border-gray-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 
+            ${(!isKelasLoaded || kelasList.length === 0) ? 'bg-gray-100 cursor-not-allowed' : ''}`}
         >
-          {kelasList.map(k => (
-            <option key={k.id} value={k.id}>{k.nama_kelas}</option>
-          ))}
+          {!isKelasLoaded ? (
+            <option value="">Memuat kelas...</option>
+          ) : kelasList.length === 0 ? (
+            <option value="">Tidak ada kelas</option>
+          ) : (
+            kelasList.map(k => (
+              <option key={k.id} value={String(k.id)}>{k.nama_kelas}</option>
+            ))
+          )}
         </select>
       </div>
 
@@ -110,6 +217,13 @@ const ParentingPage = () => {
             Catat Pertemuan &amp; Upload Dokumentasi
           </h2>
         </div>
+
+        {/* ✅ Tampilkan warning jika kelas belum dipilih */}
+        {!selectedKelasId && isKelasLoaded && (
+          <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-xl text-yellow-700 text-sm">
+            ⚠️ Silakan pilih kelas terlebih dahulu dari dropdown di atas
+          </div>
+        )}
 
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-4">
           {/* Tanggal */}
@@ -162,7 +276,13 @@ const ParentingPage = () => {
             <input
               type="file"
               accept="image/*,.pdf"
-              onChange={e => setForm(p => ({ ...p, foto: e.target.files[0] || null }))}
+              onChange={e => {
+                const file = e.target.files[0] || null;
+                if (file) {
+                  console.log('📎 File selected:', file.name, file.size, file.type);
+                }
+                setForm(p => ({ ...p, foto: file }));
+              }}
               className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 file:mr-2 file:py-0.5 file:px-2 file:rounded file:border-0 file:text-xs file:bg-gray-100 file:text-gray-600"
             />
           </div>
@@ -182,12 +302,13 @@ const ParentingPage = () => {
           />
         </div>
 
+        {/* ✅ Disable button jika kelas belum dipilih atau masih loading */}
         <button
           onClick={handleSubmit}
-          disabled={saving}
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl text-sm font-bold uppercase tracking-wide transition-colors disabled:opacity-50"
+          disabled={saving || !selectedKelasId || !isKelasLoaded}
+          className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl text-sm font-bold uppercase tracking-wide transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {saving ? 'Menyimpan...' : 'Simpan Laporan & Lampiran'}
+          {!isKelasLoaded ? 'Memuat kelas...' : !selectedKelasId ? 'Pilih kelas dulu' : saving ? 'Menyimpan...' : 'Simpan Laporan & Lampiran'}
         </button>
       </div>
 

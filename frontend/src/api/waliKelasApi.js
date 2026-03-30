@@ -10,14 +10,14 @@ export const waliKelasApi = {
     axiosInstance.get(`/api/academic/walas/parenting${kelas_id ? `?kelas_id=${kelas_id}` : ''}`),
   getParentingById: (id) =>
     axiosInstance.get(`/api/academic/walas/parenting/${id}`),
+  
+  // ✅ FIX: Tanpa manual Content-Type, axios handle multipart boundary otomatis
   createParenting: (formData) =>
-    axiosInstance.post('/api/academic/walas/parenting', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    }),
+    axiosInstance.post('/api/academic/walas/parenting', formData),
+  
   updateParenting: (id, formData) =>
-    axiosInstance.put(`/api/academic/walas/parenting/${id}`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    }),
+    axiosInstance.put(`/api/academic/walas/parenting/${id}`, formData),
+  
   deleteParenting: (id) =>
     axiosInstance.delete(`/api/academic/walas/parenting/${id}`),
 
@@ -30,14 +30,14 @@ export const waliKelasApi = {
     axiosInstance.get(`/api/academic/walas/kebersihan/rekap/${kelas_id}`),
   getKebersihanById: (id) =>
     axiosInstance.get(`/api/academic/walas/kebersihan/${id}`),
+  
+  // ✅ FIX: Tanpa manual Content-Type
   createKebersihan: (formData) =>
-    axiosInstance.post('/api/academic/walas/kebersihan', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    }),
+    axiosInstance.post('/api/academic/walas/kebersihan', formData),
+  
   updateKebersihan: (id, formData) =>
-    axiosInstance.put(`/api/academic/walas/kebersihan/${id}`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    }),
+    axiosInstance.put(`/api/academic/walas/kebersihan/${id}`, formData),
+  
   deleteKebersihan: (id) =>
     axiosInstance.delete(`/api/academic/walas/kebersihan/${id}`),
 
@@ -46,10 +46,14 @@ export const waliKelasApi = {
     axiosInstance.get(`/api/academic/walas/refleksi${kelas_id ? `?kelas_id=${kelas_id}` : ''}`),
   getRefleksiById: (id) =>
     axiosInstance.get(`/api/academic/walas/refleksi/${id}`),
-  createRefleksi: (data) =>
-    axiosInstance.post('/api/academic/walas/refleksi', data),
-  updateRefleksi: (id, data) =>
-    axiosInstance.put(`/api/academic/walas/refleksi/${id}`, data),
+  
+  // ✅ FIX: Ubah parameter jadi formData untuk support upload file
+  createRefleksi: (formData) =>
+    axiosInstance.post('/api/academic/walas/refleksi', formData),
+  
+  updateRefleksi: (id, formData) =>
+    axiosInstance.put(`/api/academic/walas/refleksi/${id}`, formData),
+  
   deleteRefleksi: (id) =>
     axiosInstance.delete(`/api/academic/walas/refleksi/${id}`),
 };
