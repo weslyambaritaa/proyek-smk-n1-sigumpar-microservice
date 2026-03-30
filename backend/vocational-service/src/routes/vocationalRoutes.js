@@ -1,29 +1,17 @@
-const express = require("express");
-const verifyToken = require('../middleware/auth'); // Import middleware
+const express = require('express');
 const router = express.Router();
-const {
-  getAllTodos,
-  getTodoById,
-  createTodo,
-  updateTodo,
-  deleteTodo,
-} = require("../controllers/vocationalController");
+const pramukaController = require('../controllers/pramukaController');
 
-/**
- * Routes untuk resource /todos
- *
- * GET    /todos       => Ambil semua todos (support filter via query params)
- * POST   /todos       => Buat todo baru
- * GET    /todos/:id   => Ambil todo tertentu
- * PUT    /todos/:id   => Update todo tertentu
- * DELETE /todos/:id   => Hapus todo tertentu
- */
+console.log("Cek Controller Regu:", typeof pramukaController.getAllRegu); // Debugging
 
-router.route("/").get(getAllTodos).post(createTodo);
-router.route("/:id").get(getTodoById).put(updateTodo).delete(deleteTodo);
+// --- REGU & ANGGOTA ---
+router.get('/regu', pramukaController.getAllRegu);
+router.post('/regu', pramukaController.createRegu);
+router.get('/regu/siswa-tersedia', pramukaController.getSiswaTersedia);
+router.post('/regu/assign', pramukaController.assignSiswaToRegu);
 
-// Tambahkan verifyToken sebelum memanggil fungsi controller
-router.get('/', verifyToken, controller.getAll);
-router.post('/', verifyToken, controller.create);
+// --- ABSENSI (Berbasis Regu, bukan Kelas) ---
+router.get('/regu/:regu_id/siswa', pramukaController.getSiswaByRegu); 
+router.post('/absensi', pramukaController.submitAbsensiPramuka);
 
 module.exports = router;
