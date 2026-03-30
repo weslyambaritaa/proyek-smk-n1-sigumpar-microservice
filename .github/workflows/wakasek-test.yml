@@ -1,0 +1,37 @@
+name: Unit Testing Wakasek
+
+on:
+  push:
+    # Ganti 'main' dengan nama branch kamu, misal 'fitur-wakasek'
+    # Atau gunakan '*' agar jalan di semua branch
+    branches: ["main", "master", "wakasek*"]
+  pull_request:
+    branches: ["main", "master"]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    # Pastikan working-directory mengarah ke folder tempat package.json berada
+    # Jika package.json ada di root, hapus baris working-directory di bawah
+    defaults:
+      run:
+        working-directory: ./backend/learning-service
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: "./backend/learning-service/package-lock.json"
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run Integrated Unit Testing
+        # Menjalankan spesifik file yang kita buat tadi agar hemat waktu di Actions
+        run: npm test src/controllers/wakasekRole.test.js
