@@ -22,11 +22,15 @@ const SiswaPage = () => {
     try {
       const [resSiswa, resKelas] = await Promise.all([
         academicApi.getAllSiswa(),
-        academicApi.getAllKelas()
+        academicApi.getAllKelas(),
       ]);
 
-      const rawSiswa = Array.isArray(resSiswa.data) ? resSiswa.data : resSiswa.data.data || [];
-      const rawKelas = Array.isArray(resKelas.data) ? resKelas.data : resKelas.data.data || [];
+      const rawSiswa = Array.isArray(resSiswa.data)
+        ? resSiswa.data
+        : resSiswa.data.data || [];
+      const rawKelas = Array.isArray(resKelas.data)
+        ? resKelas.data
+        : resKelas.data.data || [];
 
       const siswaWithKelas = rawSiswa.map((siswa) => {
         const kelas = rawKelas.find((k) => k.id === siswa.kelas_id);
@@ -40,7 +44,7 @@ const SiswaPage = () => {
     } catch (err) {
       console.error("Gagal mengambil data:", err);
       toast.error("Gagal memuat data siswa");
-      setSiswaData([]); 
+      setSiswaData([]);
     }
   };
 
@@ -83,7 +87,7 @@ const SiswaPage = () => {
 
   const handleDeleteClick = (siswa) => {
     setSiswaToDelete(siswa);
-    setDeleteConfirmation(""); 
+    setDeleteConfirmation("");
     setIsDeleteDialogOpen(true);
     setOpenMenuId(null); // Tutup menu setelah opsi dipilih
   };
@@ -126,7 +130,9 @@ const SiswaPage = () => {
         </Button>
       </div>
 
-      <div className="bg-white rounded-lg shadow overflow-visible"> {/* overflow-visible agar menu tidak terpotong */}
+      <div className="bg-white rounded-lg shadow overflow-visible">
+        {" "}
+        {/* overflow-visible agar menu tidak terpotong */}
         <table className="w-full text-left border-collapse">
           <thead className="bg-gray-50 text-gray-600 uppercase text-xs font-semibold">
             <tr>
@@ -149,13 +155,17 @@ const SiswaPage = () => {
                     </span>
                   </td>
                   {/* --- KOLOM TINDAKAN DENGAN MENU TITIK TIGA --- */}
-                  <td className="px-6 py-4 text-center relative" ref={openMenuId === s.id ? menuRef : null}>
+                  <td
+                    className="px-6 py-4 text-center relative"
+                    ref={openMenuId === s.id ? menuRef : null}
+                  >
                     <button
                       onClick={() => toggleMenu(s.id)}
                       className="text-gray-500 hover:text-gray-800 p-2 rounded-full hover:bg-gray-100 transition-colors"
                       aria-label="Tampilkan opsi"
                     >
-                      <span className="font-bold text-lg">⋮</span> {/* Karakter titik tiga vertikal */}
+                      <span className="font-bold text-lg">⋮</span>{" "}
+                      {/* Karakter titik tiga vertikal */}
                     </button>
 
                     {/* --- DROPDOWN OPSI (MUNCUL JIKA ID COCOK) --- */}
@@ -182,7 +192,10 @@ const SiswaPage = () => {
               ))
             ) : (
               <tr>
-                <td colSpan="4" className="px-6 py-10 text-center text-gray-400">
+                <td
+                  colSpan="4"
+                  className="px-6 py-10 text-center text-gray-400"
+                >
                   Belum ada data siswa.
                 </td>
               </tr>
@@ -202,25 +215,38 @@ const SiswaPage = () => {
         <div className="fixed inset-0 z-50 flex justify-end bg-black/50 backdrop-blur-sm transition-opacity">
           <div className="bg-white w-full max-w-md h-full shadow-2xl flex flex-col animate-slide-right">
             <div className="px-6 py-4 border-b">
-              <h2 className="text-xl font-bold text-red-600">Hapus Data Siswa</h2>
-              <p className="text-sm text-gray-500 mt-1">Tindakan ini bersifat permanen.</p>
+              <h2 className="text-xl font-bold text-red-600">
+                Hapus Data Siswa
+              </h2>
+              <p className="text-sm text-gray-500 mt-1">
+                Tindakan ini bersifat permanen.
+              </p>
             </div>
 
             <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
               <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                <h3 className="text-sm font-bold text-red-800 mb-2">Peringatan!</h3>
+                <h3 className="text-sm font-bold text-red-800 mb-2">
+                  Peringatan!
+                </h3>
                 <p className="text-sm text-red-700">
-                  Seluruh data akademik terkait siswa ini mungkin akan terpengaruh.
+                  Seluruh data akademik terkait siswa ini mungkin akan
+                  terpengaruh.
                 </p>
                 <ul className="list-disc list-inside mt-2 text-sm font-bold text-red-900">
                   <li>{siswaToDelete?.nama_lengkap}</li>
-                  <li className="font-normal italic">NISN: {siswaToDelete?.nisn}</li>
+                  <li className="font-normal italic">
+                    NISN: {siswaToDelete?.nisn}
+                  </li>
                 </ul>
               </div>
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Ketik ulang <span className="text-black border-b-2 border-red-500">{siswaToDelete?.nama_lengkap}</span> untuk konfirmasi
+                  Ketik ulang{" "}
+                  <span className="text-black border-b-2 border-red-500">
+                    {siswaToDelete?.nama_lengkap}
+                  </span>{" "}
+                  untuk konfirmasi
                 </label>
                 <input
                   type="text"
@@ -233,7 +259,10 @@ const SiswaPage = () => {
             </div>
 
             <div className="px-6 py-4 border-t bg-gray-50 flex justify-end gap-3">
-              <Button variant="secondary" onClick={() => setIsDeleteDialogOpen(false)}>
+              <Button
+                variant="secondary"
+                onClick={() => setIsDeleteDialogOpen(false)}
+              >
                 Batal
               </Button>
               <button

@@ -219,6 +219,11 @@ const App = () => {
             <Route path="/academic/piket" element={<PiketPage />} />
             <Route path="/academic/upacara" element={<UpacaraPage />} />
             <Route path="/absensi-siswa" element={<AbsensiSiswa />} />
+            <Route
+              path="/laporan-tahunan"
+              element={<div>Laporan Tahunan</div>}
+            />
+            <Route path="/presensi-kelas" element={<div>Presensi Kelas</div>} />
           </Routes>
         </main>
       </div>

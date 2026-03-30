@@ -73,7 +73,7 @@ const SiswaDialog = ({ isOpen, onClose, onSuccess, selectedSiswa }) => {
           <h2 className="text-xl font-bold text-gray-800">
             {selectedSiswa ? "Edit Data Siswa" : "Tambah Siswa Baru"}
           </h2>
-          <button 
+          <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600 transition-colors"
           >
@@ -82,21 +82,28 @@ const SiswaDialog = ({ isOpen, onClose, onSuccess, selectedSiswa }) => {
         </div>
 
         {/* Form Isi */}
-        <form onSubmit={handleSubmit} className="flex-1 flex flex-col overflow-hidden">
+        <form
+          onSubmit={handleSubmit}
+          className="flex-1 flex flex-col overflow-hidden"
+        >
           <div className="flex-1 overflow-y-auto px-6 py-6 space-y-5">
             <Input
               label="NISN"
               placeholder="Masukkan 10 digit NISN"
               value={formData.nisn}
-              onChange={(e) => setFormData({ ...formData, nisn: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, nisn: e.target.value })
+              }
               required
             />
-            
+
             <Input
               label="Nama Lengkap"
               placeholder="Nama lengkap sesuai ijazah"
               value={formData.nama_lengkap}
-              onChange={(e) => setFormData({ ...formData, nama_lengkap: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, nama_lengkap: e.target.value })
+              }
               required
             />
 
@@ -107,7 +114,9 @@ const SiswaDialog = ({ isOpen, onClose, onSuccess, selectedSiswa }) => {
               <select
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
                 value={formData.kelas_id}
-                onChange={(e) => setFormData({ ...formData, kelas_id: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, kelas_id: e.target.value })
+                }
                 required
               >
                 <option value="">-- Klik untuk memilih kelas --</option>
@@ -122,18 +131,15 @@ const SiswaDialog = ({ isOpen, onClose, onSuccess, selectedSiswa }) => {
 
           {/* Footer Tombol */}
           <div className="px-6 py-4 border-t bg-gray-50 flex justify-end gap-3">
-            <Button 
-              variant="secondary" 
-              onClick={onClose} 
+            <Button
+              variant="secondary"
+              onClick={onClose}
               type="button"
               disabled={loading}
             >
               Batal
             </Button>
-            <Button 
-              type="submit" 
-              disabled={loading}
-            >
+            <Button type="submit" disabled={loading}>
               {loading ? "Menyimpan..." : "Simpan Data"}
             </Button>
           </div>
