@@ -11,6 +11,7 @@ import MapelPage from "./pages/tata-usaha/mapel/MapelPage";
 import JadwalPage from "./pages/tata-usaha/jadwal/JadwalPage";
 import PiketPage from "./pages/tata-usaha/piket/PiketPage";
 import UpacaraPage from "./pages/tata-usaha/upacara/UpacaraPage";
+import PengajuanPklPage from "./pages/vokasi/PengajuanPklPage";
 
 /**
  * Komponen reusable untuk grup menu per role (Dropdown)
@@ -239,6 +240,7 @@ const App = () => {
             <Route path="/academic/jadwal" element={<JadwalPage />} />
             <Route path="/academic/piket" element={<PiketPage />} />
             <Route path="/academic/upacara" element={<UpacaraPage />} />
+            <Route path="/proyek-vokasi" element={<PengajuanPklPage />} />
             {/* Route lainnya bisa ditambahkan di sini */}
           </Routes>
         </main>
