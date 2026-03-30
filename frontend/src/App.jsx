@@ -12,6 +12,10 @@ import PengumumanPage from "./pages/tata-usaha/pengumuman/PengumumanPage";
 import JadwalPage from "./pages/tata-usaha/jadwal/JadwalPage";
 import PiketPage from "./pages/tata-usaha/piket/PiketPage";
 import UpacaraPage from "./pages/tata-usaha/upacara/UpacaraPage";
+import PKLPage from "./pages/vokasi/PKLPage";
+import MonitoringPage from "./pages/vokasi/MonitoringPage";
+import ProyekPage from "./pages/vokasi/ProyekPage";
+import NilaiKompetensiPage from "./pages/vokasi/NilaiKompetensiPage";
 
 /**
  * Komponen reusable untuk grup menu per role (Dropdown)
@@ -185,30 +189,33 @@ const App = () => {
               {/* Dropdown Pramuka */}
               {hasRole("pramuka") && (
                 <NavDropdown
-                  title="Pramuka"
-                  icon="⛺"
-                  isOpen={openMenus["pramuka"]}
-                  onClick={() => toggleMenu("pramuka")}
-                >
-                  <NavLink to="/nilai-pramuka" className={subNavClass}>
-                    Nilai Pramuka
-                  </NavLink>
-                </NavDropdown>
+  title="Vokasi"
+  icon="🛠️"
+  isOpen={openMenus["vokasi"]}
+  onClick={() => toggleMenu("vokasi")}
+>
+</NavDropdown>
               )}
 
               {/* Dropdown Vokasi */}
               {hasRole("vokasi") && (
-                <NavDropdown
-                  title="Vokasi"
-                  icon="🛠️"
-                  isOpen={openMenus["vokasi"]}
-                  onClick={() => toggleMenu("vokasi")}
-                >
-                  <NavLink to="/proyek-vokasi" className={subNavClass}>
-                    Proyek Siswa
-                  </NavLink>
-                </NavDropdown>
-              )}
+  <NavDropdown
+  title="Vokasi"
+  icon="🛠️"
+  isOpen={openMenus["vokasi"]}
+  onClick={() => toggleMenu("vokasi")}
+>
+  <NavLink to="/vokasi/pelaporan-lokasi-pkl" className={subNavClass}>
+    Pelaporan Lokasi PKL
+  </NavLink>
+  <NavLink to="/vokasi/pelaporan-progress-pkl" className={subNavClass}>
+    Pelaporan Progress PKL
+  </NavLink>
+  <NavLink to="/vokasi/input-nilai-pkl" className={subNavClass}>
+    Input Nilai PKL
+  </NavLink>
+</NavDropdown>
+)}
             </div>
           </nav>
 
@@ -244,6 +251,10 @@ const App = () => {
             <Route path="/academic/jadwal" element={<JadwalPage />} />
             <Route path="/academic/piket" element={<PiketPage />} />
             <Route path="/academic/upacara" element={<UpacaraPage />} />
+<Route path="/vokasi/pelaporan-lokasi-pkl" element={<PKLPage />} />
+<Route path="/vokasi/pelaporan-progress-pkl" element={<MonitoringPage />} />
+<Route path="/vokasi/input-nilai-pkl" element={<NilaiKompetensiPage />} />
+<Route path="/vokasi/proyek" element={<ProyekPage />} />
             {/* Route lainnya bisa ditambahkan di sini */}
           </Routes>
         </main>

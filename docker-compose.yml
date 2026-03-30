@@ -21,6 +21,7 @@ services:
     networks:
       - microservices-network
     volumes:
+    
       - keycloak_db_data:/var/lib/postgresql/data
 
   keycloak:
