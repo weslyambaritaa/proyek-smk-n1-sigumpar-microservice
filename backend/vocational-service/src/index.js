@@ -1,41 +1,44 @@
-const express = require("express");
-const cors = require("cors");
-const helmet = require("helmet");
-const morgan = require("morgan");
-const { errorHandler } = require("./middleware/errorHandler");
+const express = require('express');
+const cors = require('cors');
+const helmet = require('helmet');
+const morgan = require('morgan');
+const path = require('path');
+const fs = require('fs');
+const vokasiRoutes = require('./routes/vokasiRoutes');
+const { errorHandler } = require('./middleware/errorHandler');
 
 const app = express();
-const PORT = process.env.PORT || 3007;
+const PORT = process.env.PORT || 3006;
 
-// Middleware global (identik dengan users-service)
+// Pastikan folder uploads ada
+const uploadsDir = path.join(__dirname, '../uploads');
+if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+
+// Middleware global
 app.use(helmet());
-// app.use(cors({ origin: process.env.CORS_ORIGIN || "*" }));
-app.use(morgan("dev"));
+app.use(morgan('dev'));
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// Health check endpoint
-app.get("/health", (req, res) => {
-  res.json({
-    status: "OK",
-    service: "todos-service",
-    timestamp: new Date().toISOString(),
-  });
+// Static files untuk uploads
+app.use('/api/vokasi/uploads', express.static(uploadsDir));
+
+// Health check
+app.get('/health', (req, res) => {
+  res.json({ status: 'OK', service: 'vokasi-service', timestamp: new Date().toISOString() });
 });
 
 // Mount routes
-app.use("/todos", todoRoutes);
+app.use('/api/vokasi', vokasiRoutes);
 
 // 404 handler
 app.use((req, res) => {
-  res.status(404).json({
-    success: false,
-    message: `Route '${req.originalUrl}' tidak ditemukan`,
-  });
+  res.status(404).json({ success: false, message: `Route '${req.originalUrl}' tidak ditemukan` });
 });
 
-// Error handler (selalu di akhir)
+// Error handler
 app.use(errorHandler);
 
 app.listen(PORT, () => {
-  console.log(`Vocational Service berjalan di http://localhost:${PORT}`);
+  console.log(`Vokasi Service running on port ${PORT}`);
 });
