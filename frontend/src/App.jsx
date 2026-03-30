@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, NavLink, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, NavLink } from "react-router-dom";
 import { useState } from "react";
 import KelasPage from "./pages/tata-usaha/kelas/KelasPage";
 import SiswaPage from "./pages/tata-usaha/siswa/SiswaPage";
@@ -242,8 +242,6 @@ const App = () => {
             <Route path="/academic/upacara" element={<UpacaraPage />} />
             {/* Route Guru Mapel */}
             <Route path="/guru-mapel/input-nilai" element={<InputNilaiPage />} />
-            {/* Alias: redirect path lama → path baru */}
-            <Route path="/input-nilai" element={<Navigate to="/guru-mapel/input-nilai" replace />} />
             {/* Route lainnya bisa ditambahkan di sini */}
           </Routes>
         </main>
