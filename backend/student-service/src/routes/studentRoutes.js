@@ -1,5 +1,5 @@
 const express = require("express");
-const { verifyToken } = require("../middleware/auth"); // Import middleware
+const extractIdentity = require("../middleware/extractIdentity");
 const router = express.Router();
 
 const {
@@ -10,14 +10,10 @@ const {
   deleteUser,
 } = require("../controllers/studentController");
 
-router.route("/")
-  .get(verifyToken, getAllUsers)
-  .post(verifyToken, createUser);
-
 // Route untuk koleksi (tanpa ID)
-router.route("/").get(getAllUsers).post(createUser);
+router.route("/").get(extractIdentity, getAllUsers).post(extractIdentity, createUser);
 
 // Route untuk satu resource (dengan ID)
-router.route("/:id").get(getUserById).put(updateUser).delete(deleteUser);
+router.route("/:id").get(extractIdentity, getUserById).put(extractIdentity, updateUser).delete(extractIdentity, deleteUser);
 
 module.exports = router;

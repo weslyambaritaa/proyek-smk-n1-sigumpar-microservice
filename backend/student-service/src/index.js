@@ -5,18 +5,13 @@ const morgan = require("morgan");
 
 const { errorHandler } = require("./middleware/errorHandler");
 
-// PERHATIKAN: Di student-service kita tidak boleh pakai userRoutes!
-// Jika Anda belum membuat studentRoutes, kita buat sementara seperti ini agar tidak error:
-const studentRoutes = express.Router();
-studentRoutes.get("/", (req, res) =>
-  res.json({ message: "Ini data students" }),
-);
-
+const studentRoutes = require("./routes/studentRoutes");
 const gradeRoutes = require("./routes/gradeRoutes");
 const app = express();
 
 app.use(helmet());
-app.use(cors({ origin: "*" }));
+// CORS ditangani oleh Nginx API Gateway — jangan aktifkan di sini
+// app.use(cors({ origin: process.env.CORS_ORIGIN || "*" }));
 app.use(morgan("dev"));
 app.use(express.json());
 
@@ -27,7 +22,6 @@ app.get("/health", (req, res) => {
   });
 });
 
-// Tanpa auth middleware
 app.use("/api/students", studentRoutes);
 app.use("/api/grades", gradeRoutes);
 
