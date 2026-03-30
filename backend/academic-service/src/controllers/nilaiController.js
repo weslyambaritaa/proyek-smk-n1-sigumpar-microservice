@@ -31,7 +31,13 @@ exports.getNilai = async (req, res) => {
         n.nilai_uas,
         n.nilai_praktik,
         ROUND(
-          (n.nilai_tugas * 0.15 + n.nilai_kuis * 0.15 + n.nilai_uts * 0.20 + n.nilai_uas * 0.30 + n.nilai_praktik * 0.20)::numeric,
+          (
+            n.nilai_tugas * 0.15 +
+            n.nilai_kuis * 0.15 +
+            n.nilai_uts * 0.20 +
+            n.nilai_uas * 0.30 +
+            n.nilai_praktik * 0.20
+          )::numeric,
           2
         ) AS nilai_akhir
       FROM nilai_siswa n
@@ -100,7 +106,13 @@ exports.getSiswaByKelas = async (req, res) => {
         CASE 
           WHEN n.id IS NOT NULL THEN
             ROUND(
-              (n.nilai_tugas * 0.15 + n.nilai_kuis * 0.15 + n.nilai_uts * 0.20 + n.nilai_uas * 0.30 + n.nilai_praktik * 0.20)::numeric,
+              (
+                n.nilai_tugas * 0.15 +
+                n.nilai_kuis * 0.15 +
+                n.nilai_uts * 0.20 +
+                n.nilai_uas * 0.30 +
+                n.nilai_praktik * 0.20
+              )::numeric,
               2
             )
           ELSE 0
@@ -136,7 +148,6 @@ exports.getSiswaByKelas = async (req, res) => {
  */
 exports.saveNilaiBulk = async (req, res) => {
   const { mapel_id, kelas_id, tahun_ajar, nilai } = req.body;
-  const guru_id = req.user?.sub || null;
 
   if (!mapel_id || !kelas_id || !tahun_ajar || !Array.isArray(nilai)) {
     return res.status(400).json({
@@ -154,34 +165,44 @@ exports.saveNilaiBulk = async (req, res) => {
       const { siswa_id, nilai_tugas, nilai_kuis, nilai_uts, nilai_uas, nilai_praktik } = item;
 
       const upsertQuery = `
-        INSERT INTO nilai_siswa 
-          (siswa_id, mapel_id, kelas_id, tahun_ajar, guru_id, nilai_tugas, nilai_kuis, nilai_uts, nilai_uas, nilai_praktik, updated_at)
-        VALUES 
-          ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
-        ON CONFLICT (siswa_id, mapel_id, tahun_ajar)
-        DO UPDATE SET
-          nilai_tugas = EXCLUDED.nilai_tugas,
-          nilai_kuis = EXCLUDED.nilai_kuis,
-          nilai_uts = EXCLUDED.nilai_uts,
-          nilai_uas = EXCLUDED.nilai_uas,
-          nilai_praktik = EXCLUDED.nilai_praktik,
-          guru_id = EXCLUDED.guru_id,
-          updated_at = NOW()
-        RETURNING *
-      `;
+  INSERT INTO nilai_siswa
+    (
+      siswa_id,
+      mapel_id,
+      kelas_id,
+      tahun_ajar,
+      nilai_tugas,
+      nilai_kuis,
+      nilai_uts,
+      nilai_uas,
+      nilai_praktik,
+      updated_at
+    )
+  VALUES
+    ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
+  ON CONFLICT (siswa_id, mapel_id, kelas_id, tahun_ajar)
+  DO UPDATE SET
+    nilai_tugas = EXCLUDED.nilai_tugas,
+    nilai_kuis = EXCLUDED.nilai_kuis,
+    nilai_uts = EXCLUDED.nilai_uts,
+    nilai_uas = EXCLUDED.nilai_uas,
+    nilai_praktik = EXCLUDED.nilai_praktik,
+    updated_at = NOW()
+  RETURNING *;
+`;
 
       const r = await client.query(upsertQuery, [
         siswa_id,
         mapel_id,
         kelas_id,
         tahun_ajar,
-        guru_id,
-        nilai_tugas || 0,
-        nilai_kuis || 0,
-        nilai_uts || 0,
-        nilai_uas || 0,
-        nilai_praktik || 0,
+        Number(nilai_tugas) || 0,
+        Number(nilai_kuis) || 0,
+        Number(nilai_uts) || 0,
+        Number(nilai_uas) || 0,
+        Number(nilai_praktik) || 0,
       ]);
+
       results.push(r.rows[0]);
     }
 
@@ -190,7 +211,12 @@ exports.saveNilaiBulk = async (req, res) => {
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('Error saveNilaiBulk:', err);
-    res.status(500).json({ success: false, error: err.message });
+    res.status(500).json({
+      success: false,
+      error: err.message,
+      detail: err.detail || null,
+      code: err.code || null,
+    });
   } finally {
     client.release();
   }
@@ -218,6 +244,7 @@ exports.updateNilai = async (req, res) => {
 
     res.json({ success: true, data: result.rows[0] });
   } catch (err) {
+    console.error('Error updateNilai:', err);
     res.status(500).json({ success: false, error: err.message });
   }
 };
@@ -231,6 +258,7 @@ exports.deleteNilai = async (req, res) => {
     await pool.query('DELETE FROM nilai_siswa WHERE id = $1', [id]);
     res.json({ success: true, message: 'Nilai berhasil dihapus' });
   } catch (err) {
+    console.error('Error deleteNilai:', err);
     res.status(500).json({ success: false, error: err.message });
   }
 };
