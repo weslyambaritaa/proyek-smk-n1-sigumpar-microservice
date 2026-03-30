@@ -86,7 +86,13 @@ export default function InputNilaiPage() {
         mapel_id: selectedMapel || undefined,
         tahun_ajar: selectedTahun || undefined,
       });
-      const data = Array.isArray(res.data?.data) ? res.data.data : [];
+
+      // Pastikan data selalu array bahkan jika response sukses tapi 'data' null
+      const data =
+        res?.data?.status === "success" && Array.isArray(res?.data?.data)
+          ? res.data.data
+          : [];
+
       // Filter nama lokal
       const filtered = searchNama
         ? data.filter((r) =>
@@ -100,8 +106,12 @@ export default function InputNilaiPage() {
         })),
       );
       setPage(1);
-    } catch {
-      toast.error("Gagal memuat data nilai siswa");
+    } catch (err) {
+      // Tampilkan pesan error spesifik dari backend jika ada
+      const errorMsg =
+        err.response?.data?.message || "Gagal memuat data nilai siswa";
+      toast.error(errorMsg);
+      setRows([]); // Kosongkan rows jika request gagal
     } finally {
       setLoading(false);
     }
