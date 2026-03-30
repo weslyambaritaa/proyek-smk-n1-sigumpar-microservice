@@ -2,36 +2,26 @@ name: Unit Testing Wakasek
 
 on:
   push:
-    # Terpicu saat push ke branch utama atau branch kerja kamu
     branches: ["main", "master", "wakil-kepala-sekolah"]
-  pull_request:
-    branches: ["main", "master"]
 
 jobs:
   test:
     runs-on: ubuntu-latest
-
-    # Memberitahu GitHub bahwa semua perintah dijalankan di folder project ini
     defaults:
       run:
         working-directory: ./backend/learning-service
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: "20"
           cache: "npm"
-          # Path ke package-lock agar caching npm berjalan maksimal
           cache-dependency-path: "./backend/learning-service/package-lock.json"
 
-      - name: Install dependencies
-        # Menginstall semua library (termasuk Jest) ke server GitHub
+      - name: Install
         run: npm install
 
-      - name: Run Integrated Unit Testing
-        # Menggunakan npx agar folder node_modules/.bin/jest terpanggil dengan benar
+      - name: Test
+        # Sekarang npm test akan jalan karena Jest sudah terdaftar
         run: npx jest src/controllers/wakasekRole.test.js
