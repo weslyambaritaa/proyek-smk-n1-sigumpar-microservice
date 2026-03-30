@@ -4,12 +4,13 @@ const helmet = require("helmet");
 const morgan = require("morgan");
 const { errorHandler } = require("./middleware/errorHandler");
 
+// 1. PASTIKAN IMPORT FILE ROUTES YANG BENAR
+const vocationalRoutes = require("./routes/vocationalRoutes"); 
+
 const app = express();
 const PORT = process.env.PORT || 3007;
 
-// Middleware global (identik dengan users-service)
 app.use(helmet());
-// app.use(cors({ origin: process.env.CORS_ORIGIN || "*" }));
 app.use(morgan("dev"));
 app.use(express.json());
 
@@ -17,23 +18,23 @@ app.use(express.json());
 app.get("/health", (req, res) => {
   res.json({
     status: "OK",
-    service: "todos-service",
+    service: "vocational-service", // Update nama service agar sesuai
     timestamp: new Date().toISOString(),
   });
 });
 
-// Mount routes
-app.use("/todos", todoRoutes);
+// 2. MOUNT ROUTES DENGAN PREFIX /api/vocational
+// Ini agar match dengan request dari Nginx: http://localhost:8001/api/vocational/...
+app.use("/api/vocational", vocationalRoutes);
 
 // 404 handler
 app.use((req, res) => {
   res.status(404).json({
     success: false,
-    message: `Route '${req.originalUrl}' tidak ditemukan`,
+    message: `Route '${req.originalUrl}' tidak ditemukan di Vocational Service`,
   });
 });
 
-// Error handler (selalu di akhir)
 app.use(errorHandler);
 
 app.listen(PORT, () => {
