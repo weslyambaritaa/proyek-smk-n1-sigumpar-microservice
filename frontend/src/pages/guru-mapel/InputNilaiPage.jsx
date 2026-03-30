@@ -107,9 +107,18 @@ export default function InputNilaiPage() {
       );
       setPage(1);
     } catch (err) {
-      // Tampilkan pesan error spesifik dari backend jika ada
+      console.error("DEBUG API ERROR:", {
+        url: err.config?.url,
+        status: err.response?.status,
+        data: err.response?.data,
+      });
+
       const errorMsg =
-        err.response?.data?.message || "Gagal memuat data nilai siswa";
+        err.response?.data?.message ||
+        (err.response?.status === 404
+          ? "Rute API Nilai tidak ditemukan (404). Pastikan Backend sudah direstart dan Gateway sudah dikonfigurasi."
+          : "Gagal memuat data siswa");
+
       toast.error(errorMsg);
       setRows([]); // Kosongkan rows jika request gagal
     } finally {
