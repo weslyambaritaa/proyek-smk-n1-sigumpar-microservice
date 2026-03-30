@@ -242,6 +242,8 @@ const App = () => {
             <Route path="/academic/upacara" element={<UpacaraPage />} />
             {/* Route Guru Mapel */}
             <Route path="/guru-mapel/input-nilai" element={<InputNilaiPage />} />
+            {/* Route Wali Kelas */}
+            <Route path="/presensi-kelas" element={<div className="p-8 text-center text-gray-500">Halaman Presensi Kelas (Sedang Dikembangkan)</div>} />
             {/* Route lainnya bisa ditambahkan di sini */}
           </Routes>
         </main>
