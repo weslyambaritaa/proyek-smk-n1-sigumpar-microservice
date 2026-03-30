@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
 const morgan = require("morgan");
+const learningRoutes = require("./routes/learningRoutes");
 const { errorHandler } = require("./middleware/errorHandler");
 
 const app = express();
@@ -17,13 +18,13 @@ app.use(express.json());
 app.get("/health", (req, res) => {
   res.json({
     status: "OK",
-    service: "todos-service",
+    service: "learning-service",
     timestamp: new Date().toISOString(),
   });
 });
 
 // Mount routes
-app.use("/todos", todoRoutes);
+app.use("/todos", learningRoutes);
 
 // 404 handler
 app.use((req, res) => {
@@ -37,5 +38,5 @@ app.use((req, res) => {
 app.use(errorHandler);
 
 app.listen(PORT, () => {
-    console.log(`Learning Service running on port ${PORT}`);
+  console.log(`Learning Service running on port ${PORT}`);
 });

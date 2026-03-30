@@ -1,4 +1,4 @@
-﻿#!/bin/bash
+#!/bin/bash
 # Menjalankan PostgreSQL di background
 service postgresql start
 sleep 3

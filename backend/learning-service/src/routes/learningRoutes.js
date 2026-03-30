@@ -1,5 +1,4 @@
 const express = require("express");
-const verifyToken = require('../middleware/auth'); // Import middleware
 const router = express.Router();
 const {
   getAllTodos,
@@ -21,8 +20,5 @@ const {
 
 router.route("/").get(getAllTodos).post(createTodo);
 router.route("/:id").get(getTodoById).put(updateTodo).delete(deleteTodo);
-
-router.get('/', verifyToken, controller.getAll);
-router.post('/', verifyToken, controller.create);
 
 module.exports = router;

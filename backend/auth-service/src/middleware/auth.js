@@ -2,11 +2,20 @@ const jwt = require("jsonwebtoken");
 const jwksClient = require("jwks-rsa");
 const authController = require("../controllers/authController");
 
-// ── Keycloak URL dari env (dalam Docker = http://keycloak:8080) ──
-const KEYCLOAK_URL = process.env.KEYCLOAK_URL || "http://keycloak:8080";
+const KEYCLOAK_URL = process.env.KEYCLOAK_URL || "http://localhost:8080";
 const KEYCLOAK_REALM = process.env.KEYCLOAK_REALM || "smk-sigumpar";
+const KEYCLOAK_CLIENT_ID = process.env.KEYCLOAK_CLIENT_ID || "smk-sigumpar";
+const KEYCLOAK_ISSUER = `${KEYCLOAK_URL}/realms/${KEYCLOAK_REALM}`;
 
-// JWKS client membaca public key dari Keycloak
+const allowedIssuers = [KEYCLOAK_ISSUER];
+
+if (
+  !KEYCLOAK_URL.includes("localhost") &&
+  !KEYCLOAK_URL.includes("127.0.0.1")
+) {
+  allowedIssuers.push(`http://localhost:8080/realms/${KEYCLOAK_REALM}`);
+}
+
 const client = jwksClient({
   jwksUri: `${KEYCLOAK_URL}/realms/${KEYCLOAK_REALM}/protocol/openid-connect/certs`,
   cache: true,
@@ -32,16 +41,13 @@ const verifyToken = (req, res, next) => {
     return res.status(401).json({ message: "Token tidak ditemukan" });
   }
 
-  // ── PERBAIKAN UTAMA: issuer harus KEYCLOAK_URL (bukan localhost) ──
-  // Token diterbitkan oleh Keycloak dengan issuer = KEYCLOAK_URL,
-  // tapi browser membuka http://localhost:8080 → issuer di token = localhost:8080
-  // Solusi: nonaktifkan validasi issuer di sini, Nginx sudah menjadi gatekeeper
   jwt.verify(
     token,
     getKey,
     {
       algorithms: ["RS256"],
-      // issuer sengaja TIDAK diset di sini agar fleksibel di Docker maupun lokal
+      issuer: allowedIssuers,
+      audience: KEYCLOAK_CLIENT_ID,
     },
     (err, decoded) => {
       if (err) {
@@ -53,7 +59,6 @@ const verifyToken = (req, res, next) => {
 
       req.user = decoded;
 
-      // Sinkronisasi user ke background (tidak blocking)
       if (authController.syncUserFromToken) {
         authController
           .syncUserFromToken(decoded)

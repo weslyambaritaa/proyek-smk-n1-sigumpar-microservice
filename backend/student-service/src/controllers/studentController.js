@@ -2,7 +2,7 @@ const fs = require("fs");
 const path = require("path");
 const { v4: uuidv4 } = require("uuid");
 const { createError } = require("../middleware/errorHandler");
-const pool = require('../config/db');
+const pool = require("../config/db");
 
 // Path absolut ke file data JSON
 const DATA_FILE = path.join(__dirname, "../data/users.json");
@@ -34,10 +34,12 @@ const writeUsers = (users) => {
  * - ?search=keyword  => filter berdasarkan nama atau email
  * - ?role=admin      => filter berdasarkan role
  */
-exports.getAllUsers = async (req, res, next) => {
+const getAllUsers = async (req, res, next) => {
   try {
-    const result = await pool.query('SELECT * FROM users ORDER BY created_at DESC');
-    res.status(200).json({ status: 'success', data: result.rows });
+    const result = await pool.query(
+      "SELECT * FROM users ORDER BY created_at DESC",
+    );
+    res.status(200).json({ status: "success", data: result.rows });
   } catch (err) {
     next(err);
   }
@@ -55,7 +57,10 @@ const getUserById = (req, res, next) => {
 
     if (!user) {
       // Lempar error custom dengan status 404
-      throw createError(404, `User dengan ID '${req.params.id}' tidak ditemukan`);
+      throw createError(
+        404,
+        `User dengan ID '${req.params.id}' tidak ditemukan`,
+      );
     }
 
     res.json({ success: true, data: user });
@@ -76,14 +81,14 @@ const getUserById = (req, res, next) => {
  *   "role": "admin | user (opsional, default: user)"
  * }
  */
-exports.createUser = async (req, res, next) => {
+const createUser = async (req, res, next) => {
   const { id, username, email } = req.body; // id dikirim dari Keycloak/Frontend
   try {
     const result = await pool.query(
-      'INSERT INTO users (id, username, email) VALUES ($1, $2, $3) RETURNING *',
-      [id, username, email]
+      "INSERT INTO users (id, username, email) VALUES ($1, $2, $3) RETURNING *",
+      [id, username, email],
     );
-    res.status(201).json({ status: 'success', data: result.rows[0] });
+    res.status(201).json({ status: "success", data: result.rows[0] });
   } catch (err) {
     next(err);
   }
@@ -102,13 +107,16 @@ const updateUser = (req, res, next) => {
     // Cari index user untuk memudahkan update
     const index = users.findIndex((u) => u.id === req.params.id);
     if (index === -1) {
-      throw createError(404, `User dengan ID '${req.params.id}' tidak ditemukan`);
+      throw createError(
+        404,
+        `User dengan ID '${req.params.id}' tidak ditemukan`,
+      );
     }
 
     // Jika email diubah, cek duplikasi dengan user lain
     if (email && email !== users[index].email) {
       const emailExists = users.some(
-        (u, i) => i !== index && u.email.toLowerCase() === email.toLowerCase()
+        (u, i) => i !== index && u.email.toLowerCase() === email.toLowerCase(),
       );
       if (emailExists) {
         throw createError(409, `Email '${email}' sudah digunakan user lain`);
@@ -141,7 +149,10 @@ const deleteUser = (req, res, next) => {
     const index = users.findIndex((u) => u.id === req.params.id);
 
     if (index === -1) {
-      throw createError(404, `User dengan ID '${req.params.id}' tidak ditemukan`);
+      throw createError(
+        404,
+        `User dengan ID '${req.params.id}' tidak ditemukan`,
+      );
     }
 
     // Hapus user dari array menggunakan splice
