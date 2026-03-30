@@ -2,8 +2,7 @@ name: Unit Testing Wakasek
 
 on:
   push:
-    # Ganti 'main' dengan nama branch kamu, misal 'fitur-wakasek'
-    # Atau gunakan '*' agar jalan di semua branch
+    # Terpicu saat push ke branch utama atau branch kerja kamu
     branches: ["main", "master", "wakil-kepala-sekolah"]
   pull_request:
     branches: ["main", "master"]
@@ -12,8 +11,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
-    # Pastikan working-directory mengarah ke folder tempat package.json berada
-    # Jika package.json ada di root, hapus baris working-directory di bawah
+    # Memberitahu GitHub bahwa semua perintah dijalankan di folder project ini
     defaults:
       run:
         working-directory: ./backend/learning-service
@@ -27,11 +25,13 @@ jobs:
         with:
           node-version: "20"
           cache: "npm"
+          # Path ke package-lock agar caching npm berjalan maksimal
           cache-dependency-path: "./backend/learning-service/package-lock.json"
 
       - name: Install dependencies
+        # Menginstall semua library (termasuk Jest) ke server GitHub
         run: npm install
 
       - name: Run Integrated Unit Testing
-        # Menjalankan spesifik file yang kita buat tadi agar hemat waktu di Actions
-        run: npm test src/controllers/wakasekRole.test.js
+        # Menggunakan npx agar folder node_modules/.bin/jest terpanggil dengan benar
+        run: npx jest src/controllers/wakasekRole.test.js
