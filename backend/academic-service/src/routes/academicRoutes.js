@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
 const arsipSuratController = require('../controllers/arsipSuratController');
-const nilaiController = require('../controllers/nilaiController');
 const kelasController = require('../controllers/kelasController');
 const pengumumanController = require('../controllers/pengumumanController');
 const siswaController = require('../controllers/siswaController');
@@ -61,14 +60,5 @@ router.get('/upacara', extractIdentity, upacaraController.getAllUpacara);
 router.post('/upacara', extractIdentity, upacaraController.createUpacara);
 router.put('/upacara/:id', extractIdentity, upacaraController.updateUpacara);
 router.delete('/upacara/:id', extractIdentity, upacaraController.deleteUpacara);
-
-// =============================================
-// RUTE NILAI SISWA (Guru Mapel)
-// =============================================
-router.get('/nilai', extractIdentity, nilaiController.getNilai);
-router.get('/nilai/siswa-by-kelas', extractIdentity, nilaiController.getSiswaByKelas);
-router.post('/nilai/bulk', extractIdentity, nilaiController.saveNilaiBulk);
-router.put('/nilai/:id', extractIdentity, nilaiController.updateNilai);
-router.delete('/nilai/:id', extractIdentity, nilaiController.deleteNilai);
 
 module.exports = router;

@@ -57,22 +57,4 @@ export const academicApi = {
   createUpacara: (data) => axiosInstance.post('/api/academic/upacara', data),
   updateUpacara: (id, data) => axiosInstance.put(`/api/academic/upacara/${id}`, data),
   deleteUpacara: (id) => axiosInstance.delete(`/api/academic/upacara/${id}`),
-
-  // =============================================
-  // --- NILAI SISWA (Guru Mapel) ---
-  // =============================================
-  // Ambil semua nilai dengan filter opsional
-  getNilai: (params) => axiosInstance.get('/api/academic/nilai', { params }),
-
-  // Ambil siswa di kelas + nilai mereka (untuk tabel input nilai)
-  getSiswaByKelas: (params) => axiosInstance.get('/api/academic/nilai/siswa-by-kelas', { params }),
-
-  // Simpan nilai massal (upsert) — dipakai tombol "Simpan Semua Nilai"
-  saveNilaiBulk: (data) => axiosInstance.post('/api/academic/nilai/bulk', data),
-
-  // Update satu baris nilai
-  updateNilai: (id, data) => axiosInstance.put(`/api/academic/nilai/${id}`, data),
-
-  // Hapus nilai
-  deleteNilai: (id) => axiosInstance.delete(`/api/academic/nilai/${id}`),
 };
