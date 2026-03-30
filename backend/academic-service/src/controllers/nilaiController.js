@@ -74,6 +74,23 @@ exports.getSiswaByKelas = async (req, res) => {
   }
 
   try {
+    // FIX: Hindari cast $2::INTEGER yang gagal saat null — gunakan kondisi dinamis
+    let joinCondition = `
+      ON  n.siswa_id  = s.id_siswa
+      AND n.kelas_id  = $1
+    `;
+    const params = [kelas_id];
+    let paramIdx = 2;
+
+    if (mapel_id) {
+      joinCondition += ` AND n.mapel_id = $${paramIdx++}`;
+      params.push(mapel_id);
+    }
+    if (tahun_ajar) {
+      joinCondition += ` AND n.tahun_ajar = $${paramIdx++}`;
+      params.push(tahun_ajar);
+    }
+
     const query = `
       SELECT
         s.id_siswa                              AS siswa_id,
@@ -82,7 +99,8 @@ exports.getSiswaByKelas = async (req, res) => {
         k.nama_kelas,
         COALESCE(n.id,        NULL)             AS nilai_id,
         COALESCE(n.mapel_id,  NULL)             AS mapel_id,
-        COALESCE(n.tahun_ajar, $3)              AS tahun_ajar,
+        COALESCE(n.tahun_ajar, ${ tahun_ajar ? `'${tahun_ajar}'` : 'NULL' })
+                                                AS tahun_ajar,
         COALESCE(n.nilai_tugas,   0)            AS nilai_tugas,
         COALESCE(n.nilai_kuis,    0)            AS nilai_kuis,
         COALESCE(n.nilai_uts,     0)            AS nilai_uts,
@@ -99,21 +117,12 @@ exports.getSiswaByKelas = async (req, res) => {
         END AS nilai_akhir
       FROM siswa s
       JOIN kelas k ON s.id_kelas = k.id
-      LEFT JOIN nilai_siswa n
-        ON  n.siswa_id  = s.id_siswa
-        AND n.kelas_id  = $1
-        AND ($2::INTEGER IS NULL OR n.mapel_id = $2::INTEGER)
-        AND ($3::VARCHAR IS NULL OR n.tahun_ajar = $3)
+      LEFT JOIN nilai_siswa n ${joinCondition}
       WHERE s.id_kelas = $1
       ORDER BY s."namaSiswa" ASC
     `;
 
-    const result = await pool.query(query, [
-      kelas_id,
-      mapel_id  || null,
-      tahun_ajar || null,
-    ]);
-
+    const result = await pool.query(query, params);
     res.json({ success: true, data: result.rows });
   } catch (err) {
     console.error('Error getSiswaByKelas:', err);

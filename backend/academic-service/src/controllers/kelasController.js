@@ -4,9 +4,10 @@ const pool = require('../config/db');
 exports.getAllKelas = async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM kelas ORDER BY tingkat, nama_kelas');
-    res.json(result.rows);
+    // FIX: Konsisten dengan format { success, data } yang diharapkan frontend
+    res.json({ success: true, data: result.rows });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ success: false, error: err.message });
   }
 };
 
