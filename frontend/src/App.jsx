@@ -189,9 +189,9 @@ const App = () => {
                   isOpen={openMenus["pramuka"]}
                   onClick={() => toggleMenu("pramuka")}
                 >
-                  <NavLink to="/pramuka/regu" className={subNavClass}>Manajemen Regu</NavLink>
-                  <NavLink to="/pramuka/anggota-regu" className={subNavClass}>Plotting Anggota</NavLink>
-                  <NavLink to="/pramuka/absensi" className={subNavClass}>Absensi Pramuka</NavLink>
+                  <NavLink to="/vocational/regu" className={subNavClass}>Manajemen Regu</NavLink>
+                  <NavLink to="/vocational/anggota-regu" className={subNavClass}>Plotting Anggota</NavLink>
+                  <NavLink to="/vocational/absensi" className={subNavClass}>Absensi Pramuka</NavLink>
                 </NavDropdown>
               )}
 
@@ -243,9 +243,9 @@ const App = () => {
             <Route path="/academic/upacara" element={<UpacaraPage />} />
 
             {/* Pramuka Routes */}
-            <Route path="/pramuka/regu" element={<ReguPage />} />
-            <Route path="/pramuka/anggota-regu" element={<AnggotaReguPage />} />
-            <Route path="/pramuka/absensi" element={<AbsensiPramukaPage />} />
+            <Route path="/vocational/regu" element={<ReguPage />} />
+            <Route path="/vocational/anggota-regu" element={<AnggotaReguPage />} />
+            <Route path="/vocational/absensi" element={<AbsensiPramukaPage />} />
           </Routes>
         </main>
       </div>
