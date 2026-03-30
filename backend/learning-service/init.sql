@@ -39,5 +39,8 @@ CREATE TABLE IF NOT EXISTS review_kepsek (
 CREATE TABLE IF NOT EXISTS review_wakasek (
   id SERIAL PRIMARY KEY,
   perangkat_id INTEGER,
-  komentar TEXT
+  komentar_silabus TEXT,
+  komentar_rpp TEXT,
+  komentar_modul_ajar TEXT,
+  created_at TIMESTAMP DEFAULT NOW()
 );
