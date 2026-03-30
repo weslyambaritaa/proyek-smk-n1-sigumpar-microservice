@@ -4,10 +4,11 @@ import KelasPage from "./pages/tata-usaha/kelas/KelasPage";
 import SiswaPage from "./pages/tata-usaha/siswa/SiswaPage";
 import keycloak, { hasRole } from "./keycloak";
 import { Toaster } from "react-hot-toast";
-import Dashboard from "./pages/Dashboard";
-import PengumumanPage from "./pages/tata-usaha/pengumuman/PengumumanPage";
+import Dashboard from "./pages/dashboard/Dashboard";
+import DetailPengumuman from "./pages/dashboard/DetailPengumuman";
 import ArsipSuratPage from "./pages/tata-usaha/arsip-surat/ArsipSuratPage";
 import MapelPage from "./pages/tata-usaha/mapel/MapelPage";
+import PengumumanPage from "./pages/tata-usaha/pengumuman/PengumumanPage";
 import JadwalPage from "./pages/tata-usaha/jadwal/JadwalPage";
 import PiketPage from "./pages/tata-usaha/piket/PiketPage";
 import UpacaraPage from "./pages/tata-usaha/upacara/UpacaraPage";
@@ -229,6 +230,10 @@ const App = () => {
         <main className="flex-1 p-8 overflow-y-auto">
           <Routes>
             <Route path="/" element={<Dashboard />} />
+            
+            {/* Tambahkan route baru ini untuk detail pengumuman */}
+            <Route path="/pengumuman/:id" element={<DetailPengumuman />} />
+            
             {/* <Route path="/users" element={<UsersPage />} />
             <Route path="/todos" element={<TodosPage />} /> */}
             <Route path="/academic/kelas" element={<KelasPage />} />
