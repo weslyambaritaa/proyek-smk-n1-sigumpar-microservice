@@ -255,8 +255,9 @@ const App = () => {
             {/* Route Wakasek */}
             <Route path="/wakepsek/dashboard" element={<DashboardWakasek />} />
             <Route path="/wakepsek/daftar-guru" element={<DaftarGuruPage />} />
-            <Route path="/wakepsek/detail-pembelajaran/:userId" element={<DetailPembelajaranPage />} />
             <Route path="/wakepsek/form-instruksi" element={<FormInstruksi />} />
+            <Route path="/wakepsek/detail-pembelajaran" element={<DaftarGuruPage />} />  {/* ← tambah ini */}
+            <Route path="/wakepsek/detail-pembelajaran/:userId" element={<DetailPembelajaranPage />} />
             {/* Route lainnya bisa ditambahkan di sini */}
           </Routes>
         </main>
