@@ -12,6 +12,9 @@ import PengumumanPage from "./pages/tata-usaha/pengumuman/PengumumanPage";
 import JadwalPage from "./pages/tata-usaha/jadwal/JadwalPage";
 import PiketPage from "./pages/tata-usaha/piket/PiketPage";
 import UpacaraPage from "./pages/tata-usaha/upacara/UpacaraPage";
+import ReguPage from './pages/pramuka/regu/ReguPage';
+import AnggotaReguPage from './pages/pramuka/anggota_regu/AnggotaReguPage';
+import AbsensiPramukaPage from './pages/pramuka/absensi/AbsensiPramukaPage';
 
 /**
  * Komponen reusable untuk grup menu per role (Dropdown)
@@ -28,7 +31,7 @@ const NavDropdown = ({ title, icon, children, isOpen, onClick }) => {
           <span>{title}</span>
         </div>
         <span
-          className={`transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
+          className={`transition-transform duration-200 text-[10px] ${isOpen ? "rotate-180" : ""}`}
         >
           ▼
         </span>
@@ -60,7 +63,6 @@ const App = () => {
         position="top-center"
         reverseOrder={false}
         toastOptions={{
-          // Styling khusus agar toast lebih besar
           style: {
             padding: "20px 30px",
             fontSize: "16px",
@@ -81,10 +83,10 @@ const App = () => {
             <h1 className="text-xl font-bold text-blue-600">SMK N1 Sigumpar</h1>
           </div>
 
-          <nav className="flex-1 p-4 overflow-y-auto">
+          <nav className="flex-1 p-4 overflow-y-auto shadow-inner">
             {/* Dashboard umum */}
             <NavLink to="/" className={navClass}>
-              🏠 Dashboard
+              <span className="mr-3">🏠</span> Dashboard
             </NavLink>
 
             <div className="mt-4 space-y-1">
@@ -99,7 +101,6 @@ const App = () => {
                   <NavLink to="/laporan-tahunan" className={subNavClass}>
                     Laporan Tahunan
                   </NavLink>
-                  {/* Tambah menu kepsek di sini */}
                 </NavDropdown>
               )}
 
@@ -153,8 +154,6 @@ const App = () => {
                   isOpen={openMenus["tu"]}
                   onClick={() => toggleMenu("tu")}
                 >
-                  {/* <NavLink to="/users" className={subNavClass}>Data Siswa</NavLink>
-                  <NavLink to="/todos" className={subNavClass}>Administrasi</NavLink> */}
                   <NavLink to="/academic/kelas" className={subNavClass}>
                     Data Kelas
                   </NavLink>
@@ -182,7 +181,7 @@ const App = () => {
                 </NavDropdown>
               )}
 
-              {/* Dropdown Pramuka */}
+              {/* Dropdown Pramuka - UPDATED */}
               {hasRole("pramuka") && (
                 <NavDropdown
                   title="Pramuka"
@@ -190,9 +189,9 @@ const App = () => {
                   isOpen={openMenus["pramuka"]}
                   onClick={() => toggleMenu("pramuka")}
                 >
-                  <NavLink to="/nilai-pramuka" className={subNavClass}>
-                    Nilai Pramuka
-                  </NavLink>
+                  <NavLink to="/pramuka/regu" className={subNavClass}>Manajemen Regu</NavLink>
+                  <NavLink to="/pramuka/anggota-regu" className={subNavClass}>Plotting Anggota</NavLink>
+                  <NavLink to="/pramuka/absensi" className={subNavClass}>Absensi Pramuka</NavLink>
                 </NavDropdown>
               )}
 
@@ -214,14 +213,15 @@ const App = () => {
 
           {/* Profil User di Bawah Sidebar */}
           <div className="p-4 border-t bg-gray-50">
-            <p className="text-sm font-semibold truncate">
-              {keycloak.tokenParsed?.name}
+            <p className="text-xs text-gray-500 mb-1 italic">Logged in as:</p>
+            <p className="text-sm font-bold text-gray-800 truncate mb-3">
+              {keycloak.tokenParsed?.name || "User SMK"}
             </p>
             <button
               onClick={() => keycloak.logout()}
-              className="w-full mt-2 bg-red-500 text-white py-2 rounded-lg text-xs hover:bg-red-600 transition-colors"
+              className="w-full bg-red-500 text-white py-2 rounded-lg text-xs font-bold hover:bg-red-600 transition-colors shadow-sm"
             >
-              Logout
+              LOGOUT
             </button>
           </div>
         </aside>
@@ -230,12 +230,9 @@ const App = () => {
         <main className="flex-1 p-8 overflow-y-auto">
           <Routes>
             <Route path="/" element={<Dashboard />} />
-            
-            {/* Tambahkan route baru ini untuk detail pengumuman */}
             <Route path="/pengumuman/:id" element={<DetailPengumuman />} />
             
-            {/* <Route path="/users" element={<UsersPage />} />
-            <Route path="/todos" element={<TodosPage />} /> */}
+            {/* Academic Routes */}
             <Route path="/academic/kelas" element={<KelasPage />} />
             <Route path="/academic/siswa" element={<SiswaPage />} />
             <Route path="/academic/pengumuman" element={<PengumumanPage />} />
@@ -244,7 +241,11 @@ const App = () => {
             <Route path="/academic/jadwal" element={<JadwalPage />} />
             <Route path="/academic/piket" element={<PiketPage />} />
             <Route path="/academic/upacara" element={<UpacaraPage />} />
-            {/* Route lainnya bisa ditambahkan di sini */}
+
+            {/* Pramuka Routes */}
+            <Route path="/pramuka/regu" element={<ReguPage />} />
+            <Route path="/pramuka/anggota-regu" element={<AnggotaReguPage />} />
+            <Route path="/pramuka/absensi" element={<AbsensiPramukaPage />} />
           </Routes>
         </main>
       </div>
