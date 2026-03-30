@@ -40,3 +40,4 @@ app.use(errorHandler);
 app.listen(PORT, () => {
   console.log(`Vocational Service berjalan di http://localhost:${PORT}`);
 });
+app.use(cors());

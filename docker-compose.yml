@@ -107,6 +107,7 @@ services:
       - PORT=3007
       - DB_NAME=vocational_db
       - DB_USER=vocational_user
+      - DB_PASSWORD=password
       - DATABASE_URL=postgres://vocational_user:password@localhost:5432/vocational_db
     depends_on: [keycloak]
 
