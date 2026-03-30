@@ -10,10 +10,10 @@ const BOBOT = { tugas: 15, kuis: 15, uts: 20, uas: 30, praktik: 20 };
 const TAHUN_AJAR_OPTIONS = ["2023/2024", "2024/2025", "2025/2026", "2026/2027"];
 
 function hitungNilaiAkhir(row) {
-  const t = Number(row.nilai_tugas)   || 0;
-  const k = Number(row.nilai_kuis)    || 0;
-  const u = Number(row.nilai_uts)     || 0;
-  const a = Number(row.nilai_uas)     || 0;
+  const t = Number(row.nilai_tugas) || 0;
+  const k = Number(row.nilai_kuis) || 0;
+  const u = Number(row.nilai_uts) || 0;
+  const a = Number(row.nilai_uas) || 0;
   const p = Number(row.nilai_praktik) || 0;
   return (
     (t * BOBOT.tugas +
@@ -30,17 +30,17 @@ function hitungNilaiAkhir(row) {
 // =============================================
 export default function InputNilaiPage() {
   // ----- State: filter -----
-  const [mapelList, setMapelList]       = useState([]);
-  const [kelasList, setKelasList]       = useState([]);
+  const [mapelList, setMapelList] = useState([]);
+  const [kelasList, setKelasList] = useState([]);
   const [selectedMapel, setSelectedMapel] = useState("");
   const [selectedKelas, setSelectedKelas] = useState("");
   const [selectedTahun, setSelectedTahun] = useState("2023/2024");
-  const [searchNama, setSearchNama]     = useState("");
+  const [searchNama, setSearchNama] = useState("");
 
   // ----- State: data -----
-  const [rows, setRows]         = useState([]);
-  const [loading, setLoading]   = useState(false);
-  const [saving, setSaving]     = useState(false);
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [sudahCari, setSudahCari] = useState(false);
 
   // ----- Pagination -----
@@ -53,7 +53,7 @@ export default function InputNilaiPage() {
   useEffect(() => {
     Promise.all([academicApi.getAllMapel(), academicApi.getAllKelas()])
       .then(([mapelRes, kelasRes]) => {
-        // Backend mengembalikan { success, data } ATAU array langsung
+        // Gunakan pengecekan Array.isArray yang lebih ketat
         const mapels = Array.isArray(mapelRes.data?.data)
           ? mapelRes.data.data
           : Array.isArray(mapelRes.data)
@@ -82,49 +82,44 @@ export default function InputNilaiPage() {
     setSudahCari(true);
     try {
       const res = await academicApi.getSiswaByKelas({
-        kelas_id:   selectedKelas,
-        mapel_id:   selectedMapel  || undefined,
-        tahun_ajar: selectedTahun  || undefined,
+        kelas_id: selectedKelas,
+        mapel_id: selectedMapel || undefined,
+        tahun_ajar: selectedTahun || undefined,
       });
 
-      // FIX: backend mengirim { success: true, data: [...] }
-      // bukan { status: "success", data: [...] }
-      const data =
-        res?.data?.success === true && Array.isArray(res?.data?.data)
-          ? res.data.data
-          : Array.isArray(res?.data)
-            ? res.data
-            : [];
+      // Pastikan data selalu array bahkan jika response sukses tapi 'data' null
+      const data = Array.isArray(res?.data?.data)
+        ? res.data.data
+          : [];
 
-      // Filter nama secara lokal
+      // Filter nama lokal
       const filtered = searchNama
         ? data.filter((r) =>
-            r.nama_lengkap.toLowerCase().includes(searchNama.toLowerCase())
+            r.nama_lengkap.toLowerCase().includes(searchNama.toLowerCase()),
           )
         : data;
-
       setRows(
         filtered.map((r) => ({
           ...r,
-          _dirty: false,
-        }))
+          _dirty: false, // tandai apakah baris ini berubah
+        })),
       );
       setPage(1);
     } catch (err) {
       console.error("DEBUG API ERROR:", {
-        url:    err.config?.url,
+        url: err.config?.url,
         status: err.response?.status,
-        data:   err.response?.data,
+        data: err.response?.data,
       });
 
       const errorMsg =
         err.response?.data?.message ||
         (err.response?.status === 404
-          ? "Rute API Nilai tidak ditemukan (404). Pastikan Backend sudah direstart."
+          ? "Rute API Nilai tidak ditemukan (404). Pastikan Backend sudah direstart dan Gateway sudah dikonfigurasi."
           : "Gagal memuat data siswa");
 
       toast.error(errorMsg);
-      setRows([]);
+      setRows([]); // Kosongkan rows jika request gagal
     } finally {
       setLoading(false);
     }
@@ -137,8 +132,8 @@ export default function InputNilaiPage() {
     const parsed = val === "" ? "" : Math.min(100, Math.max(0, Number(val)));
     setRows((prev) =>
       prev.map((r, i) =>
-        i === idx ? { ...r, [field]: parsed, _dirty: true } : r
-      )
+        i === idx ? { ...r, [field]: parsed, _dirty: true } : r,
+      ),
     );
   };
 
@@ -157,21 +152,20 @@ export default function InputNilaiPage() {
 
     setSaving(true);
     try {
-      // siswa_id adalah UUID (string), dikirim apa adanya
       const nilaiPayload = rows.map((r) => ({
-        siswa_id:      r.siswa_id,
-        nilai_tugas:   Number(r.nilai_tugas)   || 0,
-        nilai_kuis:    Number(r.nilai_kuis)    || 0,
-        nilai_uts:     Number(r.nilai_uts)     || 0,
-        nilai_uas:     Number(r.nilai_uas)     || 0,
+        siswa_id: r.siswa_id,
+        nilai_tugas: Number(r.nilai_tugas) || 0,
+        nilai_kuis: Number(r.nilai_kuis) || 0,
+        nilai_uts: Number(r.nilai_uts) || 0,
+        nilai_uas: Number(r.nilai_uas) || 0,
         nilai_praktik: Number(r.nilai_praktik) || 0,
       }));
 
       await academicApi.saveNilaiBulk({
-        mapel_id:   selectedMapel,
-        kelas_id:   selectedKelas,
+        mapel_id: selectedMapel,
+        kelas_id: selectedKelas,
         tahun_ajar: selectedTahun,
-        nilai:      nilaiPayload,
+        nilai: nilaiPayload,
       });
 
       toast.success("Semua nilai berhasil disimpan!");
@@ -200,15 +194,17 @@ export default function InputNilaiPage() {
   // Pagination
   // =============================================
   const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
-  const pagedRows  = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const pagedRows = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  // Helper nama kelas / mapel terpilih
+  // helper: nama kelas / mapel terpilih
   const namaKelas = Array.isArray(kelasList)
-    ? kelasList.find((k) => String(k.id) === String(selectedKelas))?.nama_kelas || ""
+    ? kelasList.find((k) => String(k.id) === String(selectedKelas))
+        ?.nama_kelas || ""
     : "";
 
   const namaMapel = Array.isArray(mapelList)
-    ? mapelList.find((m) => String(m.id) === String(selectedMapel))?.nama_mapel || ""
+    ? mapelList.find((m) => String(m.id) === String(selectedMapel))
+        ?.nama_mapel || ""
     : "";
 
   // =============================================
@@ -328,7 +324,10 @@ export default function InputNilaiPage() {
               <h2 className="text-base font-bold text-gray-800">
                 Daftar Nilai
                 {namaKelas && (
-                  <span className="text-gray-500 font-normal"> — {namaKelas}</span>
+                  <span className="text-gray-500 font-normal">
+                    {" "}
+                    — {namaKelas}
+                  </span>
                 )}
               </h2>
               {rows.length > 0 && (
@@ -347,15 +346,21 @@ export default function InputNilaiPage() {
           {/* Bobot info */}
           <div className="px-6 py-2 bg-gray-50 border-b border-gray-100 flex flex-wrap gap-3 text-xs text-gray-500">
             <span>📊 Bobot Nilai:</span>
-            <span className="font-medium text-gray-700">Tugas {BOBOT.tugas}%</span>
+            <span className="font-medium text-gray-700">
+              Tugas {BOBOT.tugas}%
+            </span>
             <span>·</span>
-            <span className="font-medium text-gray-700">Kuis {BOBOT.kuis}%</span>
+            <span className="font-medium text-gray-700">
+              Kuis {BOBOT.kuis}%
+            </span>
             <span>·</span>
             <span className="font-medium text-gray-700">UTS {BOBOT.uts}%</span>
             <span>·</span>
             <span className="font-medium text-gray-700">UAS {BOBOT.uas}%</span>
             <span>·</span>
-            <span className="font-medium text-gray-700">Praktik {BOBOT.praktik}%</span>
+            <span className="font-medium text-gray-700">
+              Praktik {BOBOT.praktik}%
+            </span>
           </div>
 
           {/* Tabel */}
@@ -388,7 +393,7 @@ export default function InputNilaiPage() {
                 <tbody className="divide-y divide-gray-50">
                   {pagedRows.map((row, localIdx) => {
                     const globalIdx = (page - 1) * PAGE_SIZE + localIdx;
-                    const akhir     = hitungNilaiAkhir(row);
+                    const akhir = hitungNilaiAkhir(row);
                     const isModified = row._dirty;
 
                     return (
@@ -428,7 +433,11 @@ export default function InputNilaiPage() {
                               max="100"
                               value={row[field]}
                               onChange={(e) =>
-                                handleNilaiChange(globalIdx, field, e.target.value)
+                                handleNilaiChange(
+                                  globalIdx,
+                                  field,
+                                  e.target.value,
+                                )
                               }
                               className="w-16 text-center px-2 py-1.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all bg-white"
                             />

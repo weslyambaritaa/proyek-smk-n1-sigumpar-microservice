@@ -9,10 +9,9 @@ exports.getAllMapel = async (req, res) => {
             LEFT JOIN kelas k ON m.kelas_id = k.id 
             ORDER BY m.id DESC
         `);
-        // FIX: Konsisten dengan format { success, data } yang diharapkan frontend
-        res.json({ success: true, data: result.rows });
+        res.json(result.rows);
     } catch (err) {
-        res.status(500).json({ success: false, error: err.message });
+        res.status(500).json({ error: err.message });
     }
 };
 

@@ -64,11 +64,10 @@ router.delete('/upacara/:id', extractIdentity, upacaraController.deleteUpacara);
 
 // =============================================
 // RUTE NILAI SISWA (Guru Mapel)
-// PENTING: Route statis (/siswa-by-kelas, /bulk) HARUS di atas route dinamis (/:id)
 // =============================================
+router.get('/nilai', extractIdentity, nilaiController.getNilai);
 router.get('/nilai/siswa-by-kelas', extractIdentity, nilaiController.getSiswaByKelas);
 router.post('/nilai/bulk', extractIdentity, nilaiController.saveNilaiBulk);
-router.get('/nilai', extractIdentity, nilaiController.getNilai);
 router.put('/nilai/:id', extractIdentity, nilaiController.updateNilai);
 router.delete('/nilai/:id', extractIdentity, nilaiController.deleteNilai);
 
