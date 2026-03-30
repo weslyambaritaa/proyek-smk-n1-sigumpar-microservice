@@ -4,7 +4,7 @@ on:
   push:
     # Ganti 'main' dengan nama branch kamu, misal 'fitur-wakasek'
     # Atau gunakan '*' agar jalan di semua branch
-    branches: ["main", "master", "wakasek*"]
+    branches: ["main", "master", "wakil-kepala-sekolah"]
   pull_request:
     branches: ["main", "master"]
 
