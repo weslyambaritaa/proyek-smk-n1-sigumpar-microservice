@@ -1,0 +1,35 @@
+name: Node.js CI - Learning Service
+
+# Kapan tes ini berjalan?
+on:
+  push:
+    branches: ["guru-mapel-rpp", "main"] # Jalan saat push ke branch ini atau main
+  pull_request:
+    branches: ["main"] # Jalan saat ada yang mau merge ke main
+
+jobs:
+  test-job:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Ambil kode dari GitHub
+      - uses: actions/checkout@v4
+
+      # 2. Setup Node.js versi 20
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          # Path ke package-lock.json agar install lebih cepat
+          cache-dependency-path: "backend/learning-service/package-lock.json"
+
+      # 3. Install dependensi (khusus di folder learning-service)
+      - name: Install dependencies
+        working-directory: backend/learning-service
+        run: npm install
+
+      # 4. Jalankan perintah npm test yang tadi kita buat
+      - name: Run Jest Tests
+        working-directory: backend/learning-service
+        run: npm test
