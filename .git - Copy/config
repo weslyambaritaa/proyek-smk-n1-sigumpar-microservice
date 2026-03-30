@@ -1,0 +1,34 @@
+[core]
+	repositoryformatversion = 0
+	filemode = false
+	bare = false
+	logallrefupdates = true
+	symlinks = false
+	ignorecase = true
+[submodule]
+	active = .
+[remote "origin"]
+	url = https://github.com/weslyambaritaa/proyek-smk-n1-sigumpar-microservice.git
+	fetch = +refs/heads/*:refs/remotes/origin/*
+[branch "main"]
+	remote = origin
+	merge = refs/heads/main
+	vscode-merge-base = origin/main
+[lfs]
+	repositoryformatversion = 0
+[branch "guru-mapel"]
+	remote = origin
+	merge = refs/heads/guru-mapel
+	vscode-merge-base = origin/main
+[branch "coba-crud-kelas"]
+	remote = origin
+	merge = refs/heads/coba-crud-kelas
+	vscode-merge-base = origin/coba-crud-kelas
+[branch "crud-input-nilai"]
+	remote = origin
+	merge = refs/heads/crud-input-nilai
+	vscode-merge-base = origin/main
+[branch "crud-parenting"]
+	remote = origin
+	merge = refs/heads/crud-parenting
+	vscode-merge-base = origin/main

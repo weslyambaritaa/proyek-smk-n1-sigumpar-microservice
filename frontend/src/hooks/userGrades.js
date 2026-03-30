@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
 import { studentApi } from "../api/studentApi";
+import { academicApi } from "../api/academicApi";
 
 const calculateFinalScore = ({
   tugas = 0,
@@ -36,15 +37,15 @@ const normalizeGradeItem = (item) => ({
         uts: item.uts || 0,
         uas: item.uas || 0,
         praktik: item.praktik || 0,
-      })
+      }),
   ),
 });
 
 const normalizeStudentToGrade = (item) => ({
   id: null,
   student_id: item.id || "",
-  student_name: item.username || item.name || "Tanpa Nama",
-  nis: item.nis || item.id || "-",
+  student_name: item.nama_lengkap || item.username || item.name || "Tanpa Nama",
+  nis: item.nisn || item.nis || item.id || "-",
   tugas: 0,
   kuis: 0,
   uts: 0,
@@ -64,21 +65,23 @@ const useGrades = () => {
     setError(null);
 
     try {
-      const response = await studentApi.getGrades(params);
-      const gradeData = response.data?.data || [];
+      const gradeResponse = await studentApi.getGrades(params);
+      const gradeData = gradeResponse.data?.data || gradeResponse.data || [];
 
-      if (gradeData.length > 0) {
+      if (Array.isArray(gradeData) && gradeData.length > 0) {
         const normalizedGrades = gradeData.map(normalizeGradeItem);
         setGrades(normalizedGrades);
         return normalizedGrades;
       }
 
-      const studentResponse = await studentApi.getStudents({
+      const studentResponse = await academicApi.getAllSiswa({
         kelas: params.kelas,
         search: params.search,
       });
 
-      const studentData = studentResponse.data?.data || [];
+      const studentData = Array.isArray(studentResponse.data)
+        ? studentResponse.data
+        : studentResponse.data?.data || [];
       const normalizedStudents = studentData.map(normalizeStudentToGrade);
 
       setGrades(normalizedStudents);
@@ -149,7 +152,7 @@ const useGrades = () => {
         setSaving(false);
       }
     },
-    [grades]
+    [grades],
   );
 
   return {

@@ -29,6 +29,7 @@ const NilaiPage = () => {
   } = useGrades();
 
   useEffect(() => {
+<<<<<<< HEAD
     const fetchOptions = async () => {
       try {
         setLoadingOptions(true);
@@ -65,6 +66,44 @@ const NilaiPage = () => {
     fetchOptions();
   }, []);
 
+=======
+    fetchOptions();
+  }, []);
+
+  const fetchOptions = async () => {
+    try {
+      const [mapelRes, kelasRes] = await Promise.all([
+        academicApi.getAllMapel(),
+        academicApi.getAllKelas(),
+      ]);
+
+      const mapels = mapelRes.data?.data || [];
+      const kelases = kelasRes.data?.data || [];
+
+      setMapelOptions(mapels.map((m) => m.nama_mapel || m.nama));
+      setKelasOptions(kelases.map((k) => k.nama_kelas || k.nama));
+
+      if (mapels.length > 0) {
+        setFilters((prev) => ({
+          ...prev,
+          mapel: mapels[0].nama_mapel || mapels[0].nama,
+        }));
+      }
+      if (kelases.length > 0) {
+        setFilters((prev) => ({
+          ...prev,
+          kelas: kelases[0].nama_kelas || kelases[0].nama,
+        }));
+      }
+    } catch (err) {
+      console.error("Gagal mengambil options:", err);
+      toast.error("Gagal memuat data mapel dan kelas");
+    } finally {
+      setLoadingOptions(false);
+    }
+  };
+
+>>>>>>> 4230e45464797b1cb4e9ca82f6d34278f9aa9c1e
   useEffect(() => {
     if (!loadingOptions && filters.mapel && filters.kelas) {
       handleCari();
@@ -92,6 +131,11 @@ const NilaiPage = () => {
     } catch (_) {}
   };
 
+  const handleRefresh = async () => {
+    setLoadingOptions(true);
+    await fetchOptions();
+  };
+
   const handleSave = async () => {
     try {
       const result = await saveAllGrades({
@@ -108,13 +152,23 @@ const NilaiPage = () => {
   return (
     <div className="p-6">
       <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-slate-800 tracking-wide">
-            INPUT & KELOLA NILAI
-          </h1>
-          <p className="text-slate-500 mt-3">
-            Kelola nilai tugas, kuis, UTS, UAS, dan praktik siswa
-          </p>
+        <div className="text-center mb-8 flex items-center justify-center gap-4">
+          <div>
+            <h1 className="text-4xl font-bold text-slate-800 tracking-wide">
+              INPUT & KELOLA NILAI
+            </h1>
+            <p className="text-slate-500 mt-3">
+              Kelola nilai tugas, kuis, UTS, UAS, dan praktik siswa
+            </p>
+          </div>
+          <button
+            onClick={handleRefresh}
+            disabled={loadingOptions}
+            className="bg-slate-600 hover:bg-slate-700 disabled:bg-slate-400 text-white px-4 py-2 rounded-xl font-semibold text-sm transition-colors h-fit"
+            title="Refresh data kelas dan mapel dari database"
+          >
+            {loadingOptions ? "MEMUAT..." : "🔄 REFRESH"}
+          </button>
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5 mb-6">
@@ -125,6 +179,7 @@ const NilaiPage = () => {
               </label>
               <select
                 value={filters.mapel}
+<<<<<<< HEAD
                 onChange={(e) =>
                   setFilters((prev) => ({ ...prev, mapel: e.target.value }))
                 }
@@ -133,6 +188,16 @@ const NilaiPage = () => {
               >
                 {loadingOptions ? (
                   <option>Loading...</option>
+=======
+                onChange={(e) => {
+                  setFilters((prev) => ({ ...prev, mapel: e.target.value }));
+                  loadGrades({ ...filters, mapel: e.target.value });
+                }}
+                className="w-full h-11 border border-gray-300 rounded-xl px-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {mapelOptions.length === 0 ? (
+                  <option>Memuat mapel...</option>
+>>>>>>> 4230e45464797b1cb4e9ca82f6d34278f9aa9c1e
                 ) : (
                   mapelOptions.map((item) => (
                     <option key={item} value={item}>
@@ -149,6 +214,7 @@ const NilaiPage = () => {
               </label>
               <select
                 value={filters.kelas}
+<<<<<<< HEAD
                 onChange={(e) =>
                   setFilters((prev) => ({ ...prev, kelas: e.target.value }))
                 }
@@ -157,6 +223,16 @@ const NilaiPage = () => {
               >
                 {loadingOptions ? (
                   <option>Loading...</option>
+=======
+                onChange={(e) => {
+                  setFilters((prev) => ({ ...prev, kelas: e.target.value }));
+                  loadGrades({ ...filters, kelas: e.target.value });
+                }}
+                className="w-full h-11 border border-gray-300 rounded-xl px-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {kelasOptions.length === 0 ? (
+                  <option>Memuat kelas...</option>
+>>>>>>> 4230e45464797b1cb4e9ca82f6d34278f9aa9c1e
                 ) : (
                   kelasOptions.map((item) => (
                     <option key={item} value={item}>
@@ -164,6 +240,7 @@ const NilaiPage = () => {
                     </option>
                   ))
                 )}
+<<<<<<< HEAD
               </select>
             </div>
 
@@ -183,6 +260,8 @@ const NilaiPage = () => {
                     {item}
                   </option>
                 ))}
+=======
+>>>>>>> 4230e45464797b1cb4e9ca82f6d34278f9aa9c1e
               </select>
             </div>
 

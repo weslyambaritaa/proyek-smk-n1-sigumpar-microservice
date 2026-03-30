@@ -1,0 +1,4 @@
+# pack-refs with: peeled fully-peeled sorted 
+5f045b035a7b3a1efa3256681509b627f29bfca9 refs/remotes/origin/auth-service
+47e331c2816c4dc84657d0a919d7cc19e5e749c0 refs/remotes/origin/coba-crud-kelas
+5f045b035a7b3a1efa3256681509b627f29bfca9 refs/remotes/origin/main
