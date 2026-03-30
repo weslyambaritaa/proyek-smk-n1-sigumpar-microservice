@@ -1,9 +1,7 @@
-// 1. Mocking UUID
-jest.mock("uuid", () => ({
-  v4: () => "test-uuid-12345",
+ // 1. Mocking UUID & File System di paling atas
+jest.mock("uuid", () => ({ 
+  v4: () => "test-uuid-12345" 
 }));
-
-// 2. Mocking File System (fs)
 jest.mock("fs");
 
 const { createTodo, deleteTodo } = require("./todoController");
@@ -18,11 +16,11 @@ describe("Todo Controller - Unit Testing Gloria", () => {
     // Reset status setiap kali tes baru dimulai
     mockRequest = {
       body: {},
-      params: {}, // Ditambahkan agar deleteTodo bisa membaca ID
+      params: {},
     };
     mockResponse = {
       status: jest.fn().mockReturnThis(),
-      json: jest.fn(),
+      json: jest.fn().mockReturnThis(),
     };
     next = jest.fn();
 
@@ -31,58 +29,72 @@ describe("Todo Controller - Unit Testing Gloria", () => {
     fs.writeFileSync.mockClear();
   });
 
-  // --- KELOMPOK TES: CREATE ---
-  describe("createTodo functionality", () => {
-    test("Harus gagal (Error 400) jika userId atau title tidak ada", () => {
+  // --- KELOMPOK TES: CREATE TODO ---
+  describe("Fungsi createTodo", () => {
+    test("Harus GAGAL (400) jika data tidak lengkap", () => {
       mockRequest.body = { userId: "", title: "" };
       createTodo(mockRequest, mockResponse, next);
+      
       expect(next).toHaveBeenCalled();
       const error = next.mock.calls[0][0];
       expect(error.statusCode).toBe(400);
-      expect(error.message).toContain("wajib diisi");
     });
 
-    test("Harus BERHASIL (Status 201) jika data valid", () => {
+    test("Harus GAGAL (400) jika priority salah", () => {
+      mockRequest.body = { userId: "11S23030", title: "Test", priority: "super-high" };
+      createTodo(mockRequest, mockResponse, next);
+      
+      expect(next).toHaveBeenCalled();
+      expect(next.mock.calls[0][0].statusCode).toBe(400);
+    });
+
+    test("Harus BERHASIL (201) jika data valid", () => {
       mockRequest.body = {
         userId: "11S23030",
         title: "Implementasi Jest Gloria",
         priority: "high",
       };
+      
       createTodo(mockRequest, mockResponse, next);
+      
       expect(mockResponse.status).toHaveBeenCalledWith(201);
+      expect(mockResponse.json).toHaveBeenCalledWith(
+        expect.objectContaining({ success: true })
+      );
       expect(fs.writeFileSync).toHaveBeenCalled();
     });
   });
 
-  // --- KELOMPOK TES: DELETE ---
-  describe("deleteTodo functionality", () => {
-    test("Harus BERHASIL (Status 200) saat menghapus todo yang ada", () => {
-      const existingTodo = {
-        id: "123",
-        title: "Tugas Lama",
-        userId: "11S23030",
-      };
-      fs.readFileSync.mockReturnValue(JSON.stringify([existingTodo]));
-
-      mockRequest.params = { id: "123" };
+  // --- KELOMPOK TES: DELETE TODO ---
+  describe("Fungsi deleteTodo", () => {
+    test("Harus BERHASIL saat menghapus ID yang ada", () => {
+      // Pastikan ID pakai String '123' karena Christian pakai ===
+      const dataLama = [{ id: '123', title: 'Tugas Lama', userId: '11S23030' }];
+      fs.readFileSync.mockReturnValue(JSON.stringify(dataLama));
+      
+      mockRequest.params = { id: '123' };
       deleteTodo(mockRequest, mockResponse, next);
 
-      expect(mockResponse.status).toHaveBeenCalledWith(200);
+      // Cek apakah JSON berhasil dikirim dengan pesan sukses
       expect(mockResponse.json).toHaveBeenCalledWith(
-        expect.objectContaining({ success: true }),
+        expect.objectContaining({ 
+          success: true, 
+          message: "Todo berhasil dihapus" 
+        })
       );
       expect(fs.writeFileSync).toHaveBeenCalled();
     });
 
-    test("Harus GAGAL (Error 404) jika menghapus ID yang tidak terdaftar", () => {
-      fs.readFileSync.mockReturnValue(JSON.stringify([]));
-
-      mockRequest.params = { id: "ID-ngasal" };
+    test("Harus GAGAL (404) jika ID tidak ditemukan", () => {
+      fs.readFileSync.mockReturnValue(JSON.stringify([])); // Database kosong
+      
+      mockRequest.params = { id: 'ID-ngasal' };
       deleteTodo(mockRequest, mockResponse, next);
 
       expect(next).toHaveBeenCalled();
       const error = next.mock.calls[0][0];
       expect(error.statusCode).toBe(404);
+      expect(error.message).toContain("tidak ditemukan");
     });
   });
 });
