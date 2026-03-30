@@ -1,5 +1,16 @@
-CREATE TABLE IF NOT EXISTS kelas_pramuka (id SERIAL PRIMARY KEY, nama_regu VARCHAR(100));
-CREATE TABLE IF NOT EXISTS absensi_pramuka (id SERIAL PRIMARY KEY, siswa_id INTEGER, tanggal DATE, status VARCHAR(20));
-CREATE TABLE IF NOT EXISTS laporan_pramuka (id SERIAL PRIMARY KEY, deskripsi TEXT, file_url TEXT);
-CREATE TABLE IF NOT EXISTS laporan_lokasi_pkl (id SERIAL PRIMARY KEY, siswa_id INTEGER, nama_perusahaan VARCHAR(150), alamat TEXT);
-CREATE TABLE IF NOT EXISTS laporan_progres_pkl (id SERIAL PRIMARY KEY, siswa_id INTEGER, minggu_ke INTEGER, deskripsi TEXT);
+ALTER TABLE pkl_submissions 
+ADD COLUMN status_kelayakan ENUM('layak', 'tidak_layak'),
+ADD COLUMN status_approval ENUM('pending', 'disetujui', 'ditolak') DEFAULT 'pending',
+ADD COLUMN progres_terakhir INT DEFAULT 0,
+ADD COLUMN nilai_akhir DECIMAL(5,2),
+ADD COLUMN predikat VARCHAR(2),
+ADD COLUMN keterangan_nilai TEXT,
+ADD COLUMN catatan_guru TEXT;
+
+CREATE TABLE pkl_monitoring (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    pkl_id INT,
+    tanggal_kunjungan DATETIME,
+    catatan TEXT,
+    FOREIGN KEY (pkl_id) REFERENCES pkl_submissions(id)
+);
