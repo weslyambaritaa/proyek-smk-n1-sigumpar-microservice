@@ -2,10 +2,10 @@
 
 -- Tabel kelas (primary key UUID)
 CREATE TABLE IF NOT EXISTS kelas (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id SERIAL PRIMARY KEY,
     nama_kelas VARCHAR(50) NOT NULL,
     tingkat VARCHAR(10),
-    wali_kelas_id UUID
+    wali_kelas_id UUID  -- TAMBAHKAN BARIS INI
 );
 
 -- Tabel siswa (foreign key ke kelas.id)
@@ -59,32 +59,6 @@ CREATE TABLE IF NOT EXISTS jadwal_mengajar (
 CREATE TABLE IF NOT EXISTS jadwal_piket (id SERIAL PRIMARY KEY, tanggal DATE, guru_id UUID);
 CREATE TABLE IF NOT EXISTS jadwal_upacara (id SERIAL PRIMARY KEY, tanggal DATE, petugas TEXT);
 
--- Data dummy siswa (dengan id_kelas UUID yang valid)
--- Pertama, kita harus punya data kelas agar id_kelas bisa di-refer.
-INSERT INTO kelas (id, nama_kelas, tingkat) VALUES
-    ('11111111-1111-1111-1111-111111111001', 'Kelas 1A', '1'),
-    ('22222222-2222-2222-2222-222222222002', 'Kelas 2B', '2')
-ON CONFLICT (id) DO NOTHING;
-
--- Kemudian insert siswa dengan id_kelas yang sudah ada
-INSERT INTO siswa (id_siswa, id_kelas, namaSiswa, NIS) VALUES
-    ('11111111-1111-1111-1111-111111111111', '11111111-1111-1111-1111-111111111001', 'Budi Santoso', '12345'),
-    ('22222222-2222-2222-2222-222222222222', '11111111-1111-1111-1111-111111111001', 'Siti Rahayu', '12346'),
-    ('33333333-3333-3333-3333-333333333333', '22222222-2222-2222-2222-222222222002', 'Ahmad Wijaya', '12347')
-ON CONFLICT (NIS) DO NOTHING;
-
--- Data dummy mata pelajaran (contoh)
-INSERT INTO mata_pelajaran (nama_mapel, kelas_id, guru_mapel_id) VALUES
-    ('Matematika', '11111111-1111-1111-1111-111111111001', 'guru-uuid-1'),
-    ('Bahasa Indonesia', '11111111-1111-1111-1111-111111111001', 'guru-uuid-2'),
-    ('IPA', '22222222-2222-2222-2222-222222222002', 'guru-uuid-1')
-ON CONFLICT (nama_mapel) DO NOTHING;
-
--- Data dummy jadwal mengajar (opsional)
-INSERT INTO jadwal_mengajar (guru_id, kelas_id, mata_pelajaran, hari, waktu_mulai, waktu_berakhir) VALUES
-    ('guru-uuid-1', '11111111-1111-1111-1111-111111111001', 'Matematika', 'Senin', '07:30', '09:00'),
-    ('guru-uuid-2', '11111111-1111-1111-1111-111111111001', 'Bahasa Indonesia', 'Selasa', '09:15', '10:45')
-ON CONFLICT DO NOTHING;
 
 -- Grant privileges
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO academic_user;
