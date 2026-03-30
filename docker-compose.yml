@@ -62,7 +62,7 @@ services:
       - PORT=3003
       - DB_NAME=academic_db
       - DB_USER=academic_user
-      - DATABASE_URL=postgres://academic_user:password@localhost:5432/academic_db
+      - DB_HOST=keycloak-db
       - DB_PASSWORD=password
     depends_on: [keycloak]
 
@@ -74,7 +74,8 @@ services:
       - PORT=3004
       - DB_NAME=asset_db
       - DB_USER=asset_user
-      - DATABASE_URL=postgres://asset_user:password@localhost:5432/asset_db
+      - DB_HOST=keycloak-db
+      - DB_PASSWORD=password
     depends_on: [keycloak]
 
   learning-service:
@@ -85,7 +86,8 @@ services:
       - PORT=3006
       - DB_NAME=learning_db
       - DB_USER=learning_user
-      - DATABASE_URL=postgres://learning_user:password@localhost:5432/learning_db
+      - DB_HOST=keycloak-db
+      - DB_PASSWORD=password
     depends_on: [keycloak]
 
   student-service:
@@ -96,7 +98,8 @@ services:
       - PORT=3008
       - DB_NAME=student_db
       - DB_USER=student_user
-      - DATABASE_URL=postgres://student_user:password@localhost:5432/student_db
+      - DB_HOST=keycloak-db
+      - DB_PASSWORD=password
     depends_on: [keycloak]
 
   vocational-service:
@@ -107,7 +110,8 @@ services:
       - PORT=3007
       - DB_NAME=vocational_db
       - DB_USER=vocational_user
-      - DATABASE_URL=postgres://vocational_user:password@localhost:5432/vocational_db
+      - DB_HOST=keycloak-db
+      - DB_PASSWORD=password
     depends_on: [keycloak]
 
   api-gateway:
