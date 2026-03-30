@@ -7,9 +7,9 @@ const siswaController = require('../controllers/siswaController');
 const mapelController = require('../controllers/mapelController');
 const jadwalController = require('../controllers/jadwalController');
 const piketController = require('../controllers/piketController');
-// const verifyToken = require('../middleware/auth'); 
-const upload = require('../middleware/upload');
 const upacaraController = require('../controllers/upacaraController');
+const nilaiController = require('../controllers/nilaiController');
+const upload = require('../middleware/upload');
 const extractIdentity = require('../middleware/extractIdentity');
 
 // Rute Kelas
@@ -32,7 +32,6 @@ router.delete('/pengumuman/:id', extractIdentity, pengumumanController.deletePen
 
 // Rute Arsip Surat
 router.get('/arsip-surat', extractIdentity, arsipSuratController.getAllArsipSurat);
-// Gunakan upload.single('file') untuk memproses form-data yang memiliki input field bernama 'file'
 router.post('/arsip-surat', extractIdentity, upload.single('file'), arsipSuratController.createArsipSurat);
 router.put('/arsip-surat/:id', extractIdentity, upload.single('file'), arsipSuratController.updateArsipSurat);
 router.delete('/arsip-surat/:id', extractIdentity, arsipSuratController.deleteArsipSurat);
@@ -60,5 +59,12 @@ router.get('/upacara', extractIdentity, upacaraController.getAllUpacara);
 router.post('/upacara', extractIdentity, upacaraController.createUpacara);
 router.put('/upacara/:id', extractIdentity, upacaraController.updateUpacara);
 router.delete('/upacara/:id', extractIdentity, upacaraController.deleteUpacara);
+
+// Rute Nilai
+router.get('/nilai', extractIdentity, nilaiController.getNilai);
+router.get('/nilai/siswa-by-kelas', extractIdentity, nilaiController.getSiswaByKelas);
+router.post('/nilai/bulk', extractIdentity, nilaiController.saveNilaiBulk);
+router.put('/nilai/:id', extractIdentity, nilaiController.updateNilai);
+router.delete('/nilai/:id', extractIdentity, nilaiController.deleteNilai);
 
 module.exports = router;

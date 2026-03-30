@@ -27,23 +27,27 @@ axiosInstance.interceptors.request.use(
 axiosInstance.interceptors.response.use(
   (response) => response,
   (error) => {
+    console.error("AXIOS RESPONSE ERROR:", {
+      message: error.message,
+      url: error.config?.url,
+      method: error.config?.method,
+      status: error.response?.status,
+      data: error.response?.data,
+    });
+
     if (error.response) {
-      // Jika Backend menolak karena Token Invalid/Expired (401 atau 403)
       if (error.response.status === 401 || error.response.status === 403) {
         toast.error("Sesi Anda telah habis. Silakan login kembali.");
-        // Beri waktu 2 detik agar notifikasi terbaca sebelum redirect
         setTimeout(() => {
           keycloak.login();
-        }, 2000); 
-      } 
-      // Jika Backend mati (502 Bad Gateway)
-      else if (error.response.status === 502) {
+        }, 2000);
+      } else if (error.response.status === 502) {
         toast.error("Server sedang bermasalah atau tidak dapat dijangkau.");
       }
     } else {
-       // Jika tidak ada respon sama sekali (misal jaringan terputus)
-       toast.error("Gagal terhubung ke server.");
+      toast.error("Gagal terhubung ke server.");
     }
+
     return Promise.reject(error);
   }
 );

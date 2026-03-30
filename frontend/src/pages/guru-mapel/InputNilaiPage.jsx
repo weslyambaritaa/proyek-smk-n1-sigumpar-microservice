@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import toast from "react-hot-toast";
 import { academicApi } from "../../api/academicApi";
-
 // =============================================
 // KONSTANTA
 // =============================================
@@ -82,10 +81,10 @@ export default function InputNilaiPage() {
     setSudahCari(true);
     try {
       const res = await academicApi.getSiswaByKelas({
-        kelas_id: selectedKelas,
-        mapel_id: selectedMapel || undefined,
-        tahun_ajar: selectedTahun || undefined,
-      });
+  kelas_id: selectedKelas,
+  mapel_id: selectedMapel || undefined,
+  tahun_ajar: selectedTahun || undefined,
+});
 
       // Pastikan data selalu array bahkan jika response sukses tapi 'data' null
       const data = Array.isArray(res?.data?.data)
@@ -106,21 +105,32 @@ export default function InputNilaiPage() {
       );
       setPage(1);
     } catch (err) {
-      console.error("DEBUG API ERROR:", {
-        url: err.config?.url,
-        status: err.response?.status,
-        data: err.response?.data,
-      });
+  console.error("DEBUG API ERROR FULL:", err);
+  console.error("DEBUG API ERROR DETAIL:", {
+    message: err.message,
+    url: err.config?.url,
+    method: err.config?.method,
+    params: err.config?.params,
+    status: err.response?.status,
+    data: err.response?.data,
+  });
 
-      const errorMsg =
-        err.response?.data?.message ||
-        (err.response?.status === 404
-          ? "Rute API Nilai tidak ditemukan (404). Pastikan Backend sudah direstart dan Gateway sudah dikonfigurasi."
-          : "Gagal memuat data siswa");
+  const errorMsg =
+    err.response?.data?.message ||
+    err.response?.data?.error ||
+    (err.response?.status === 404
+      ? "Rute API Nilai tidak ditemukan (404)."
+      : err.response?.status === 401
+        ? "Unauthorized (401). Token/login bermasalah."
+        : err.response?.status === 403
+          ? "Forbidden (403). Role tidak diizinkan."
+          : err.response?.status === 500
+            ? "Backend academic-service error (500). Cek log backend."
+            : "Gagal memuat data siswa");
 
-      toast.error(errorMsg);
-      setRows([]); // Kosongkan rows jika request gagal
-    } finally {
+  toast.error(errorMsg);
+  setRows([]);
+} finally {
       setLoading(false);
     }
   }, [selectedKelas, selectedMapel, selectedTahun, searchNama]);

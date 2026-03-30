@@ -34,6 +34,59 @@ CREATE TABLE IF NOT EXISTS jadwal_mengajar (
 CREATE TABLE IF NOT EXISTS jadwal_piket (id SERIAL PRIMARY KEY, tanggal DATE, guru_id UUID);
 CREATE TABLE IF NOT EXISTS jadwal_upacara (id SERIAL PRIMARY KEY, tanggal DATE, petugas TEXT);
 
+-- ==========================================
+-- TABEL FITUR WALI KELAS
+-- ==========================================
+
+-- Tabel pertemuan parenting kelas massal (bukan per-siswa)
+CREATE TABLE IF NOT EXISTS parenting (
+    id SERIAL PRIMARY KEY,
+    kelas_id INTEGER NOT NULL REFERENCES kelas(id) ON DELETE CASCADE,
+    tanggal DATE NOT NULL,
+    kehadiran_ortu INTEGER DEFAULT 0,       -- jumlah orang tua hadir
+    agenda_utama VARCHAR(255) NOT NULL,
+    foto_url TEXT DEFAULT '',               -- URL dokumentasi foto/dokumen
+    ringkasan_hasil TEXT DEFAULT '',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Tabel kontrol kebersihan kelas harian
+CREATE TABLE IF NOT EXISTS kebersihan_kelas (
+    id SERIAL PRIMARY KEY,
+    kelas_id INTEGER NOT NULL REFERENCES kelas(id) ON DELETE CASCADE,
+    tanggal_penilaian DATE NOT NULL,
+    status_kebersihan VARCHAR(30) NOT NULL DEFAULT 'bersih',  -- sangat_bersih | bersih | cukup | kotor
+    foto_url TEXT DEFAULT '',               -- URL foto kondisi kelas
+    catatan TEXT DEFAULT '',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Tabel refleksi wali kelas (judul + isi evaluasi)
+CREATE TABLE IF NOT EXISTS refleksi_kelas (
+    id SERIAL PRIMARY KEY,
+    kelas_id INTEGER NOT NULL REFERENCES kelas(id) ON DELETE CASCADE,
+    tanggal DATE NOT NULL,
+    judul_refleksi VARCHAR(255) NOT NULL,
+    isi_refleksi TEXT DEFAULT '',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS nilai_siswa (
+    id SERIAL PRIMARY KEY,
+    siswa_id INTEGER NOT NULL REFERENCES siswa(id) ON DELETE CASCADE,
+    mapel_id INTEGER NOT NULL REFERENCES mata_pelajaran(id) ON DELETE CASCADE,
+    kelas_id INTEGER NOT NULL REFERENCES kelas(id) ON DELETE CASCADE,
+    tahun_ajar VARCHAR(20) NOT NULL,
+    nilai_tugas NUMERIC(5,2) DEFAULT 0,
+    nilai_kuis NUMERIC(5,2) DEFAULT 0,
+    nilai_uts NUMERIC(5,2) DEFAULT 0,
+    nilai_uas NUMERIC(5,2) DEFAULT 0,
+    nilai_praktik NUMERIC(5,2) DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT unique_nilai_siswa UNIQUE (siswa_id, mapel_id, kelas_id, tahun_ajar)
+);
+
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO academic_user;
 GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO academic_user;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO academic_user;
