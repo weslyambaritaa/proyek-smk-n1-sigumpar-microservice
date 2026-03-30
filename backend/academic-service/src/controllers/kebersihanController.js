@@ -3,12 +3,12 @@ const pool = require('../config/db');
 // ================================================
 // --- KONTROLLER KEBERSIHAN KELAS (WALI KELAS) ---
 // ================================================
-// Mengelola jadwal piket dan penilaian kebersihan kelas
+// Mengelola kontrol kebersihan kelas harian
 
 // GET semua data kebersihan
-// Query param opsional: ?kelas_id=1&minggu=2025-W14
+// Query param opsional: ?kelas_id=1
 exports.getAllKebersihan = async (req, res) => {
-    const { kelas_id, minggu } = req.query;
+    const { kelas_id } = req.query;
     try {
         let query = `SELECT * FROM kebersihan_kelas`;
         const params = [];
@@ -17,11 +17,6 @@ exports.getAllKebersihan = async (req, res) => {
         if (kelas_id) {
             conditions.push(`kelas_id = $${params.length + 1}`);
             params.push(kelas_id);
-        }
-        if (minggu) {
-            // Format: 'YYYY-WXX', filter berdasarkan minggu ISO
-            conditions.push(`to_char(tanggal_penilaian, 'IYYY-"W"IW') = $${params.length + 1}`);
-            params.push(minggu);
         }
         if (conditions.length > 0) {
             query += ` WHERE ` + conditions.join(' AND ');
@@ -49,38 +44,32 @@ exports.getKebersihanById = async (req, res) => {
     }
 };
 
-// POST buat penilaian kebersihan baru
+// POST buat laporan kebersihan baru
 exports.createKebersihan = async (req, res) => {
     const {
         kelas_id,
         tanggal_penilaian,
-        petugas_piket,   // array nama siswa: ["Budi", "Siti", "Joko"]
-        skor,            // 1-100
-        aspek_penilaian, // JSON: { lantai, meja, papan_tulis, tempat_sampah }
+        status_kebersihan,
         catatan
     } = req.body;
 
-    if (!kelas_id || !tanggal_penilaian || skor === undefined) {
-        return res.status(400).json({ message: 'kelas_id, tanggal_penilaian, dan skor wajib diisi' });
+    const foto_url = req.file ? `/uploads/${req.file.filename}` : (req.body.foto_url || '');
+
+    if (!kelas_id || !tanggal_penilaian || !status_kebersihan) {
+        return res.status(400).json({ message: 'kelas_id, tanggal_penilaian, dan status_kebersihan wajib diisi' });
     }
 
-    if (skor < 0 || skor > 100) {
-        return res.status(400).json({ message: 'Skor harus antara 0 dan 100' });
+    const statusValid = ['sangat_bersih', 'bersih', 'cukup', 'kotor'];
+    if (!statusValid.includes(status_kebersihan)) {
+        return res.status(400).json({ message: `status_kebersihan harus salah satu dari: ${statusValid.join(', ')}` });
     }
 
     try {
         const result = await pool.query(`
             INSERT INTO kebersihan_kelas
-                (kelas_id, tanggal_penilaian, petugas_piket, skor, aspek_penilaian, catatan)
-            VALUES ($1, $2, $3, $4, $5, $6) RETURNING *
-        `, [
-            kelas_id,
-            tanggal_penilaian,
-            JSON.stringify(petugas_piket || []),
-            skor,
-            JSON.stringify(aspek_penilaian || {}),
-            catatan || ''
-        ]);
+                (kelas_id, tanggal_penilaian, status_kebersihan, foto_url, catatan)
+            VALUES ($1, $2, $3, $4, $5) RETURNING *
+        `, [kelas_id, tanggal_penilaian, status_kebersihan, foto_url, catatan || '']);
 
         res.status(201).json({ success: true, data: result.rows[0] });
     } catch (err) {
@@ -88,25 +77,19 @@ exports.createKebersihan = async (req, res) => {
     }
 };
 
-// PUT update penilaian kebersihan
+// PUT update laporan kebersihan
 exports.updateKebersihan = async (req, res) => {
     const { id } = req.params;
-    const { kelas_id, tanggal_penilaian, petugas_piket, skor, aspek_penilaian, catatan } = req.body;
+    const { kelas_id, tanggal_penilaian, status_kebersihan, catatan } = req.body;
+    const foto_url = req.file ? `/uploads/${req.file.filename}` : (req.body.foto_url || '');
+
     try {
         const result = await pool.query(`
             UPDATE kebersihan_kelas
-            SET kelas_id = $1, tanggal_penilaian = $2, petugas_piket = $3,
-                skor = $4, aspek_penilaian = $5, catatan = $6
-            WHERE id = $7 RETURNING *
-        `, [
-            kelas_id,
-            tanggal_penilaian,
-            JSON.stringify(petugas_piket || []),
-            skor,
-            JSON.stringify(aspek_penilaian || {}),
-            catatan || '',
-            id
-        ]);
+            SET kelas_id = $1, tanggal_penilaian = $2, status_kebersihan = $3,
+                foto_url = $4, catatan = $5
+            WHERE id = $6 RETURNING *
+        `, [kelas_id, tanggal_penilaian, status_kebersihan, foto_url, catatan || '', id]);
 
         if (result.rowCount === 0) {
             return res.status(404).json({ message: 'Data kebersihan tidak ditemukan' });
@@ -131,20 +114,16 @@ exports.deleteKebersihan = async (req, res) => {
     }
 };
 
-// GET rekap rata-rata skor per minggu untuk satu kelas
+// GET rekap kebersihan per kelas
 exports.getRekapKebersihan = async (req, res) => {
     const { kelas_id } = req.params;
     try {
         const result = await pool.query(`
-            SELECT
-                to_char(tanggal_penilaian, 'IYYY-"W"IW') AS minggu,
-                ROUND(AVG(skor), 1) AS rata_rata_skor,
-                COUNT(*) AS jumlah_penilaian
+            SELECT status_kebersihan, COUNT(*) AS jumlah
             FROM kebersihan_kelas
             WHERE kelas_id = $1
-            GROUP BY minggu
-            ORDER BY minggu DESC
-            LIMIT 12
+            GROUP BY status_kebersihan
+            ORDER BY jumlah DESC
         `, [kelas_id]);
 
         res.json({ success: true, data: result.rows });

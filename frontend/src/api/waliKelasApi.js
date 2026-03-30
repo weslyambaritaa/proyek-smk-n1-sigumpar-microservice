@@ -5,15 +5,19 @@ export const waliKelasApi = {
   getBeranda: (kelas_id) =>
     axiosInstance.get(`/api/academic/walas/beranda?kelas_id=${kelas_id}`),
 
-  // ── PARENTING ────────────────────────────────────────────────
+  // ── PARENTING KELAS MASSAL ───────────────────────────────────
   getAllParenting: (kelas_id) =>
     axiosInstance.get(`/api/academic/walas/parenting${kelas_id ? `?kelas_id=${kelas_id}` : ''}`),
   getParentingById: (id) =>
     axiosInstance.get(`/api/academic/walas/parenting/${id}`),
-  createParenting: (data) =>
-    axiosInstance.post('/api/academic/walas/parenting', data),
-  updateParenting: (id, data) =>
-    axiosInstance.put(`/api/academic/walas/parenting/${id}`, data),
+  createParenting: (formData) =>
+    axiosInstance.post('/api/academic/walas/parenting', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    }),
+  updateParenting: (id, formData) =>
+    axiosInstance.put(`/api/academic/walas/parenting/${id}`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    }),
   deleteParenting: (id) =>
     axiosInstance.delete(`/api/academic/walas/parenting/${id}`),
 
@@ -26,10 +30,14 @@ export const waliKelasApi = {
     axiosInstance.get(`/api/academic/walas/kebersihan/rekap/${kelas_id}`),
   getKebersihanById: (id) =>
     axiosInstance.get(`/api/academic/walas/kebersihan/${id}`),
-  createKebersihan: (data) =>
-    axiosInstance.post('/api/academic/walas/kebersihan', data),
-  updateKebersihan: (id, data) =>
-    axiosInstance.put(`/api/academic/walas/kebersihan/${id}`, data),
+  createKebersihan: (formData) =>
+    axiosInstance.post('/api/academic/walas/kebersihan', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    }),
+  updateKebersihan: (id, formData) =>
+    axiosInstance.put(`/api/academic/walas/kebersihan/${id}`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    }),
   deleteKebersihan: (id) =>
     axiosInstance.delete(`/api/academic/walas/kebersihan/${id}`),
 

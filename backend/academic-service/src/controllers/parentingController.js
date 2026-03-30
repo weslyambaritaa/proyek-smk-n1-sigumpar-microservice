@@ -1,28 +1,24 @@
 const pool = require('../config/db');
 
 // ==========================================
-// --- KONTROLLER PARENTING (WALI KELAS) ---
+// --- KONTROLLER PARENTING KELAS MASSAL ---
 // ==========================================
-// Mencatat riwayat komunikasi/pertemuan wali kelas dengan orang tua siswa
+// Mencatat riwayat pertemuan wali kelas dengan orang tua secara massal per kelas
 
 // GET semua catatan parenting
 // Query param opsional: ?kelas_id=1
 exports.getAllParenting = async (req, res) => {
     const { kelas_id } = req.query;
     try {
-        let query = `
-            SELECT p.*, s.nama_lengkap AS nama_siswa, s.nisn
-            FROM parenting p
-            JOIN siswa s ON p.siswa_id = s.id
-        `;
+        let query = `SELECT * FROM parenting`;
         const params = [];
 
         if (kelas_id) {
-            query += ` WHERE s.kelas_id = $1`;
+            query += ` WHERE kelas_id = $1`;
             params.push(kelas_id);
         }
 
-        query += ` ORDER BY p.tanggal DESC`;
+        query += ` ORDER BY tanggal DESC`;
         const result = await pool.query(query, params);
         res.json({ success: true, data: result.rows });
     } catch (err) {
@@ -34,12 +30,7 @@ exports.getAllParenting = async (req, res) => {
 exports.getParentingById = async (req, res) => {
     const { id } = req.params;
     try {
-        const result = await pool.query(`
-            SELECT p.*, s.nama_lengkap AS nama_siswa, s.nisn
-            FROM parenting p
-            JOIN siswa s ON p.siswa_id = s.id
-            WHERE p.id = $1
-        `, [id]);
+        const result = await pool.query(`SELECT * FROM parenting WHERE id = $1`, [id]);
 
         if (result.rowCount === 0) {
             return res.status(404).json({ message: 'Catatan parenting tidak ditemukan' });
@@ -50,20 +41,20 @@ exports.getParentingById = async (req, res) => {
     }
 };
 
-// POST buat catatan parenting baru
+// POST buat catatan parenting massal baru
 exports.createParenting = async (req, res) => {
-    const { siswa_id, tanggal, topik, catatan, jenis_komunikasi } = req.body;
-    // jenis_komunikasi: 'tatap_muka' | 'telepon' | 'whatsapp' | 'surat'
+    const { kelas_id, tanggal, kehadiran_ortu, agenda_utama, ringkasan_hasil } = req.body;
+    const foto_url = req.file ? `/uploads/${req.file.filename}` : (req.body.foto_url || '');
 
-    if (!siswa_id || !tanggal || !topik) {
-        return res.status(400).json({ message: 'siswa_id, tanggal, dan topik wajib diisi' });
+    if (!kelas_id || !tanggal || !agenda_utama) {
+        return res.status(400).json({ message: 'kelas_id, tanggal, dan agenda_utama wajib diisi' });
     }
 
     try {
         const result = await pool.query(`
-            INSERT INTO parenting (siswa_id, tanggal, topik, catatan, jenis_komunikasi)
-            VALUES ($1, $2, $3, $4, $5) RETURNING *
-        `, [siswa_id, tanggal, topik, catatan || '', jenis_komunikasi || 'tatap_muka']);
+            INSERT INTO parenting (kelas_id, tanggal, kehadiran_ortu, agenda_utama, foto_url, ringkasan_hasil)
+            VALUES ($1, $2, $3, $4, $5, $6) RETURNING *
+        `, [kelas_id, tanggal, kehadiran_ortu || 0, agenda_utama, foto_url, ringkasan_hasil || '']);
 
         res.status(201).json({ success: true, data: result.rows[0] });
     } catch (err) {
@@ -74,13 +65,16 @@ exports.createParenting = async (req, res) => {
 // PUT update catatan parenting
 exports.updateParenting = async (req, res) => {
     const { id } = req.params;
-    const { siswa_id, tanggal, topik, catatan, jenis_komunikasi } = req.body;
+    const { kelas_id, tanggal, kehadiran_ortu, agenda_utama, ringkasan_hasil } = req.body;
+    const foto_url = req.file ? `/uploads/${req.file.filename}` : (req.body.foto_url || '');
+
     try {
         const result = await pool.query(`
             UPDATE parenting
-            SET siswa_id = $1, tanggal = $2, topik = $3, catatan = $4, jenis_komunikasi = $5
-            WHERE id = $6 RETURNING *
-        `, [siswa_id, tanggal, topik, catatan, jenis_komunikasi, id]);
+            SET kelas_id = $1, tanggal = $2, kehadiran_ortu = $3,
+                agenda_utama = $4, foto_url = $5, ringkasan_hasil = $6
+            WHERE id = $7 RETURNING *
+        `, [kelas_id, tanggal, kehadiran_ortu || 0, agenda_utama, foto_url, ringkasan_hasil || '', id]);
 
         if (result.rowCount === 0) {
             return res.status(404).json({ message: 'Catatan parenting tidak ditemukan' });

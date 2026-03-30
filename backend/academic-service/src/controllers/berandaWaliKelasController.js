@@ -3,8 +3,6 @@ const pool = require('../config/db');
 // ==============================================
 // --- KONTROLLER BERANDA WALI KELAS ---
 // ==============================================
-// Mengagregasi data dari berbagai tabel untuk ditampilkan
-// sebagai ringkasan di dashboard beranda wali kelas
 
 // GET /api/academic/walas/beranda?kelas_id=1
 exports.getBerandaData = async (req, res) => {
@@ -16,10 +14,7 @@ exports.getBerandaData = async (req, res) => {
 
     try {
         // 1. Info kelas
-        const kelasResult = await pool.query(
-            'SELECT * FROM kelas WHERE id = $1',
-            [kelas_id]
-        );
+        const kelasResult = await pool.query('SELECT * FROM kelas WHERE id = $1', [kelas_id]);
         if (kelasResult.rowCount === 0) {
             return res.status(404).json({ message: 'Kelas tidak ditemukan' });
         }
@@ -32,24 +27,26 @@ exports.getBerandaData = async (req, res) => {
         );
         const totalSiswa = parseInt(totalSiswaResult.rows[0].total);
 
-        // 3. Catatan parenting bulan ini
+        // 3. Pertemuan parenting bulan ini
         const parentingResult = await pool.query(`
             SELECT COUNT(*) AS total
-            FROM parenting p
-            JOIN siswa s ON p.siswa_id = s.id
-            WHERE s.kelas_id = $1
-              AND date_trunc('month', p.tanggal) = date_trunc('month', CURRENT_DATE)
+            FROM parenting
+            WHERE kelas_id = $1
+              AND date_trunc('month', tanggal) = date_trunc('month', CURRENT_DATE)
         `, [kelas_id]);
         const totalParentingBulanIni = parseInt(parentingResult.rows[0].total);
 
-        // 4. Rata-rata skor kebersihan bulan ini
+        // 4. Status kebersihan terbaru bulan ini
         const kebersihanResult = await pool.query(`
-            SELECT ROUND(AVG(skor), 1) AS rata_rata
+            SELECT status_kebersihan, COUNT(*) AS jumlah
             FROM kebersihan_kelas
             WHERE kelas_id = $1
               AND date_trunc('month', tanggal_penilaian) = date_trunc('month', CURRENT_DATE)
+            GROUP BY status_kebersihan
+            ORDER BY jumlah DESC
+            LIMIT 1
         `, [kelas_id]);
-        const rataRataKebersihan = kebersihanResult.rows[0].rata_rata || null;
+        const statusKebersihanTerbanyak = kebersihanResult.rows[0]?.status_kebersihan || null;
 
         // 5. Refleksi terbaru
         const refleksiResult = await pool.query(`
@@ -60,18 +57,16 @@ exports.getBerandaData = async (req, res) => {
         `, [kelas_id]);
         const refleksiTerbaru = refleksiResult.rows[0] || null;
 
-        // 6. Pengumuman terbaru (3 terakhir — untuk ditampilkan di beranda)
+        // 6. Pengumuman terbaru (3 terakhir)
         const pengumumanResult = await pool.query(
             'SELECT * FROM pengumuman ORDER BY id DESC LIMIT 3'
         );
 
-        // 7. Catatan parenting terbaru (5 terakhir)
+        // 7. Parenting terbaru (5 terakhir)
         const parentingTerbaruResult = await pool.query(`
-            SELECT p.*, s.nama_lengkap AS nama_siswa
-            FROM parenting p
-            JOIN siswa s ON p.siswa_id = s.id
-            WHERE s.kelas_id = $1
-            ORDER BY p.tanggal DESC
+            SELECT * FROM parenting
+            WHERE kelas_id = $1
+            ORDER BY tanggal DESC
             LIMIT 5
         `, [kelas_id]);
 
@@ -82,7 +77,7 @@ exports.getBerandaData = async (req, res) => {
                 statistik: {
                     total_siswa: totalSiswa,
                     parenting_bulan_ini: totalParentingBulanIni,
-                    rata_rata_kebersihan: rataRataKebersihan,
+                    status_kebersihan_terbanyak: statusKebersihanTerbanyak,
                 },
                 refleksi_terbaru: refleksiTerbaru,
                 pengumuman_terbaru: pengumumanResult.rows,

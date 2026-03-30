@@ -74,19 +74,19 @@ router.delete('/upacara/:id', extractIdentity, upacaraController.deleteUpacara);
 // Beranda (dashboard ringkasan)
 router.get('/walas/beranda', extractIdentity, berandaWaliKelasController.getBerandaData);
 
-// Parenting
+// Parenting Kelas Massal
 router.get('/walas/parenting', extractIdentity, parentingController.getAllParenting);
 router.get('/walas/parenting/:id', extractIdentity, parentingController.getParentingById);
-router.post('/walas/parenting', extractIdentity, parentingController.createParenting);
-router.put('/walas/parenting/:id', extractIdentity, parentingController.updateParenting);
+router.post('/walas/parenting', extractIdentity, upload.single('foto'), parentingController.createParenting);
+router.put('/walas/parenting/:id', extractIdentity, upload.single('foto'), parentingController.updateParenting);
 router.delete('/walas/parenting/:id', extractIdentity, parentingController.deleteParenting);
 
 // Kebersihan Kelas
 router.get('/walas/kebersihan', extractIdentity, kebersihanController.getAllKebersihan);
 router.get('/walas/kebersihan/rekap/:kelas_id', extractIdentity, kebersihanController.getRekapKebersihan);
 router.get('/walas/kebersihan/:id', extractIdentity, kebersihanController.getKebersihanById);
-router.post('/walas/kebersihan', extractIdentity, kebersihanController.createKebersihan);
-router.put('/walas/kebersihan/:id', extractIdentity, kebersihanController.updateKebersihan);
+router.post('/walas/kebersihan', extractIdentity, upload.single('foto'), kebersihanController.createKebersihan);
+router.put('/walas/kebersihan/:id', extractIdentity, upload.single('foto'), kebersihanController.updateKebersihan);
 router.delete('/walas/kebersihan/:id', extractIdentity, kebersihanController.deleteKebersihan);
 
 // Refleksi Kelas

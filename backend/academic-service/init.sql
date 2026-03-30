@@ -38,39 +38,36 @@ CREATE TABLE IF NOT EXISTS jadwal_upacara (id SERIAL PRIMARY KEY, tanggal DATE, 
 -- TABEL FITUR WALI KELAS
 -- ==========================================
 
--- Tabel catatan komunikasi wali kelas dengan orang tua siswa
+-- Tabel pertemuan parenting kelas massal (bukan per-siswa)
 CREATE TABLE IF NOT EXISTS parenting (
     id SERIAL PRIMARY KEY,
-    siswa_id INTEGER NOT NULL REFERENCES siswa(id) ON DELETE CASCADE,
+    kelas_id INTEGER NOT NULL REFERENCES kelas(id) ON DELETE CASCADE,
     tanggal DATE NOT NULL,
-    topik VARCHAR(255) NOT NULL,
-    catatan TEXT DEFAULT '',
-    jenis_komunikasi VARCHAR(50) DEFAULT 'tatap_muka',
+    kehadiran_ortu INTEGER DEFAULT 0,       -- jumlah orang tua hadir
+    agenda_utama VARCHAR(255) NOT NULL,
+    foto_url TEXT DEFAULT '',               -- URL dokumentasi foto/dokumen
+    ringkasan_hasil TEXT DEFAULT '',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Tabel penilaian kebersihan kelas mingguan
+-- Tabel kontrol kebersihan kelas harian
 CREATE TABLE IF NOT EXISTS kebersihan_kelas (
     id SERIAL PRIMARY KEY,
     kelas_id INTEGER NOT NULL REFERENCES kelas(id) ON DELETE CASCADE,
     tanggal_penilaian DATE NOT NULL,
-    petugas_piket JSONB DEFAULT '[]',      -- array nama siswa piket
-    skor INTEGER NOT NULL CHECK (skor >= 0 AND skor <= 100),
-    aspek_penilaian JSONB DEFAULT '{}',    -- { lantai, meja, papan_tulis, tempat_sampah }
+    status_kebersihan VARCHAR(30) NOT NULL DEFAULT 'bersih',  -- sangat_bersih | bersih | cukup | kotor
+    foto_url TEXT DEFAULT '',               -- URL foto kondisi kelas
     catatan TEXT DEFAULT '',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Tabel refleksi mingguan kondisi kelas oleh wali kelas
+-- Tabel refleksi wali kelas (judul + isi evaluasi)
 CREATE TABLE IF NOT EXISTS refleksi_kelas (
     id SERIAL PRIMARY KEY,
     kelas_id INTEGER NOT NULL REFERENCES kelas(id) ON DELETE CASCADE,
     tanggal DATE NOT NULL,
-    kondisi_kelas VARCHAR(20) NOT NULL DEFAULT 'baik',  -- sangat_baik | baik | cukup | kurang
-    hal_positif TEXT DEFAULT '',
-    hal_perlu_perbaikan TEXT DEFAULT '',
-    rencana_tindak_lanjut TEXT DEFAULT '',
-    catatan_tambahan TEXT DEFAULT '',
+    judul_refleksi VARCHAR(255) NOT NULL,
+    isi_refleksi TEXT DEFAULT '',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

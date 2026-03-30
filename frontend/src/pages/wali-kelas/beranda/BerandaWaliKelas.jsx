@@ -98,9 +98,9 @@ const BerandaWaliKelas = () => {
               color="bg-purple-50"
             />
             <StatCard
-              label="Rata-rata Skor Kebersihan"
-              value={data.statistik.rata_rata_kebersihan
-                ? `${data.statistik.rata_rata_kebersihan} / 100`
+              label="Status Kebersihan Terbanyak"
+              value={data.statistik.status_kebersihan_terbanyak
+                ? data.statistik.status_kebersihan_terbanyak.replace('_', ' ').toUpperCase()
                 : 'Belum ada'}
               icon="🧹"
               color="bg-green-50"
@@ -119,18 +119,11 @@ const BerandaWaliKelas = () => {
                         weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
                       })}
                     </span>
-                    <KondisiBadge kondisi={data.refleksi_terbaru.kondisi_kelas} />
                   </div>
-                  {data.refleksi_terbaru.hal_positif && (
+                  {data.refleksi_terbaru.judul_refleksi && (
                     <div>
-                      <p className="text-xs font-semibold text-green-600 mb-1">✅ Hal Positif</p>
-                      <p className="text-sm text-gray-600">{data.refleksi_terbaru.hal_positif}</p>
-                    </div>
-                  )}
-                  {data.refleksi_terbaru.rencana_tindak_lanjut && (
-                    <div>
-                      <p className="text-xs font-semibold text-blue-600 mb-1">📌 Rencana Tindak Lanjut</p>
-                      <p className="text-sm text-gray-600">{data.refleksi_terbaru.rencana_tindak_lanjut}</p>
+                      <p className="text-xs font-semibold text-indigo-600 mb-1">📌 {data.refleksi_terbaru.judul_refleksi}</p>
+                      <p className="text-sm text-gray-600">{data.refleksi_terbaru.isi_refleksi}</p>
                     </div>
                   )}
                 </div>
@@ -158,30 +151,30 @@ const BerandaWaliKelas = () => {
 
             {/* Parenting Terbaru */}
             <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 lg:col-span-2">
-              <h2 className="text-sm font-bold text-gray-700 mb-4">👨‍👩‍👧 Catatan Parenting Terbaru</h2>
+              <h2 className="text-sm font-bold text-gray-700 mb-4">👨‍👩‍👧 Pertemuan Parenting Terbaru</h2>
               {data.parenting_terbaru.length > 0 ? (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="text-left text-xs text-gray-400 border-b border-gray-100">
-                        <th className="pb-2 font-medium">Siswa</th>
                         <th className="pb-2 font-medium">Tanggal</th>
-                        <th className="pb-2 font-medium">Topik</th>
-                        <th className="pb-2 font-medium">Jenis</th>
+                        <th className="pb-2 font-medium">Agenda</th>
+                        <th className="pb-2 font-medium">Kehadiran Ortu</th>
+                        <th className="pb-2 font-medium">Ringkasan</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
                       {data.parenting_terbaru.map(p => (
                         <tr key={p.id}>
-                          <td className="py-2.5 font-medium text-gray-700">{p.nama_siswa}</td>
-                          <td className="py-2.5 text-gray-500">
+                          <td className="py-2.5 text-gray-500 text-xs">
                             {new Date(p.tanggal).toLocaleDateString('id-ID')}
                           </td>
-                          <td className="py-2.5 text-gray-600">{p.topik}</td>
-                          <td className="py-2.5">
-                            <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full capitalize">
-                              {p.jenis_komunikasi?.replace('_', ' ')}
-                            </span>
+                          <td className="py-2.5 font-medium text-gray-700">{p.agenda_utama}</td>
+                          <td className="py-2.5 text-blue-600 font-semibold text-xs">
+                            {p.kehadiran_ortu || 0} orang
+                          </td>
+                          <td className="py-2.5 text-gray-500 text-xs max-w-xs truncate">
+                            {p.ringkasan_hasil || '—'}
                           </td>
                         </tr>
                       ))}

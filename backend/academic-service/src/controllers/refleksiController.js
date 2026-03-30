@@ -3,7 +3,7 @@ const pool = require('../config/db');
 // =============================================
 // --- KONTROLLER REFLEKSI (WALI KELAS) ---
 // =============================================
-// Mencatat refleksi mingguan kondisi kelas oleh wali kelas
+// Mencatat refleksi wali kelas berupa judul + isi evaluasi
 
 // GET semua catatan refleksi
 // Query param opsional: ?kelas_id=1
@@ -45,36 +45,20 @@ exports.createRefleksi = async (req, res) => {
     const {
         kelas_id,
         tanggal,
-        kondisi_kelas,      // 'sangat_baik' | 'baik' | 'cukup' | 'kurang'
-        hal_positif,        // TEXT — hal-hal baik minggu ini
-        hal_perlu_perbaikan,// TEXT — hal yang perlu ditingkatkan
-        rencana_tindak_lanjut, // TEXT — rencana ke depan
-        catatan_tambahan
+        judul_refleksi,
+        isi_refleksi,
     } = req.body;
 
-    if (!kelas_id || !tanggal || !kondisi_kelas) {
-        return res.status(400).json({ message: 'kelas_id, tanggal, dan kondisi_kelas wajib diisi' });
-    }
-
-    const kondisiValid = ['sangat_baik', 'baik', 'cukup', 'kurang'];
-    if (!kondisiValid.includes(kondisi_kelas)) {
-        return res.status(400).json({ message: `kondisi_kelas harus salah satu dari: ${kondisiValid.join(', ')}` });
+    if (!kelas_id || !tanggal || !judul_refleksi) {
+        return res.status(400).json({ message: 'kelas_id, tanggal, dan judul_refleksi wajib diisi' });
     }
 
     try {
         const result = await pool.query(`
             INSERT INTO refleksi_kelas
-                (kelas_id, tanggal, kondisi_kelas, hal_positif, hal_perlu_perbaikan, rencana_tindak_lanjut, catatan_tambahan)
-            VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *
-        `, [
-            kelas_id,
-            tanggal,
-            kondisi_kelas,
-            hal_positif || '',
-            hal_perlu_perbaikan || '',
-            rencana_tindak_lanjut || '',
-            catatan_tambahan || ''
-        ]);
+                (kelas_id, tanggal, judul_refleksi, isi_refleksi)
+            VALUES ($1, $2, $3, $4) RETURNING *
+        `, [kelas_id, tanggal, judul_refleksi, isi_refleksi || '']);
 
         res.status(201).json({ success: true, data: result.rows[0] });
     } catch (err) {
@@ -85,24 +69,14 @@ exports.createRefleksi = async (req, res) => {
 // PUT update refleksi
 exports.updateRefleksi = async (req, res) => {
     const { id } = req.params;
-    const {
-        kelas_id, tanggal, kondisi_kelas,
-        hal_positif, hal_perlu_perbaikan,
-        rencana_tindak_lanjut, catatan_tambahan
-    } = req.body;
+    const { kelas_id, tanggal, judul_refleksi, isi_refleksi } = req.body;
 
     try {
         const result = await pool.query(`
             UPDATE refleksi_kelas
-            SET kelas_id = $1, tanggal = $2, kondisi_kelas = $3, hal_positif = $4,
-                hal_perlu_perbaikan = $5, rencana_tindak_lanjut = $6, catatan_tambahan = $7
-            WHERE id = $8 RETURNING *
-        `, [
-            kelas_id, tanggal, kondisi_kelas,
-            hal_positif || '', hal_perlu_perbaikan || '',
-            rencana_tindak_lanjut || '', catatan_tambahan || '',
-            id
-        ]);
+            SET kelas_id = $1, tanggal = $2, judul_refleksi = $3, isi_refleksi = $4
+            WHERE id = $5 RETURNING *
+        `, [kelas_id, tanggal, judul_refleksi, isi_refleksi || '', id]);
 
         if (result.rowCount === 0) {
             return res.status(404).json({ message: 'Catatan refleksi tidak ditemukan' });

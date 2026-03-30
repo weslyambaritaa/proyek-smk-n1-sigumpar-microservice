@@ -2,30 +2,22 @@ import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { waliKelasApi } from '../../../api/waliKelasApi';
 import { academicApi } from '../../../api/academicApi';
-import ParentingDialog from './dialog/ParentingDialog';
-
-const JENIS_LABEL = {
-  tatap_muka: 'Tatap Muka',
-  telepon: 'Telepon',
-  whatsapp: 'WhatsApp',
-  surat: 'Surat',
-};
-
-const JENIS_COLOR = {
-  tatap_muka: 'bg-blue-100 text-blue-700',
-  telepon:    'bg-green-100 text-green-700',
-  whatsapp:   'bg-emerald-100 text-emerald-700',
-  surat:      'bg-orange-100 text-orange-700',
-};
 
 const ParentingPage = () => {
   const [data, setData] = useState([]);
   const [kelasList, setKelasList] = useState([]);
-  const [siswaDiKelas, setSiswaDiKelas] = useState([]);
   const [selectedKelasId, setSelectedKelasId] = useState('');
   const [loading, setLoading] = useState(false);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editData, setEditData] = useState(null);
+  const [saving, setSaving] = useState(false);
+
+  const today = new Date().toISOString().split('T')[0];
+  const [form, setForm] = useState({
+    tanggal: today,
+    kehadiran_ortu: '',
+    agenda_utama: '',
+    ringkasan_hasil: '',
+    foto: null,
+  });
 
   useEffect(() => {
     academicApi.getAllKelas()
@@ -37,14 +29,7 @@ const ParentingPage = () => {
   }, []);
 
   useEffect(() => {
-    if (!selectedKelasId) return;
-    fetchData();
-    // Ambil daftar siswa di kelas ini untuk dropdown
-    academicApi.getAllSiswa()
-      .then(res => {
-        const filtered = res.data.filter(s => String(s.kelas_id) === selectedKelasId);
-        setSiswaDiKelas(filtered);
-      });
+    if (selectedKelasId) fetchData();
   }, [selectedKelasId]);
 
   const fetchData = () => {
@@ -55,25 +40,34 @@ const ParentingPage = () => {
       .finally(() => setLoading(false));
   };
 
-  const handleSubmit = async (payload) => {
+  const handleSubmit = async () => {
+    if (!form.tanggal || !form.agenda_utama.trim()) {
+      toast.error('Tanggal dan agenda utama wajib diisi');
+      return;
+    }
+    setSaving(true);
     try {
-      if (editData) {
-        await waliKelasApi.updateParenting(editData.id, payload);
-        toast.success('Catatan berhasil diperbarui');
-      } else {
-        await waliKelasApi.createParenting(payload);
-        toast.success('Catatan berhasil ditambahkan');
-      }
-      setDialogOpen(false);
-      setEditData(null);
+      const fd = new FormData();
+      fd.append('kelas_id', selectedKelasId);
+      fd.append('tanggal', form.tanggal);
+      fd.append('kehadiran_ortu', form.kehadiran_ortu || 0);
+      fd.append('agenda_utama', form.agenda_utama);
+      fd.append('ringkasan_hasil', form.ringkasan_hasil);
+      if (form.foto) fd.append('foto', form.foto);
+
+      await waliKelasApi.createParenting(fd);
+      toast.success('Laporan parenting berhasil disimpan');
+      setForm({ tanggal: today, kehadiran_ortu: '', agenda_utama: '', ringkasan_hasil: '', foto: null });
       fetchData();
     } catch {
-      toast.error('Gagal menyimpan catatan');
+      toast.error('Gagal menyimpan laporan parenting');
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleDelete = async (id) => {
-    if (!confirm('Hapus catatan ini?')) return;
+    if (!confirm('Hapus catatan pertemuan ini?')) return;
     try {
       await waliKelasApi.deleteParenting(id);
       toast.success('Catatan berhasil dihapus');
@@ -83,82 +77,184 @@ const ParentingPage = () => {
     }
   };
 
-  const openEdit = (item) => {
-    setEditData(item);
-    setDialogOpen(true);
-  };
+  const selectedKelas = kelasList.find(k => String(k.id) === selectedKelasId);
 
   return (
-    <div>
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Parenting</h1>
-          <p className="text-sm text-gray-500 mt-1">Catatan komunikasi dengan orang tua siswa</p>
+          <h1 className="text-2xl font-bold text-gray-800">Parenting Kelas Massal</h1>
+          {selectedKelas && (
+            <p className="text-sm text-blue-600 font-medium mt-0.5">
+              Wali Kelas | {selectedKelas.nama_kelas}
+            </p>
+          )}
         </div>
-        <div className="flex items-center gap-3">
-          <select
-            value={selectedKelasId}
-            onChange={e => setSelectedKelasId(e.target.value)}
-            className="border border-gray-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            {kelasList.map(k => (
-              <option key={k.id} value={k.id}>{k.nama_kelas}</option>
-            ))}
-          </select>
-          <button
-            onClick={() => { setEditData(null); setDialogOpen(true); }}
-            className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-blue-700"
-          >
-            + Tambah Catatan
-          </button>
-        </div>
+        <select
+          value={selectedKelasId}
+          onChange={e => setSelectedKelasId(e.target.value)}
+          className="border border-gray-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          {kelasList.map(k => (
+            <option key={k.id} value={k.id}>{k.nama_kelas}</option>
+          ))}
+        </select>
       </div>
 
-      {/* Tabel */}
+      {/* Form Catat Pertemuan */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+        <div className="flex items-center gap-3 mb-5">
+          <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center text-xl">👥</div>
+          <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wide">
+            Catat Pertemuan &amp; Upload Dokumentasi
+          </h2>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-4">
+          {/* Tanggal */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
+              Tanggal Pertemuan
+            </label>
+            <input
+              type="date"
+              value={form.tanggal}
+              onChange={e => setForm(p => ({ ...p, tanggal: e.target.value }))}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+            />
+          </div>
+
+          {/* Kehadiran Orang Tua */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
+              Kehadiran Orang Tua
+            </label>
+            <input
+              type="number"
+              min={0}
+              value={form.kehadiran_ortu}
+              onChange={e => setForm(p => ({ ...p, kehadiran_ortu: e.target.value }))}
+              placeholder="Jml Hadir"
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+            />
+          </div>
+
+          {/* Agenda Utama */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
+              Agenda Utama
+            </label>
+            <input
+              type="text"
+              value={form.agenda_utama}
+              onChange={e => setForm(p => ({ ...p, agenda_utama: e.target.value }))}
+              placeholder="Judul rapat..."
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+            />
+          </div>
+
+          {/* Upload Foto/Dokumen */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
+              Upload Foto/Dokumen
+            </label>
+            <input
+              type="file"
+              accept="image/*,.pdf"
+              onChange={e => setForm(p => ({ ...p, foto: e.target.files[0] || null }))}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 file:mr-2 file:py-0.5 file:px-2 file:rounded file:border-0 file:text-xs file:bg-gray-100 file:text-gray-600"
+            />
+          </div>
+        </div>
+
+        {/* Ringkasan Hasil */}
+        <div className="mb-5">
+          <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
+            Hasil Keputusan / Catatan Penting
+          </label>
+          <textarea
+            value={form.ringkasan_hasil}
+            onChange={e => setForm(p => ({ ...p, ringkasan_hasil: e.target.value }))}
+            rows={3}
+            placeholder="Ringkasan hasil pertemuan..."
+            className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"
+          />
+        </div>
+
+        <button
+          onClick={handleSubmit}
+          disabled={saving}
+          className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl text-sm font-bold uppercase tracking-wide transition-colors disabled:opacity-50"
+        >
+          {saving ? 'Menyimpan...' : 'Simpan Laporan & Lampiran'}
+        </button>
+      </div>
+
+      {/* Histori Pertemuan */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-100">
+          <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wide">
+            Histori Pertemuan Kelas
+          </h2>
+        </div>
+
         {loading ? (
           <div className="text-center py-16 text-gray-400">Memuat data...</div>
         ) : data.length === 0 ? (
           <div className="text-center py-16 text-gray-400">
             <p className="text-4xl mb-3">👨‍👩‍👧</p>
-            <p className="text-sm">Belum ada catatan parenting untuk kelas ini</p>
+            <p className="text-sm">Belum ada catatan pertemuan parenting</p>
           </div>
         ) : (
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-100">
-              <tr className="text-left text-xs text-gray-500">
-                <th className="px-6 py-3 font-semibold">Nama Siswa</th>
-                <th className="px-6 py-3 font-semibold">Tanggal</th>
-                <th className="px-6 py-3 font-semibold">Topik</th>
-                <th className="px-6 py-3 font-semibold">Jenis</th>
-                <th className="px-6 py-3 font-semibold">Catatan</th>
+              <tr className="text-left text-xs text-gray-500 uppercase tracking-wide">
+                <th className="px-6 py-3 font-semibold">No</th>
+                <th className="px-6 py-3 font-semibold">Tanggal &amp; Agenda</th>
+                <th className="px-6 py-3 font-semibold">Kehadiran</th>
+                <th className="px-6 py-3 font-semibold">Ringkasan Hasil</th>
+                <th className="px-6 py-3 font-semibold">Lampiran</th>
                 <th className="px-6 py-3 font-semibold text-right">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {data.map(item => (
+              {data.map((item, idx) => (
                 <tr key={item.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-6 py-4 font-medium text-gray-800">{item.nama_siswa}</td>
-                  <td className="px-6 py-4 text-gray-500">
-                    {new Date(item.tanggal).toLocaleDateString('id-ID', {
-                      day: '2-digit', month: 'short', year: 'numeric'
-                    })}
-                  </td>
-                  <td className="px-6 py-4 text-gray-700">{item.topik}</td>
+                  <td className="px-6 py-4 text-gray-500">{idx + 1}</td>
                   <td className="px-6 py-4">
-                    <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${JENIS_COLOR[item.jenis_komunikasi] || 'bg-gray-100 text-gray-600'}`}>
-                      {JENIS_LABEL[item.jenis_komunikasi] || item.jenis_komunikasi}
+                    <p className="text-blue-600 text-xs mb-0.5">
+                      {new Date(item.tanggal).toLocaleDateString('id-ID', {
+                        year: 'numeric', month: '2-digit', day: '2-digit'
+                      })}
+                    </p>
+                    <p className="font-semibold text-gray-800 uppercase text-xs">
+                      {item.agenda_utama}
+                    </p>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className="text-blue-600 font-semibold text-xs">
+                      {item.kehadiran_ortu || 0} ORANGTUA
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-gray-500 max-w-xs truncate">{item.catatan || '—'}</td>
+                  <td className="px-6 py-4 text-gray-500 max-w-xs text-xs">
+                    {item.ringkasan_hasil || '—'}
+                  </td>
+                  <td className="px-6 py-4">
+                    {item.foto_url ? (
+                      <a
+                        href={item.foto_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:underline text-xs font-semibold uppercase"
+                      >
+                        Lihat File
+                      </a>
+                    ) : (
+                      <span className="text-gray-300 text-xs">—</span>
+                    )}
+                  </td>
                   <td className="px-6 py-4 text-right">
-                    <button
-                      onClick={() => openEdit(item)}
-                      className="text-blue-600 hover:text-blue-800 text-xs font-semibold mr-3"
-                    >
-                      Edit
-                    </button>
                     <button
                       onClick={() => handleDelete(item.id)}
                       className="text-red-500 hover:text-red-700 text-xs font-semibold"
@@ -172,14 +268,6 @@ const ParentingPage = () => {
           </table>
         )}
       </div>
-
-      <ParentingDialog
-        isOpen={dialogOpen}
-        onClose={() => { setDialogOpen(false); setEditData(null); }}
-        onSubmit={handleSubmit}
-        editData={editData}
-        siswaDiKelas={siswaDiKelas}
-      />
     </div>
   );
 };
