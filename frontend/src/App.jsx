@@ -11,6 +11,7 @@ import MapelPage from "./pages/tata-usaha/mapel/MapelPage";
 import JadwalPage from "./pages/tata-usaha/jadwal/JadwalPage";
 import PiketPage from "./pages/tata-usaha/piket/PiketPage";
 import UpacaraPage from "./pages/tata-usaha/upacara/UpacaraPage";
+import InputNilaiPage from "./pages/guru-mapel/InputNilaiPage";
 
 /**
  * Komponen reusable untuk grup menu per role (Dropdown)
@@ -42,7 +43,6 @@ const NavDropdown = ({ title, icon, children, isOpen, onClick }) => {
 };
 
 const App = () => {
-  // State untuk mengontrol dropdown mana yang sedang terbuka
   const [openMenus, setOpenMenus] = useState({});
 
   const toggleMenu = (menuName) => {
@@ -54,12 +54,10 @@ const App = () => {
 
   return (
     <BrowserRouter>
-      {/* === TOAST NOTIFIKASI BESAR & DI TENGAH === */}
       <Toaster
         position="top-center"
         reverseOrder={false}
         toastOptions={{
-          // Styling khusus agar toast lebih besar
           style: {
             padding: "20px 30px",
             fontSize: "16px",
@@ -73,21 +71,19 @@ const App = () => {
           error: { duration: 4000 },
         }}
       />
+
       <div className="flex min-h-screen bg-gray-50">
-        {/* === SIDEBAR === */}
         <aside className="w-64 bg-white border-r border-gray-200 flex flex-col sticky top-0 h-screen">
           <div className="p-6 border-b border-gray-100">
             <h1 className="text-xl font-bold text-blue-600">SMK N1 Sigumpar</h1>
           </div>
 
           <nav className="flex-1 p-4 overflow-y-auto">
-            {/* Dashboard umum */}
             <NavLink to="/" className={navClass}>
               🏠 Dashboard
             </NavLink>
 
             <div className="mt-4 space-y-1">
-              {/* Dropdown Kepala Sekolah */}
               {hasRole("kepala-sekolah") && (
                 <NavDropdown
                   title="Kepala Sekolah"
@@ -98,11 +94,9 @@ const App = () => {
                   <NavLink to="/laporan-tahunan" className={subNavClass}>
                     Laporan Tahunan
                   </NavLink>
-                  {/* Tambah menu kepsek di sini */}
                 </NavDropdown>
               )}
 
-              {/* Dropdown Waka Sekolah */}
               {hasRole("waka-sekolah") && (
                 <NavDropdown
                   title="Waka Sekolah"
@@ -116,7 +110,6 @@ const App = () => {
                 </NavDropdown>
               )}
 
-              {/* Dropdown Guru Mapel */}
               {hasRole("guru-mapel") && (
                 <NavDropdown
                   title="Guru Mapel"
@@ -130,7 +123,6 @@ const App = () => {
                 </NavDropdown>
               )}
 
-              {/* Dropdown Wali Kelas */}
               {hasRole("wali-kelas") && (
                 <NavDropdown
                   title="Wali Kelas"
@@ -144,7 +136,6 @@ const App = () => {
                 </NavDropdown>
               )}
 
-              {/* Dropdown Tata Usaha */}
               {hasRole("tata-usaha") && (
                 <NavDropdown
                   title="Tata Usaha"
@@ -152,8 +143,6 @@ const App = () => {
                   isOpen={openMenus["tu"]}
                   onClick={() => toggleMenu("tu")}
                 >
-                  {/* <NavLink to="/users" className={subNavClass}>Data Siswa</NavLink>
-                  <NavLink to="/todos" className={subNavClass}>Administrasi</NavLink> */}
                   <NavLink to="/academic/kelas" className={subNavClass}>
                     Data Kelas
                   </NavLink>
@@ -181,7 +170,6 @@ const App = () => {
                 </NavDropdown>
               )}
 
-              {/* Dropdown Pramuka */}
               {hasRole("pramuka") && (
                 <NavDropdown
                   title="Pramuka"
@@ -195,7 +183,6 @@ const App = () => {
                 </NavDropdown>
               )}
 
-              {/* Dropdown Vokasi */}
               {hasRole("vokasi") && (
                 <NavDropdown
                   title="Vokasi"
@@ -211,7 +198,6 @@ const App = () => {
             </div>
           </nav>
 
-          {/* Profil User di Bawah Sidebar */}
           <div className="p-4 border-t bg-gray-50">
             <p className="text-sm font-semibold truncate">
               {keycloak.tokenParsed?.name}
@@ -225,12 +211,9 @@ const App = () => {
           </div>
         </aside>
 
-        {/* === KONTEN UTAMA === */}
         <main className="flex-1 p-8 overflow-y-auto">
           <Routes>
             <Route path="/" element={<Dashboard />} />
-            {/* <Route path="/users" element={<UsersPage />} />
-            <Route path="/todos" element={<TodosPage />} /> */}
             <Route path="/academic/kelas" element={<KelasPage />} />
             <Route path="/academic/siswa" element={<SiswaPage />} />
             <Route path="/academic/pengumuman" element={<PengumumanPage />} />
@@ -239,7 +222,17 @@ const App = () => {
             <Route path="/academic/jadwal" element={<JadwalPage />} />
             <Route path="/academic/piket" element={<PiketPage />} />
             <Route path="/academic/upacara" element={<UpacaraPage />} />
-            {/* Route lainnya bisa ditambahkan di sini */}
+
+            <Route path="/input-nilai" element={<InputNilaiPage />} />
+
+            <Route
+              path="/presensi-kelas"
+              element={
+                <div className="p-8 text-center text-gray-500">
+                  Halaman Presensi Kelas (Sedang Dikembangkan)
+                </div>
+              }
+            />
           </Routes>
         </main>
       </div>
