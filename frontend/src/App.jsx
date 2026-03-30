@@ -11,6 +11,7 @@ import MapelPage from "./pages/tata-usaha/mapel/MapelPage";
 import JadwalPage from "./pages/tata-usaha/jadwal/JadwalPage";
 import PiketPage from "./pages/tata-usaha/piket/PiketPage";
 import UpacaraPage from "./pages/tata-usaha/upacara/UpacaraPage";
+import InputNilaiPage from "./pages/guru-mapel/InputNilaiPage";
 
 /**
  * Komponen reusable untuk grup menu per role (Dropdown)
@@ -124,7 +125,7 @@ const App = () => {
                   isOpen={openMenus["guru"]}
                   onClick={() => toggleMenu("guru")}
                 >
-                  <NavLink to="/input-nilai" className={subNavClass}>
+                  <NavLink to="/guru-mapel/input-nilai" className={subNavClass}>
                     Input Nilai
                   </NavLink>
                 </NavDropdown>
@@ -239,6 +240,8 @@ const App = () => {
             <Route path="/academic/jadwal" element={<JadwalPage />} />
             <Route path="/academic/piket" element={<PiketPage />} />
             <Route path="/academic/upacara" element={<UpacaraPage />} />
+            {/* Route Guru Mapel */}
+            <Route path="/guru-mapel/input-nilai" element={<InputNilaiPage />} />
             {/* Route lainnya bisa ditambahkan di sini */}
           </Routes>
         </main>
