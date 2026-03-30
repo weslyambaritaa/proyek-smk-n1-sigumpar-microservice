@@ -1,25 +1,24 @@
-const pool = require("../config/db");
+const pool = require('../config/db');
 
 // =============================================
 // NILAI CONTROLLER
-// Mengelola nilai tugas, kuis, UTS, UAS, praktik siswa
+// Kolom siswa: id_siswa (UUID), "NIS", "namaSiswa", id_kelas
 // =============================================
 
 /**
  * GET /api/academic/nilai
  * Query params: mapel_id, kelas_id, tahun_ajar, search
- * Mengembalikan daftar nilai siswa berdasarkan filter
  */
 exports.getNilai = async (req, res) => {
   const { mapel_id, kelas_id, tahun_ajar, search } = req.query;
 
   try {
     let query = `
-      SELECT 
+      SELECT
         n.id,
         n.siswa_id,
-        s.nisn,
-        s.nama_lengkap,
+        s."NIS"                AS nisn,
+        s."namaSiswa"          AS nama_lengkap,
         k.nama_kelas,
         m.nama_mapel,
         n.mapel_id,
@@ -31,110 +30,100 @@ exports.getNilai = async (req, res) => {
         n.nilai_uas,
         n.nilai_praktik,
         ROUND(
-          (n.nilai_tugas * 0.15 + n.nilai_kuis * 0.15 + n.nilai_uts * 0.20 + n.nilai_uas * 0.30 + n.nilai_praktik * 0.20)::numeric,
-          2
+          (n.nilai_tugas * 0.15 + n.nilai_kuis * 0.15 +
+           n.nilai_uts   * 0.20 + n.nilai_uas  * 0.30 +
+           n.nilai_praktik * 0.20)::numeric, 2
         ) AS nilai_akhir
       FROM nilai_siswa n
-      JOIN siswa s ON n.siswa_id = s.id_siswa
-      JOIN kelas k ON n.kelas_id = k.id
-      JOIN mata_pelajaran m ON n.mapel_id = m.id
+      JOIN siswa          s ON n.siswa_id  = s.id_siswa
+      JOIN kelas          k ON n.kelas_id  = k.id
+      JOIN mata_pelajaran m ON n.mapel_id  = m.id
       WHERE 1=1
     `;
     const params = [];
     let idx = 1;
 
-    if (mapel_id) {
-      query += ` AND n.mapel_id = $${idx++}`;
-      params.push(mapel_id);
-    }
-    if (kelas_id) {
-      query += ` AND n.kelas_id = $${idx++}`;
-      params.push(kelas_id);
-    }
-    if (tahun_ajar) {
-      query += ` AND n.tahun_ajar = $${idx++}`;
-      params.push(tahun_ajar);
-    }
-    if (search) {
-      query += ` AND LOWER(s.namaSiswa) LIKE $${idx++}`;
+    if (mapel_id)  { query += ` AND n.mapel_id  = $${idx++}`; params.push(mapel_id); }
+    if (kelas_id)  { query += ` AND n.kelas_id  = $${idx++}`; params.push(kelas_id); }
+    if (tahun_ajar){ query += ` AND n.tahun_ajar = $${idx++}`; params.push(tahun_ajar); }
+    if (search)    {
+      query += ` AND LOWER(s."namaSiswa") LIKE $${idx++}`;
       params.push(`%${search.toLowerCase()}%`);
     }
 
-    query += ` ORDER BY s.namaSiswa ASC`;
+    query += ` ORDER BY s."namaSiswa" ASC`;
 
     const result = await pool.query(query, params);
     res.json({ success: true, data: result.rows });
   } catch (err) {
-    console.error("Error getNilai:", err);
+    console.error('Error getNilai:', err);
     res.status(500).json({ success: false, error: err.message });
   }
 };
 
 /**
  * GET /api/academic/nilai/siswa-by-kelas
- * Query params: kelas_id, mapel_id, tahun_ajar
- * Mengembalikan daftar siswa di kelas + nilai mereka (jika ada)
+ * Query params: kelas_id (wajib), mapel_id, tahun_ajar
+ * Mengembalikan semua siswa di kelas + nilai mereka (LEFT JOIN)
  */
 exports.getSiswaByKelas = async (req, res) => {
   const { kelas_id, mapel_id, tahun_ajar } = req.query;
 
   if (!kelas_id) {
-    return res
-      .status(400)
-      .json({ success: false, message: "kelas_id wajib diisi" });
+    return res.status(400).json({ success: false, message: 'kelas_id wajib diisi' });
   }
 
   try {
     const query = `
-      SELECT 
-        s.id_siswa AS siswa_id,
-        s.NIS AS nisn,
-        s.namaSiswa AS nama_lengkap,
+      SELECT
+        s.id_siswa                              AS siswa_id,
+        s."NIS"                                 AS nisn,
+        s."namaSiswa"                           AS nama_lengkap,
         k.nama_kelas,
-        COALESCE(n.id, NULL) AS nilai_id,
-        COALESCE(n.mapel_id, NULL) AS mapel_id,
-        COALESCE(n.tahun_ajar, $3) AS tahun_ajar,
-        COALESCE(n.nilai_tugas, 0) AS nilai_tugas,
-        COALESCE(n.nilai_kuis, 0) AS nilai_kuis,
-        COALESCE(n.nilai_uts, 0) AS nilai_uts,
-        COALESCE(n.nilai_uas, 0) AS nilai_uas,
-        COALESCE(n.nilai_praktik, 0) AS nilai_praktik,
-        CASE 
+        COALESCE(n.id,        NULL)             AS nilai_id,
+        COALESCE(n.mapel_id,  NULL)             AS mapel_id,
+        COALESCE(n.tahun_ajar, $3)              AS tahun_ajar,
+        COALESCE(n.nilai_tugas,   0)            AS nilai_tugas,
+        COALESCE(n.nilai_kuis,    0)            AS nilai_kuis,
+        COALESCE(n.nilai_uts,     0)            AS nilai_uts,
+        COALESCE(n.nilai_uas,     0)            AS nilai_uas,
+        COALESCE(n.nilai_praktik, 0)            AS nilai_praktik,
+        CASE
           WHEN n.id IS NOT NULL THEN
             ROUND(
-              (n.nilai_tugas * 0.15 + n.nilai_kuis * 0.15 + n.nilai_uts * 0.20 + n.nilai_uas * 0.30 + n.nilai_praktik * 0.20)::numeric,
-              2
+              (n.nilai_tugas * 0.15 + n.nilai_kuis * 0.15 +
+               n.nilai_uts   * 0.20 + n.nilai_uas  * 0.30 +
+               n.nilai_praktik * 0.20)::numeric, 2
             )
           ELSE 0
         END AS nilai_akhir
       FROM siswa s
       JOIN kelas k ON s.id_kelas = k.id
-      LEFT JOIN nilai_siswa n 
-        ON n.siswa_id = s.id_siswa 
-        AND n.kelas_id = $1
+      LEFT JOIN nilai_siswa n
+        ON  n.siswa_id  = s.id_siswa
+        AND n.kelas_id  = $1
         AND ($2::INTEGER IS NULL OR n.mapel_id = $2::INTEGER)
         AND ($3::VARCHAR IS NULL OR n.tahun_ajar = $3)
       WHERE s.id_kelas = $1
-      ORDER BY s.namaSiswa ASC
+      ORDER BY s."namaSiswa" ASC
     `;
 
     const result = await pool.query(query, [
       kelas_id,
-      mapel_id || null,
+      mapel_id  || null,
       tahun_ajar || null,
     ]);
 
     res.json({ success: true, data: result.rows });
   } catch (err) {
-    console.error("Error getSiswaByKelas:", err);
+    console.error('Error getSiswaByKelas:', err);
     res.status(500).json({ success: false, error: err.message });
   }
 };
 
 /**
  * POST /api/academic/nilai/bulk
- * Body: { mapel_id, kelas_id, tahun_ajar, nilai: [{ siswa_id, nilai_tugas, nilai_kuis, nilai_uts, nilai_uas, nilai_praktik }] }
- * Upsert massal nilai siswa
+ * Body: { mapel_id, kelas_id, tahun_ajar, nilai: [{ siswa_id (UUID), ... }] }
  */
 exports.saveNilaiBulk = async (req, res) => {
   const { mapel_id, kelas_id, tahun_ajar, nilai } = req.body;
@@ -143,39 +132,38 @@ exports.saveNilaiBulk = async (req, res) => {
   if (!mapel_id || !kelas_id || !tahun_ajar || !Array.isArray(nilai)) {
     return res.status(400).json({
       success: false,
-      message: "mapel_id, kelas_id, tahun_ajar, dan nilai[] wajib diisi",
+      message: 'mapel_id, kelas_id, tahun_ajar, dan nilai[] wajib diisi',
     });
   }
 
   const client = await pool.connect();
   try {
-    await client.query("BEGIN");
+    await client.query('BEGIN');
 
     const results = [];
     for (const item of nilai) {
       const {
         siswa_id,
-        nilai_tugas,
-        nilai_kuis,
-        nilai_uts,
-        nilai_uas,
-        nilai_praktik,
+        nilai_tugas   = 0,
+        nilai_kuis    = 0,
+        nilai_uts     = 0,
+        nilai_uas     = 0,
+        nilai_praktik = 0,
       } = item;
 
       const upsertQuery = `
-        INSERT INTO nilai_siswa 
-          (siswa_id, mapel_id, kelas_id, tahun_ajar, guru_id, nilai_tugas, nilai_kuis, nilai_uts, nilai_uas, nilai_praktik, updated_at)
-        VALUES 
-          ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
-        ON CONFLICT (siswa_id, mapel_id, tahun_ajar)
-        DO UPDATE SET
-          nilai_tugas = EXCLUDED.nilai_tugas,
-          nilai_kuis = EXCLUDED.nilai_kuis,
-          nilai_uts = EXCLUDED.nilai_uts,
-          nilai_uas = EXCLUDED.nilai_uas,
+        INSERT INTO nilai_siswa
+          (siswa_id, mapel_id, kelas_id, tahun_ajar, guru_id,
+           nilai_tugas, nilai_kuis, nilai_uts, nilai_uas, nilai_praktik, updated_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
+        ON CONFLICT (siswa_id, mapel_id, tahun_ajar) DO UPDATE SET
+          nilai_tugas   = EXCLUDED.nilai_tugas,
+          nilai_kuis    = EXCLUDED.nilai_kuis,
+          nilai_uts     = EXCLUDED.nilai_uts,
+          nilai_uas     = EXCLUDED.nilai_uas,
           nilai_praktik = EXCLUDED.nilai_praktik,
-          guru_id = EXCLUDED.guru_id,
-          updated_at = NOW()
+          guru_id       = EXCLUDED.guru_id,
+          updated_at    = NOW()
         RETURNING *
       `;
 
@@ -185,24 +173,20 @@ exports.saveNilaiBulk = async (req, res) => {
         kelas_id,
         tahun_ajar,
         guru_id,
-        nilai_tugas || 0,
-        nilai_kuis || 0,
-        nilai_uts || 0,
-        nilai_uas || 0,
-        nilai_praktik || 0,
+        Number(nilai_tugas)   || 0,
+        Number(nilai_kuis)    || 0,
+        Number(nilai_uts)     || 0,
+        Number(nilai_uas)     || 0,
+        Number(nilai_praktik) || 0,
       ]);
       results.push(r.rows[0]);
     }
 
-    await client.query("COMMIT");
-    res.json({
-      success: true,
-      message: "Nilai berhasil disimpan",
-      data: results,
-    });
+    await client.query('COMMIT');
+    res.json({ success: true, message: 'Nilai berhasil disimpan', data: results });
   } catch (err) {
-    await client.query("ROLLBACK");
-    console.error("Error saveNilaiBulk:", err);
+    await client.query('ROLLBACK');
+    console.error('Error saveNilaiBulk:', err);
     res.status(500).json({ success: false, error: err.message });
   } finally {
     client.release();
@@ -211,29 +195,26 @@ exports.saveNilaiBulk = async (req, res) => {
 
 /**
  * PUT /api/academic/nilai/:id
- * Update satu record nilai
  */
 exports.updateNilai = async (req, res) => {
   const { id } = req.params;
-  const { nilai_tugas, nilai_kuis, nilai_uts, nilai_uas, nilai_praktik } =
-    req.body;
+  const { nilai_tugas, nilai_kuis, nilai_uts, nilai_uas, nilai_praktik } = req.body;
 
   try {
     const result = await pool.query(
-      `UPDATE nilai_siswa 
-       SET nilai_tugas=$1, nilai_kuis=$2, nilai_uts=$3, nilai_uas=$4, nilai_praktik=$5, updated_at=NOW()
-       WHERE id=$6 RETURNING *`,
-      [nilai_tugas, nilai_kuis, nilai_uts, nilai_uas, nilai_praktik, id],
+      `UPDATE nilai_siswa
+       SET nilai_tugas=$1, nilai_kuis=$2, nilai_uts=$3, nilai_uas=$4,
+           nilai_praktik=$5, updated_at=NOW()
+       WHERE id=$6
+       RETURNING *`,
+      [nilai_tugas, nilai_kuis, nilai_uts, nilai_uas, nilai_praktik, id]
     );
-
     if (result.rowCount === 0) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Nilai tidak ditemukan" });
+      return res.status(404).json({ success: false, message: 'Nilai tidak ditemukan' });
     }
-
     res.json({ success: true, data: result.rows[0] });
   } catch (err) {
+    console.error('Error updateNilai:', err);
     res.status(500).json({ success: false, error: err.message });
   }
 };
@@ -244,9 +225,13 @@ exports.updateNilai = async (req, res) => {
 exports.deleteNilai = async (req, res) => {
   const { id } = req.params;
   try {
-    await pool.query("DELETE FROM nilai_siswa WHERE id = $1", [id]);
-    res.json({ success: true, message: "Nilai berhasil dihapus" });
+    const result = await pool.query('DELETE FROM nilai_siswa WHERE id = $1', [id]);
+    if (result.rowCount === 0) {
+      return res.status(404).json({ success: false, message: 'Nilai tidak ditemukan' });
+    }
+    res.json({ success: true, message: 'Nilai berhasil dihapus' });
   } catch (err) {
+    console.error('Error deleteNilai:', err);
     res.status(500).json({ success: false, error: err.message });
   }
 };
