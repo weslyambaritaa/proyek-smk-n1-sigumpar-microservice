@@ -1,20 +1,22 @@
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import useGrades from "../../../hooks/userGrades";
+import { academicApi } from "../../../api/academicApi";
 
-const mapelOptions = ["Pemrograman Web", "Basis Data", "Jaringan Komputer"];
-const kelasOptions = ["XII RPL 1", "XII RPL 2", "XI RPL 1", "XI RPL 2"];
 const tahunAjarOptions = ["2023/2024", "2024/2025", "2025/2026"];
 
 const initialFilters = {
-  mapel: "Pemrograman Web",
-  kelas: "XII RPL 1",
+  mapel: "",
+  kelas: "",
   tahunAjar: "2023/2024",
   search: "",
 };
 
 const NilaiPage = () => {
   const [filters, setFilters] = useState(initialFilters);
+  const [mapelOptions, setMapelOptions] = useState([]);
+  const [kelasOptions, setKelasOptions] = useState([]);
+  const [loadingOptions, setLoadingOptions] = useState(true);
 
   const {
     grades,
@@ -27,9 +29,48 @@ const NilaiPage = () => {
   } = useGrades();
 
   useEffect(() => {
-    handleCari();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    fetchOptions();
   }, []);
+
+  const fetchOptions = async () => {
+    try {
+      const [mapelRes, kelasRes] = await Promise.all([
+        academicApi.getAllMapel(),
+        academicApi.getAllKelas(),
+      ]);
+
+      const mapels = mapelRes.data?.data || [];
+      const kelases = kelasRes.data?.data || [];
+
+      setMapelOptions(mapels.map((m) => m.nama_mapel || m.nama));
+      setKelasOptions(kelases.map((k) => k.nama_kelas || k.nama));
+
+      if (mapels.length > 0) {
+        setFilters((prev) => ({
+          ...prev,
+          mapel: mapels[0].nama_mapel || mapels[0].nama,
+        }));
+      }
+      if (kelases.length > 0) {
+        setFilters((prev) => ({
+          ...prev,
+          kelas: kelases[0].nama_kelas || kelases[0].nama,
+        }));
+      }
+    } catch (err) {
+      console.error("Gagal mengambil options:", err);
+      toast.error("Gagal memuat data mapel dan kelas");
+    } finally {
+      setLoadingOptions(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!loadingOptions && filters.mapel && filters.kelas) {
+      handleCari();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadingOptions, filters.mapel, filters.kelas]);
 
   const handleCari = async () => {
     try {
@@ -43,6 +84,11 @@ const NilaiPage = () => {
     try {
       await loadGrades(initialFilters);
     } catch (_) {}
+  };
+
+  const handleRefresh = async () => {
+    setLoadingOptions(true);
+    await fetchOptions();
   };
 
   const handleSave = async () => {
@@ -61,13 +107,23 @@ const NilaiPage = () => {
   return (
     <div className="p-6">
       <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-slate-800 tracking-wide">
-            INPUT & KELOLA NILAI
-          </h1>
-          <p className="text-slate-500 mt-3">
-            Kelola nilai tugas, kuis, UTS, UAS, dan praktik siswa
-          </p>
+        <div className="text-center mb-8 flex items-center justify-center gap-4">
+          <div>
+            <h1 className="text-4xl font-bold text-slate-800 tracking-wide">
+              INPUT & KELOLA NILAI
+            </h1>
+            <p className="text-slate-500 mt-3">
+              Kelola nilai tugas, kuis, UTS, UAS, dan praktik siswa
+            </p>
+          </div>
+          <button
+            onClick={handleRefresh}
+            disabled={loadingOptions}
+            className="bg-slate-600 hover:bg-slate-700 disabled:bg-slate-400 text-white px-4 py-2 rounded-xl font-semibold text-sm transition-colors h-fit"
+            title="Refresh data kelas dan mapel dari database"
+          >
+            {loadingOptions ? "MEMUAT..." : "🔄 REFRESH"}
+          </button>
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5 mb-6">
@@ -78,16 +134,21 @@ const NilaiPage = () => {
               </label>
               <select
                 value={filters.mapel}
-                onChange={(e) =>
-                  setFilters((prev) => ({ ...prev, mapel: e.target.value }))
-                }
+                onChange={(e) => {
+                  setFilters((prev) => ({ ...prev, mapel: e.target.value }));
+                  loadGrades({ ...filters, mapel: e.target.value });
+                }}
                 className="w-full h-11 border border-gray-300 rounded-xl px-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                {mapelOptions.map((item) => (
-                  <option key={item} value={item}>
-                    {item}
-                  </option>
-                ))}
+                {mapelOptions.length === 0 ? (
+                  <option>Memuat mapel...</option>
+                ) : (
+                  mapelOptions.map((item) => (
+                    <option key={item} value={item}>
+                      {item}
+                    </option>
+                  ))
+                )}
               </select>
             </div>
 
@@ -97,35 +158,21 @@ const NilaiPage = () => {
               </label>
               <select
                 value={filters.kelas}
-                onChange={(e) =>
-                  setFilters((prev) => ({ ...prev, kelas: e.target.value }))
-                }
+                onChange={(e) => {
+                  setFilters((prev) => ({ ...prev, kelas: e.target.value }));
+                  loadGrades({ ...filters, kelas: e.target.value });
+                }}
                 className="w-full h-11 border border-gray-300 rounded-xl px-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                {kelasOptions.map((item) => (
-                  <option key={item} value={item}>
-                    {item}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                TAHUN AJAR
-              </label>
-              <select
-                value={filters.tahunAjar}
-                onChange={(e) =>
-                  setFilters((prev) => ({ ...prev, tahunAjar: e.target.value }))
-                }
-                className="w-full h-11 border border-gray-300 rounded-xl px-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                {tahunAjarOptions.map((item) => (
-                  <option key={item} value={item}>
-                    {item}
-                  </option>
-                ))}
+                {kelasOptions.length === 0 ? (
+                  <option>Memuat kelas...</option>
+                ) : (
+                  kelasOptions.map((item) => (
+                    <option key={item} value={item}>
+                      {item}
+                    </option>
+                  ))
+                )}
               </select>
             </div>
 
@@ -171,7 +218,9 @@ const NilaiPage = () => {
             </span>
           </div>
 
-          {error && <div className="px-6 pb-4 text-sm text-red-600">{error}</div>}
+          {error && (
+            <div className="px-6 pb-4 text-sm text-red-600">{error}</div>
+          )}
 
           {loading ? (
             <div className="px-6 pb-6 text-gray-500">Memuat data nilai...</div>
@@ -222,18 +271,23 @@ const NilaiPage = () => {
                           </div>
                         </td>
 
-                        {["tugas", "kuis", "uts", "uas", "praktik"].map((field) => (
-                          <td key={field} className="px-4 py-4 text-center border-b">
-                            <input
-                              type="number"
-                              value={item[field]}
-                              onChange={(e) =>
-                                updateGradeValue(index, field, e.target.value)
-                              }
-                              className="w-16 h-9 border border-gray-300 rounded-lg text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            />
-                          </td>
-                        ))}
+                        {["tugas", "kuis", "uts", "uas", "praktik"].map(
+                          (field) => (
+                            <td
+                              key={field}
+                              className="px-4 py-4 text-center border-b"
+                            >
+                              <input
+                                type="number"
+                                value={item[field]}
+                                onChange={(e) =>
+                                  updateGradeValue(index, field, e.target.value)
+                                }
+                                className="w-16 h-9 border border-gray-300 rounded-lg text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              />
+                            </td>
+                          ),
+                        )}
 
                         <td className="px-4 py-4 text-center border-b font-bold text-blue-600">
                           {Number(item.nilai_akhir || 0).toFixed(2)}
