@@ -1,12 +1,13 @@
 const pool = require("../config/db");
-const { decodeToken } = require("../middleware/extractIdentity"); // asumsi Anda punya helper
+const { createError } = require("../middleware/errorHandler");
 
-// Daftar kelas yang diampu guru (berdasarkan token)
-exports.getTeacherClasses = async (req, res) => {
+// Helper untuk decode token tanpa verifikasi (sudah dilakukan gateway)
+// req.user sudah diisi oleh middleware extractIdentity
+
+// 1. Daftar kelas yang diampu guru
+exports.getTeacherClasses = async (req, res, next) => {
+  const guruId = req.user.sub; // UUID dari token
   try {
-    const guruId = req.user.sub; // dari token
-    // Asumsi: kelas diampu jika guru menjadi wali kelas (kelas.wali_kelas_id)
-    // ATAU mengajar di kelas (mata_pelajaran.guru_mapel_id)
     const query = `
       SELECT DISTINCT k.id, k.nama_kelas, k.tingkat
       FROM kelas k
@@ -17,12 +18,12 @@ exports.getTeacherClasses = async (req, res) => {
     const result = await pool.query(query, [guruId]);
     res.json(result.rows);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-// Mata pelajaran yang diajarkan guru di suatu kelas
-exports.getSubjectsByClass = async (req, res) => {
+// 2. Mata pelajaran yang diajarkan guru di suatu kelas
+exports.getSubjectsByClass = async (req, res, next) => {
   const { classId } = req.params;
   const guruId = req.user.sub;
   try {
@@ -34,12 +35,12 @@ exports.getSubjectsByClass = async (req, res) => {
     const result = await pool.query(query, [classId, guruId]);
     res.json(result.rows);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-// Daftar siswa dalam kelas
-exports.getClassStudents = async (req, res) => {
+// 3. Daftar siswa dalam kelas
+exports.getClassStudents = async (req, res, next) => {
   const { classId } = req.params;
   try {
     const query = `
@@ -51,14 +52,17 @@ exports.getClassStudents = async (req, res) => {
     const result = await pool.query(query, [classId]);
     res.json(result.rows);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-// Ambil absensi yang sudah ada untuk tanggal dan mata pelajaran tertentu
-exports.getAttendanceByClass = async (req, res) => {
+// 4. Ambil absensi yang sudah ada untuk tanggal dan mata pelajaran tertentu
+exports.getAttendanceByClass = async (req, res, next) => {
   const { classId } = req.params;
   const { date, subjectId } = req.query;
+  if (!date || !subjectId) {
+    return next(createError(400, "Parameter date dan subjectId wajib diisi"));
+  }
   try {
     const query = `
       SELECT a.id_siswa, a.status, a.keterangan
@@ -69,28 +73,32 @@ exports.getAttendanceByClass = async (req, res) => {
     const result = await pool.query(query, [classId, date, subjectId]);
     res.json(result.rows);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-// Bulk insert/update absensi
-exports.saveBulkAttendance = async (req, res) => {
-  const { classId, date, subjectId, attendance } = req.body; // attendance = [{ id_siswa, status, keterangan }]
+// 5. Simpan absensi massal (bulk upsert)
+exports.saveBulkAttendance = async (req, res, next) => {
+  const { classId, date, subjectId, attendance } = req.body;
+  if (!classId || !date || !subjectId || !Array.isArray(attendance)) {
+    return next(createError(400, "Data tidak lengkap"));
+  }
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
     for (const item of attendance) {
-      const query = `
+      const { id_siswa, status, keterangan } = item;
+      const upsertQuery = `
         INSERT INTO absensi_siswa (id_siswa, tanggal, status, keterangan, mata_pelajaran_id)
         VALUES ($1, $2, $3, $4, $5)
-        ON CONFLICT (id_siswa, tanggal, mata_pelajaran_id) 
+        ON CONFLICT (id_siswa, tanggal, mata_pelajaran_id)
         DO UPDATE SET status = EXCLUDED.status, keterangan = EXCLUDED.keterangan, updated_at = NOW()
       `;
-      await client.query(query, [
-        item.id_siswa,
+      await client.query(upsertQuery, [
+        id_siswa,
         date,
-        item.status,
-        item.keterangan,
+        status,
+        keterangan,
         subjectId,
       ]);
     }
@@ -98,7 +106,7 @@ exports.saveBulkAttendance = async (req, res) => {
     res.json({ success: true, message: "Absensi berhasil disimpan" });
   } catch (err) {
     await client.query("ROLLBACK");
-    res.status(500).json({ error: err.message });
+    next(err);
   } finally {
     client.release();
   }

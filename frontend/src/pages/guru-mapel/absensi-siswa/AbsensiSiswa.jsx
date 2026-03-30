@@ -78,8 +78,8 @@ const AbsensiSiswa = () => {
 
   const filteredStudents = students.filter(
     (s) =>
-      s.namaSiswa.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      s.NIS?.toLowerCase().includes(searchTerm.toLowerCase()),
+      s.namasiswa.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      s.nis.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   if (loading && !classes.length)
@@ -219,8 +219,8 @@ const AbsensiSiswa = () => {
                   {filteredStudents.map((student, idx) => (
                     <tr key={student.id_siswa} className="border-t">
                       <td className="px-4 py-2">{idx + 1}</td>
-                      <td className="px-4 py-2">{student.namaSiswa}</td>
-                      <td className="px-4 py-2">{student.NIS || "-"}</td>
+                      <td className="px-4 py-2">{student.namasiswa}</td>
+                      <td className="px-4 py-2">{student.nis || "-"}</td>
                       <td className="px-4 py-2">
                         <select
                           value={attendance[student.id_siswa]?.status || ""}

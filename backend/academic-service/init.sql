@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS kelas (
 -- Tabel siswa (foreign key ke kelas.id)
 CREATE TABLE IF NOT EXISTS siswa (
     id_siswa UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    id_kelas UUID NOT NULL REFERENCES kelas(id) ON DELETE CASCADE,
+    id_kelas INTEGER NOT NULL REFERENCES kelas(id) ON DELETE CASCADE,  -- ubah tipe jadi INTEGER
     namaSiswa VARCHAR(255) NOT NULL,
     NIS VARCHAR(255) NOT NULL UNIQUE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS siswa (
 CREATE TABLE IF NOT EXISTS mata_pelajaran (
     id SERIAL PRIMARY KEY,
     nama_mapel VARCHAR(20) UNIQUE NOT NULL,
-    kelas_id UUID REFERENCES kelas(id) ON DELETE SET NULL,
+    kelas_id INTEGER REFERENCES kelas(id) ON DELETE SET NULL,
     guru_mapel_id UUID
 );
 
@@ -50,12 +50,13 @@ CREATE TABLE IF NOT EXISTS arsip_surat (id SERIAL PRIMARY KEY, nomor_surat VARCH
 CREATE TABLE IF NOT EXISTS jadwal_mengajar (
     id SERIAL PRIMARY KEY, 
     guru_id UUID, 
-    kelas_id UUID REFERENCES kelas(id) ON DELETE CASCADE,
+    kelas_id INTEGER REFERENCES kelas(id) ON DELETE CASCADE,
     mata_pelajaran VARCHAR(100),
     hari VARCHAR(20),
     waktu_mulai TIME,
     waktu_berakhir TIME
 );
+
 CREATE TABLE IF NOT EXISTS jadwal_piket (id SERIAL PRIMARY KEY, tanggal DATE, guru_id UUID);
 CREATE TABLE IF NOT EXISTS jadwal_upacara (id SERIAL PRIMARY KEY, tanggal DATE, petugas TEXT);
 
