@@ -12,6 +12,13 @@ import JadwalPage from "./pages/tata-usaha/jadwal/JadwalPage";
 import PiketPage from "./pages/tata-usaha/piket/PiketPage";
 import UpacaraPage from "./pages/tata-usaha/upacara/UpacaraPage";
 
+// ── Import Vokasi Pages ────────────────────────────────
+import VokasiDashboard from "./pages/vokasi/VokasiDashboard";
+import PKLPage from "./pages/vokasi/PKLPage";
+import ProyekPage from "./pages/vokasi/ProyekPage";
+import NilaiKompetensiPage from "./pages/vokasi/NilaiKompetensiPage";
+import MonitoringPage from "./pages/vokasi/MonitoringPage";
+
 /**
  * Komponen reusable untuk grup menu per role (Dropdown)
  */
@@ -27,7 +34,7 @@ const NavDropdown = ({ title, icon, children, isOpen, onClick }) => {
           <span>{title}</span>
         </div>
         <span
-          className={`transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
+          className={`transition-transform duration-200 text-xs ${isOpen ? "rotate-180" : ""}`}
         >
           ▼
         </span>
@@ -42,7 +49,6 @@ const NavDropdown = ({ title, icon, children, isOpen, onClick }) => {
 };
 
 const App = () => {
-  // State untuk mengontrol dropdown mana yang sedang terbuka
   const [openMenus, setOpenMenus] = useState({});
 
   const toggleMenu = (menuName) => {
@@ -54,12 +60,10 @@ const App = () => {
 
   return (
     <BrowserRouter>
-      {/* === TOAST NOTIFIKASI BESAR & DI TENGAH === */}
       <Toaster
         position="top-center"
         reverseOrder={false}
         toastOptions={{
-          // Styling khusus agar toast lebih besar
           style: {
             padding: "20px 30px",
             fontSize: "16px",
@@ -78,6 +82,9 @@ const App = () => {
         <aside className="w-64 bg-white border-r border-gray-200 flex flex-col sticky top-0 h-screen">
           <div className="p-6 border-b border-gray-100">
             <h1 className="text-xl font-bold text-blue-600">SMK N1 Sigumpar</h1>
+            <p className="text-xs text-gray-400 mt-0.5">
+              Sistem Informasi Sekolah
+            </p>
           </div>
 
           <nav className="flex-1 p-4 overflow-y-auto">
@@ -98,7 +105,6 @@ const App = () => {
                   <NavLink to="/laporan-tahunan" className={subNavClass}>
                     Laporan Tahunan
                   </NavLink>
-                  {/* Tambah menu kepsek di sini */}
                 </NavDropdown>
               )}
 
@@ -152,8 +158,6 @@ const App = () => {
                   isOpen={openMenus["tu"]}
                   onClick={() => toggleMenu("tu")}
                 >
-                  {/* <NavLink to="/users" className={subNavClass}>Data Siswa</NavLink>
-                  <NavLink to="/todos" className={subNavClass}>Administrasi</NavLink> */}
                   <NavLink to="/academic/kelas" className={subNavClass}>
                     Data Kelas
                   </NavLink>
@@ -195,7 +199,7 @@ const App = () => {
                 </NavDropdown>
               )}
 
-              {/* Dropdown Vokasi */}
+              {/* ── Dropdown Vokasi (LENGKAP) ── */}
               {hasRole("vokasi") && (
                 <NavDropdown
                   title="Vokasi"
@@ -203,8 +207,20 @@ const App = () => {
                   isOpen={openMenus["vokasi"]}
                   onClick={() => toggleMenu("vokasi")}
                 >
-                  <NavLink to="/proyek-vokasi" className={subNavClass}>
-                    Proyek Siswa
+                  <NavLink to="/vokasi" end className={subNavClass}>
+                    📊 Dashboard Vokasi
+                  </NavLink>
+                  <NavLink to="/vokasi/pkl" className={subNavClass}>
+                    📋 Data PKL
+                  </NavLink>
+                  <NavLink to="/vokasi/monitoring" className={subNavClass}>
+                    🔍 Monitoring PKL
+                  </NavLink>
+                  <NavLink to="/vokasi/proyek" className={subNavClass}>
+                    🛠️ Proyek Vokasi
+                  </NavLink>
+                  <NavLink to="/vokasi/nilai" className={subNavClass}>
+                    📊 Nilai Kompetensi
                   </NavLink>
                 </NavDropdown>
               )}
@@ -213,12 +229,16 @@ const App = () => {
 
           {/* Profil User di Bawah Sidebar */}
           <div className="p-4 border-t bg-gray-50">
-            <p className="text-sm font-semibold truncate">
-              {keycloak.tokenParsed?.name}
+            <p className="text-sm font-semibold truncate text-gray-800">
+              {keycloak.tokenParsed?.name ||
+                keycloak.tokenParsed?.preferred_username}
+            </p>
+            <p className="text-xs text-gray-400 truncate mb-2">
+              {keycloak.tokenParsed?.email || ""}
             </p>
             <button
               onClick={() => keycloak.logout()}
-              className="w-full mt-2 bg-red-500 text-white py-2 rounded-lg text-xs hover:bg-red-600 transition-colors"
+              className="w-full mt-1 bg-red-500 text-white py-2 rounded-lg text-xs font-semibold hover:bg-red-600 transition-colors"
             >
               Logout
             </button>
@@ -228,9 +248,10 @@ const App = () => {
         {/* === KONTEN UTAMA === */}
         <main className="flex-1 p-8 overflow-y-auto">
           <Routes>
+            {/* Dashboard */}
             <Route path="/" element={<Dashboard />} />
-            {/* <Route path="/users" element={<UsersPage />} />
-            <Route path="/todos" element={<TodosPage />} /> */}
+
+            {/* Tata Usaha */}
             <Route path="/academic/kelas" element={<KelasPage />} />
             <Route path="/academic/siswa" element={<SiswaPage />} />
             <Route path="/academic/pengumuman" element={<PengumumanPage />} />
@@ -239,7 +260,13 @@ const App = () => {
             <Route path="/academic/jadwal" element={<JadwalPage />} />
             <Route path="/academic/piket" element={<PiketPage />} />
             <Route path="/academic/upacara" element={<UpacaraPage />} />
-            {/* Route lainnya bisa ditambahkan di sini */}
+
+            {/* ── Vokasi Routes ── */}
+            <Route path="/vokasi" element={<VokasiDashboard />} />
+            <Route path="/vokasi/pkl" element={<PKLPage />} />
+            <Route path="/vokasi/monitoring" element={<MonitoringPage />} />
+            <Route path="/vokasi/proyek" element={<ProyekPage />} />
+            <Route path="/vokasi/nilai" element={<NilaiKompetensiPage />} />
           </Routes>
         </main>
       </div>

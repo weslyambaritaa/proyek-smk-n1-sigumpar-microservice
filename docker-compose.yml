@@ -1,8 +1,18 @@
+# ============================================================
+# docker-compose.yml — SMK N1 Sigumpar Microservice
+# FIXED VERSION:
+#  1. healthcheck pada keycloak-db & keycloak (cegah race condition)
+#  2. depends_on dengan condition: service_healthy
+#  3. KEYCLOAK_URL konsisten di semua service
+#  4. Frontend pakai dev server (VITE_ env vars terbaca browser)
+#  5. vocational-service DB_PASSWORD ditambahkan
+# ============================================================
+
 x-service-template: &service-template
   restart: unless-stopped
   networks:
     - microservices-network
-  privileged: true # Wajib untuk menjalankan postgres di dalam kontainer
+  privileged: true
   environment:
     - NODE_ENV=development
     - KEYCLOAK_URL=http://keycloak:8080
@@ -11,6 +21,9 @@ x-service-template: &service-template
     - DB_PASSWORD=password
 
 services:
+  # ──────────────────────────────────────────────────────────
+  # KEYCLOAK DATABASE
+  # ──────────────────────────────────────────────────────────
   keycloak-db:
     image: postgres:15
     container_name: keycloak-db
@@ -22,7 +35,18 @@ services:
       - microservices-network
     volumes:
       - keycloak_db_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    # FIX #1: healthcheck agar keycloak tidak start sebelum DB siap
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keycloak -d keycloak"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
 
+  # ──────────────────────────────────────────────────────────
+  # KEYCLOAK
+  # ──────────────────────────────────────────────────────────
   keycloak:
     image: quay.io/keycloak/keycloak:22.0.1
     container_name: keycloak
@@ -35,14 +59,30 @@ services:
       KEYCLOAK_ADMIN_PASSWORD: admin
     ports:
       - "8080:8080"
+    # FIX #2: tunggu keycloak-db benar-benar sehat dulu
     depends_on:
-      - keycloak-db
+      keycloak-db:
+        condition: service_healthy
     networks:
       - microservices-network
     volumes:
       - ./keycloak-init/realm-export.json:/opt/keycloak/data/import/realm.json:ro
     command: start-dev --import-realm
+    restart: unless-stopped
+    # FIX #3: healthcheck Keycloak — semua backend tunggu ini dulu
+    healthcheck:
+      test: >
+        CMD-SHELL curl -sf
+        http://localhost:8080/realms/smk-sigumpar/.well-known/openid-configuration
+        || exit 1
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 90s
 
+  # ──────────────────────────────────────────────────────────
+  # AUTH SERVICE
+  # ──────────────────────────────────────────────────────────
   auth-service:
     <<: *service-template
     build: ./backend/auth-service
@@ -51,9 +91,18 @@ services:
       - PORT=3005
       - DB_NAME=auth_db
       - DB_USER=auth_user
+      - DB_PASSWORD=password
       - DATABASE_URL=postgres://auth_user:password@localhost:5432/auth_db
-    depends_on: [keycloak]
+      - KEYCLOAK_URL=http://keycloak:8080
+      - KEYCLOAK_REALM=smk-sigumpar
+    # FIX #4: tunggu Keycloak BENAR-BENAR siap (bukan hanya started)
+    depends_on:
+      keycloak:
+        condition: service_healthy
 
+  # ──────────────────────────────────────────────────────────
+  # ACADEMIC SERVICE
+  # ──────────────────────────────────────────────────────────
   academic-service:
     <<: *service-template
     build: ./backend/academic-service
@@ -62,10 +111,17 @@ services:
       - PORT=3003
       - DB_NAME=academic_db
       - DB_USER=academic_user
-      - DATABASE_URL=postgres://academic_user:password@localhost:5432/academic_db
       - DB_PASSWORD=password
-    depends_on: [keycloak]
+      - DATABASE_URL=postgres://academic_user:password@localhost:5432/academic_db
+      - KEYCLOAK_URL=http://keycloak:8080
+      - KEYCLOAK_REALM=smk-sigumpar
+    depends_on:
+      keycloak:
+        condition: service_healthy
 
+  # ──────────────────────────────────────────────────────────
+  # ASSET SERVICE
+  # ──────────────────────────────────────────────────────────
   asset-service:
     <<: *service-template
     build: ./backend/asset-service
@@ -74,9 +130,17 @@ services:
       - PORT=3004
       - DB_NAME=asset_db
       - DB_USER=asset_user
+      - DB_PASSWORD=password
       - DATABASE_URL=postgres://asset_user:password@localhost:5432/asset_db
-    depends_on: [keycloak]
+      - KEYCLOAK_URL=http://keycloak:8080
+      - KEYCLOAK_REALM=smk-sigumpar
+    depends_on:
+      keycloak:
+        condition: service_healthy
 
+  # ──────────────────────────────────────────────────────────
+  # LEARNING SERVICE
+  # ──────────────────────────────────────────────────────────
   learning-service:
     <<: *service-template
     build: ./backend/learning-service
@@ -85,9 +149,17 @@ services:
       - PORT=3006
       - DB_NAME=learning_db
       - DB_USER=learning_user
+      - DB_PASSWORD=password
       - DATABASE_URL=postgres://learning_user:password@localhost:5432/learning_db
-    depends_on: [keycloak]
+      - KEYCLOAK_URL=http://keycloak:8080
+      - KEYCLOAK_REALM=smk-sigumpar
+    depends_on:
+      keycloak:
+        condition: service_healthy
 
+  # ──────────────────────────────────────────────────────────
+  # STUDENT SERVICE
+  # ──────────────────────────────────────────────────────────
   student-service:
     <<: *service-template
     build: ./backend/student-service
@@ -96,9 +168,17 @@ services:
       - PORT=3008
       - DB_NAME=student_db
       - DB_USER=student_user
+      - DB_PASSWORD=password
       - DATABASE_URL=postgres://student_user:password@localhost:5432/student_db
-    depends_on: [keycloak]
+      - KEYCLOAK_URL=http://keycloak:8080
+      - KEYCLOAK_REALM=smk-sigumpar
+    depends_on:
+      keycloak:
+        condition: service_healthy
 
+  # ──────────────────────────────────────────────────────────
+  # VOCATIONAL SERVICE
+  # ──────────────────────────────────────────────────────────
   vocational-service:
     <<: *service-template
     build: ./backend/vocational-service
@@ -107,9 +187,17 @@ services:
       - PORT=3007
       - DB_NAME=vocational_db
       - DB_USER=vocational_user
+      - DB_PASSWORD=password
       - DATABASE_URL=postgres://vocational_user:password@localhost:5432/vocational_db
-    depends_on: [keycloak]
+      - KEYCLOAK_URL=http://keycloak:8080
+      - KEYCLOAK_REALM=smk-sigumpar
+    depends_on:
+      keycloak:
+        condition: service_healthy
 
+  # ──────────────────────────────────────────────────────────
+  # API GATEWAY (Nginx)
+  # ──────────────────────────────────────────────────────────
   api-gateway:
     image: nginx:alpine
     container_name: api-gateway
@@ -119,18 +207,43 @@ services:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
     networks:
       - microservices-network
+    depends_on:
+      - auth-service
+      - academic-service
+      - asset-service
+      - learning-service
+      - student-service
+      - vocational-service
+    restart: unless-stopped
 
+  # ──────────────────────────────────────────────────────────
+  # FRONTEND (Vite Dev Server)
+  # FIX #5: Gunakan dev server agar VITE_* env vars dibaca browser
+  # ──────────────────────────────────────────────────────────
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      # Gunakan Dockerfile.dev yang menjalankan `npm run dev`
+      dockerfile: Dockerfile.dev
     container_name: frontend
     ports:
       - "5173:5173"
     environment:
+      # Browser membuka Keycloak via localhost (dari sisi user)
       - VITE_KEYCLOAK_URL=http://localhost:8080
       - VITE_KEYCLOAK_REALM=smk-sigumpar
-      - VITE_KEYCLOAK_CLIENT_ID=smk-sigumpar # Samakan dengan yang di atas
+      - VITE_KEYCLOAK_CLIENT_ID=smk-sigumpar
+      # API gateway diakses browser via localhost
+      - VITE_API_URL=http://localhost:8001
+    volumes:
+      # Hot-reload: mount source code agar perubahan langsung terlihat
+      - ./frontend:/app
+      - /app/node_modules
     networks:
       - microservices-network
+    depends_on:
+      - api-gateway
+    restart: unless-stopped
 
 networks:
   microservices-network:
