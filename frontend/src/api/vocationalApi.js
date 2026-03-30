@@ -11,6 +11,6 @@ export const vocationalApi = {
   
   // --- Fitur Absensi ---
   getAllKelas: () => axiosInstance.get('/api/vocational/kelas'), 
-  getSiswaPramukaByKelas: (kelasId) => axiosInstance.get(`/api/vocational/absensi/kelas/${kelasId}`),
+  getSiswaByRegu: (reguId) => axiosInstance.get(`/api/vocational/regu/${reguId}/siswa`), // <-- Diubah
   submitAbsensiPramuka: (data) => axiosInstance.post('/api/vocational/absensi', data),
 };

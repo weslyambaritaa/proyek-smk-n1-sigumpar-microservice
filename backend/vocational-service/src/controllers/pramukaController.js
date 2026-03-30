@@ -1,16 +1,13 @@
 const db = require('../config/db');
-const axios = require('axios'); // Tambahkan axios untuk request antar-service
+const axios = require('axios');
 
-// URL base untuk ke academic service di dalam docker network
-// Menggunakan nama container: 'academic-service' dan port: '3003'
-const ACADEMIC_SERVICE_URL = 'http://academic-service:3003/api/academic';
+const ACADEMIC_SERVICE_URL = 'http://api-gateway/api/academic';
 
-// Helper untuk meneruskan token otorisasi ke service lain
 const getHeaders = (req) => ({
     Authorization: req.headers.authorization || ''
 });
 
-// --- REGU ---
+// --- REGU & PLOTTING ---
 exports.getAllRegu = async (req, res) => {
     try {
         const result = await db.query('SELECT * FROM kelas_pramuka');
@@ -29,36 +26,25 @@ exports.createRegu = async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 };
 
-// --- ANGGOTA ---
 exports.getSiswaTersedia = async (req, res) => {
     try {
-        // 1. Ambil SEMUA data siswa dari Academic Service via HTTP
-        const response = await axios.get(`${ACADEMIC_SERVICE_URL}/siswa`, {
-            headers: getHeaders(req)
-        });
-        
-        // Asumsi data array of siswa ada di response.data atau response.data.data
+        const response = await axios.get(`${ACADEMIC_SERVICE_URL}/siswa`, { headers: getHeaders(req) });
         const allSiswa = response.data.data || response.data; 
 
-        // 2. Ambil ID siswa yang sudah terdaftar di regu (dari database local vocational_db)
         const reguResult = await db.query('SELECT siswa_id FROM anggota_regu');
         const assignedSiswaIds = reguResult.rows.map(row => row.siswa_id);
 
-        // 3. Filter: Hanya ambil siswa yang ID-nya BELUM ADA di assignedSiswaIds
         const siswaTersedia = allSiswa.filter(siswa => !assignedSiswaIds.includes(siswa.id));
-
         res.json(siswaTersedia);
     } catch (err) { 
-        res.status(500).json({ 
-            error: "Gagal mengambil data siswa tersedia", 
-            details: err.message 
-        }); 
+        res.status(500).json({ error: "Gagal mengambil data siswa", details: err.message }); 
     }
 };
 
 exports.assignSiswaToRegu = async (req, res) => {
     const { regu_id, siswa_ids } = req.body;
     try {
+        // Looping untuk memasukkan setiap siswa ke tabel anggota_regu
         for (const id of siswa_ids) {
             await db.query('INSERT INTO anggota_regu (regu_id, siswa_id) VALUES ($1, $2)', [regu_id, id]);
         }
@@ -66,48 +52,40 @@ exports.assignSiswaToRegu = async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 };
 
-// --- ABSENSI & KELAS ---
-exports.getAllKelas = async (req, res) => {
-    try {
-        // Meminta data kelas langsung ke Academic Service
-        const response = await axios.get(`${ACADEMIC_SERVICE_URL}/kelas`, {
-            headers: getHeaders(req)
-        });
-        
-        res.json(response.data.data || response.data);
-    } catch (err) { 
-        res.status(500).json({ 
-            error: "Gagal mengambil data kelas dari academic-service", 
-            details: err.message 
-        }); 
-    }
-};
+// --- ABSENSI & SISWA PER REGU ---
 
-exports.getSiswaPramukaByKelas = async (req, res) => {
-    const { kelas_id } = req.params;
+// Fungsi BARU: Mengambil siswa yang terdaftar di regu tertentu (untuk absen)
+exports.getSiswaByRegu = async (req, res) => {
+    const { regu_id } = req.params;
     try {
-        // 1. Ambil data semua siswa dari Academic Service
-        const response = await axios.get(`${ACADEMIC_SERVICE_URL}/siswa`, {
-            headers: getHeaders(req)
-        });
+        // 1. Ambil ID siswa yang tergabung di regu ini
+        const dbResult = await db.query('SELECT siswa_id FROM anggota_regu WHERE regu_id = $1', [regu_id]);
+        const siswaIds = dbResult.rows.map(row => row.siswa_id);
+
+        if (siswaIds.length === 0) return res.json([]);
+
+        // 2. Ambil data detail siswa dari academic-service
+        const response = await axios.get(`${ACADEMIC_SERVICE_URL}/siswa`, { headers: getHeaders(req) });
         const allSiswa = response.data.data || response.data;
 
-        // 2. Filter manual siswa berdasarkan kelas_id
-        // Gunakan '==' agar aman jika satu integer dan satunya string
-        const siswaByKelas = allSiswa.filter(siswa => siswa.kelas_id == kelas_id);
-        
-        res.json(siswaByKelas);
-    } catch (err) { 
-        res.status(500).json({ 
-            error: `Gagal mengambil siswa untuk kelas_id ${kelas_id}`, 
-            details: err.message 
-        }); 
+        // 3. Filter hanya siswa yang ada di regu ini
+        const siswaRegu = allSiswa.filter(siswa => siswaIds.includes(siswa.id));
+        res.json(siswaRegu);
+    } catch (err) {
+        res.status(500).json({ error: "Gagal mengambil data siswa regu", details: err.message });
     }
 };
 
 exports.submitAbsensiPramuka = async (req, res) => {
+    const { regu_id, tanggal, data_absensi } = req.body;
     try {
-        // Logika simpan absensi ke DB local (vocational_db)
+        // data_absensi adalah array of object: [{ siswa_id: 1, status: 'Hadir' }, ...]
+        for (const absen of data_absensi) {
+            await db.query(
+                'INSERT INTO absensi_pramuka (regu_id, siswa_id, tanggal, status) VALUES ($1, $2, $3, $4)',
+                [regu_id, absen.siswa_id, tanggal, absen.status]
+            );
+        }
         res.json({ message: "Absensi berhasil disimpan" });
     } catch (err) { res.status(500).json({ error: err.message }); }
 };
