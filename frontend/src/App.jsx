@@ -9,9 +9,10 @@ import PengumumanPage from "./pages/tata-usaha/pengumuman/PengumumanPage";
 import ArsipSuratPage from "./pages/tata-usaha/arsip-surat/ArsipSuratPage";
 import MapelPage from "./pages/tata-usaha/mapel/MapelPage";
 import JadwalPage from "./pages/tata-usaha/jadwal/JadwalPage";
-import AbsensiSiswa from "./pages/guru-mapel/absensi-siswa/AbsensiSiswa"; // <-- import halaman absensi siswa
 import PiketPage from "./pages/tata-usaha/piket/PiketPage";
 import UpacaraPage from "./pages/tata-usaha/upacara/UpacaraPage";
+// Import halaman absensi siswa dengan flow baru (card kelas, mata pelajaran, dll)
+import AbsensiSiswa from "./pages/guru-mapel/absensi-siswa/AbsensiSiswa";
 
 const NavDropdown = ({ title, icon, children, isOpen, onClick }) => {
   return (
@@ -114,7 +115,6 @@ const App = () => {
                   <NavLink to="/input-nilai" className={subNavClass}>
                     Input Nilai
                   </NavLink>
-                  {/* ===== TAMBAH MENU ABSENSI SISWA UNTUK GURU MAPEL ===== */}
                   <NavLink to="/absensi-siswa" className={subNavClass}>
                     Absensi Siswa
                   </NavLink>
@@ -216,11 +216,9 @@ const App = () => {
             <Route path="/academic/arsip-surat" element={<ArsipSuratPage />} />
             <Route path="/academic/mapel" element={<MapelPage />} />
             <Route path="/academic/jadwal" element={<JadwalPage />} />
-            {/* ===== TAMBAH ROUTE ABSENSI SISWA ===== */}
-            <Route path="/absensi-siswa" element={<AbsensiSiswa />} />
             <Route path="/academic/piket" element={<PiketPage />} />
             <Route path="/academic/upacara" element={<UpacaraPage />} />
-            {/* Route lainnya bisa ditambahkan di sini */}
+            <Route path="/absensi-siswa" element={<AbsensiSiswa />} />
           </Routes>
         </main>
       </div>
