@@ -7,12 +7,7 @@ import { academicApi } from "../../api/academicApi";
 // =============================================
 const BOBOT = { tugas: 15, kuis: 15, uts: 20, uas: 30, praktik: 20 };
 
-const TAHUN_AJAR_OPTIONS = [
-  "2023/2024",
-  "2024/2025",
-  "2025/2026",
-  "2026/2027",
-];
+const TAHUN_AJAR_OPTIONS = ["2023/2024", "2024/2025", "2025/2026", "2026/2027"];
 
 function hitungNilaiAkhir(row) {
   const t = Number(row.nilai_tugas) || 0;
@@ -21,7 +16,11 @@ function hitungNilaiAkhir(row) {
   const a = Number(row.nilai_uas) || 0;
   const p = Number(row.nilai_praktik) || 0;
   return (
-    (t * BOBOT.tugas + k * BOBOT.kuis + u * BOBOT.uts + a * BOBOT.uas + p * BOBOT.praktik) /
+    (t * BOBOT.tugas +
+      k * BOBOT.kuis +
+      u * BOBOT.uts +
+      a * BOBOT.uas +
+      p * BOBOT.praktik) /
     100
   ).toFixed(2);
 }
@@ -54,8 +53,19 @@ export default function InputNilaiPage() {
   useEffect(() => {
     Promise.all([academicApi.getAllMapel(), academicApi.getAllKelas()])
       .then(([mapelRes, kelasRes]) => {
-        setMapelList(mapelRes.data || []);
-        setKelasList(kelasRes.data || []);
+        // Gunakan pengecekan Array.isArray yang lebih ketat
+        const mapels = Array.isArray(mapelRes.data?.data)
+          ? mapelRes.data.data
+          : Array.isArray(mapelRes.data)
+            ? mapelRes.data
+            : [];
+        const kelas = Array.isArray(kelasRes.data?.data)
+          ? kelasRes.data.data
+          : Array.isArray(kelasRes.data)
+            ? kelasRes.data
+            : [];
+        setMapelList(mapels);
+        setKelasList(kelas);
       })
       .catch(() => toast.error("Gagal memuat data mapel/kelas"));
   }, []);
@@ -76,18 +86,18 @@ export default function InputNilaiPage() {
         mapel_id: selectedMapel || undefined,
         tahun_ajar: selectedTahun || undefined,
       });
-      const data = res.data?.data || [];
+      const data = Array.isArray(res.data?.data) ? res.data.data : [];
       // Filter nama lokal
       const filtered = searchNama
         ? data.filter((r) =>
-            r.nama_lengkap.toLowerCase().includes(searchNama.toLowerCase())
+            r.nama_lengkap.toLowerCase().includes(searchNama.toLowerCase()),
           )
         : data;
       setRows(
         filtered.map((r) => ({
           ...r,
           _dirty: false, // tandai apakah baris ini berubah
-        }))
+        })),
       );
       setPage(1);
     } catch {
@@ -104,8 +114,8 @@ export default function InputNilaiPage() {
     const parsed = val === "" ? "" : Math.min(100, Math.max(0, Number(val)));
     setRows((prev) =>
       prev.map((r, i) =>
-        i === idx ? { ...r, [field]: parsed, _dirty: true } : r
-      )
+        i === idx ? { ...r, [field]: parsed, _dirty: true } : r,
+      ),
     );
   };
 
@@ -169,12 +179,15 @@ export default function InputNilaiPage() {
   const pagedRows = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   // helper: nama kelas / mapel terpilih
-  const namaKelas =
-    kelasList.find((k) => String(k.id) === String(selectedKelas))
-      ?.nama_kelas || "";
-  const namaMapel =
-    mapelList.find((m) => String(m.id) === String(selectedMapel))
-      ?.nama_mapel || "";
+  const namaKelas = Array.isArray(kelasList)
+    ? kelasList.find((k) => String(k.id) === String(selectedKelas))
+        ?.nama_kelas || ""
+    : "";
+
+  const namaMapel = Array.isArray(mapelList)
+    ? mapelList.find((m) => String(m.id) === String(selectedMapel))
+        ?.nama_mapel || ""
+    : "";
 
   // =============================================
   // RENDER
@@ -294,7 +307,8 @@ export default function InputNilaiPage() {
                 Daftar Nilai
                 {namaKelas && (
                   <span className="text-gray-500 font-normal">
-                    {" "}— {namaKelas}
+                    {" "}
+                    — {namaKelas}
                   </span>
                 )}
               </h2>
@@ -314,15 +328,21 @@ export default function InputNilaiPage() {
           {/* Bobot info */}
           <div className="px-6 py-2 bg-gray-50 border-b border-gray-100 flex flex-wrap gap-3 text-xs text-gray-500">
             <span>📊 Bobot Nilai:</span>
-            <span className="font-medium text-gray-700">Tugas {BOBOT.tugas}%</span>
+            <span className="font-medium text-gray-700">
+              Tugas {BOBOT.tugas}%
+            </span>
             <span>·</span>
-            <span className="font-medium text-gray-700">Kuis {BOBOT.kuis}%</span>
+            <span className="font-medium text-gray-700">
+              Kuis {BOBOT.kuis}%
+            </span>
             <span>·</span>
             <span className="font-medium text-gray-700">UTS {BOBOT.uts}%</span>
             <span>·</span>
             <span className="font-medium text-gray-700">UAS {BOBOT.uas}%</span>
             <span>·</span>
-            <span className="font-medium text-gray-700">Praktik {BOBOT.praktik}%</span>
+            <span className="font-medium text-gray-700">
+              Praktik {BOBOT.praktik}%
+            </span>
           </div>
 
           {/* Tabel */}
@@ -395,7 +415,11 @@ export default function InputNilaiPage() {
                               max="100"
                               value={row[field]}
                               onChange={(e) =>
-                                handleNilaiChange(globalIdx, field, e.target.value)
+                                handleNilaiChange(
+                                  globalIdx,
+                                  field,
+                                  e.target.value,
+                                )
                               }
                               className="w-16 text-center px-2 py-1.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all bg-white"
                             />
@@ -409,8 +433,8 @@ export default function InputNilaiPage() {
                               Number(akhir) >= 75
                                 ? "text-blue-600"
                                 : Number(akhir) >= 60
-                                ? "text-yellow-600"
-                                : "text-red-500"
+                                  ? "text-yellow-600"
+                                  : "text-red-500"
                             }`}
                           >
                             {akhir}
