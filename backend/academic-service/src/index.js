@@ -2,24 +2,17 @@ const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
 const morgan = require("morgan");
-const path = require('path'); // Posisikan import di atas
-const academicRoutes = require('./routes/academicRoutes'); 
+const academicRoutes = require('./routes/academicRoutes'); // Pastikan nama file di folder routes adalah academicRoutes.js
 const { errorHandler } = require("./middleware/errorHandler");
 
 const app = express();
 const PORT = process.env.PORT || 3003;
 
-// Middleware global
+// Middleware global (identik dengan users-service)
 app.use(helmet());
 // app.use(cors({ origin: process.env.CORS_ORIGIN || "*" }));
 app.use(morgan("dev"));
 app.use(express.json());
-
-// =======================================================
-// POSISI YANG BENAR UNTUK FOLDER UPLOADS
-// Harus di atas 404 handler!
-// =======================================================
-app.use('/api/academic/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Health check endpoint
 app.get("/health", (req, res) => {
@@ -33,7 +26,7 @@ app.get("/health", (req, res) => {
 // Mount routes
 app.use('/api/academic', academicRoutes);
 
-// 404 handler (Akan dieksekusi JIKA tidak ada route atau file static yang cocok)
+// 404 handler
 app.use((req, res) => {
   res.status(404).json({
     success: false,

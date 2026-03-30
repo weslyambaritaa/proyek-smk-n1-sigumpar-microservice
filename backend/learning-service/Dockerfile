@@ -5,18 +5,16 @@ RUN apt-get update && apt-get install -y postgresql postgresql-contrib sudo
 
 WORKDIR /app
 
-# Salin package json dan instal dependensi
-COPY package*.json ./
-RUN npm install
+# Copy hanya package.json (bukan lock file) lalu install fresh
+COPY package.json ./
+RUN npm install --legacy-peer-deps
 
-# Salin kode aplikasi, script start.sh, dan init.sql
+# Salin kode aplikasi dan script
 COPY . .
 
 # Berikan izin eksekusi pada script
 RUN chmod +x start.sh
 
-# Expose port (sesuaikan dengan port service masing-masing)
-# Contoh untuk student-service adalah 3005
 EXPOSE 3006
 
 CMD ["./start.sh"]

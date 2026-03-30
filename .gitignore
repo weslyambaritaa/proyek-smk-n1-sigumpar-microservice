@@ -2,8 +2,6 @@
 # DEPENDENCIES (Node.js)
 # ==========================================
 node_modules/
-dist
-.git
 .pnp
 .pnp.js
 npm-debug.log*

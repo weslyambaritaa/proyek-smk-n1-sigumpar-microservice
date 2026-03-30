@@ -4,6 +4,8 @@ service postgresql start
 sleep 3
 
 # Membuat User dan Database sesuai variabel lingkungan
+# Set default password if DB_PASSWORD is empty
+DB_PASSWORD=${DB_PASSWORD:-password}
 sudo -u postgres psql -c "CREATE USER $DB_USER WITH PASSWORD '$DB_PASSWORD';" || true
 sudo -u postgres psql -c "CREATE DATABASE $DB_NAME OWNER $DB_USER;" || true
 

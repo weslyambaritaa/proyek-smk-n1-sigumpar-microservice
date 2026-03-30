@@ -2,11 +2,12 @@ const { Pool } = require('pg');
 
 const pool = new Pool({
   user: process.env.DB_USER || 'learning_user',
-  host: process.env.DB_HOST || 'localhost', 
+  host: process.env.DB_HOST || 'localhost',
   database: process.env.DB_NAME || 'learning_db',
   password: process.env.DB_PASSWORD || 'password',
   port: 5432,
 });
+
 module.exports = pool;
 
 pool.query('SELECT NOW()', (err, res) => {

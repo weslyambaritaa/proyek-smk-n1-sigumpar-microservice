@@ -1,28 +1,18 @@
-const express = require("express");
-const verifyToken = require('../middleware/auth'); // Import middleware
+const express = require('express');
 const router = express.Router();
-const {
-  getAllTodos,
-  getTodoById,
-  createTodo,
-  updateTodo,
-  deleteTodo,
-} = require("../controllers/learningController");
+const verifyToken = require('../middleware/auth');
+const ctrl = require('../controllers/learningController');
 
-/**
- * Routes untuk resource /todos
- *
- * GET    /todos       => Ambil semua todos (support filter via query params)
- * POST   /todos       => Buat todo baru
- * GET    /todos/:id   => Ambil todo tertentu
- * PUT    /todos/:id   => Update todo tertentu
- * DELETE /todos/:id   => Hapus todo tertentu
- */
+// ---- Perangkat Pembelajaran ----
+// Catatan: multer dijalankan di dalam controller (bukan sebagai middleware route)
+// karena Express 5 mengubah cara async error propagation
+router.get('/perangkat',                  verifyToken, ctrl.getAllPerangkat);
+router.post('/perangkat',                 verifyToken, ctrl.uploadPerangkat);  // multer dihandle di dalam controller
+router.get('/perangkat/:id/download',     verifyToken, ctrl.downloadPerangkat);
+router.delete('/perangkat/:id',           verifyToken, ctrl.deletePerangkat);
 
-router.route("/").get(getAllTodos).post(createTodo);
-router.route("/:id").get(getTodoById).put(updateTodo).delete(deleteTodo);
-
-router.get('/', verifyToken, controller.getAll);
-router.post('/', verifyToken, controller.create);
+// ---- Nilai Siswa ----
+router.get('/nilai',        verifyToken, ctrl.getNilai);
+router.post('/nilai/batch', verifyToken, ctrl.saveNilaiBatch);
 
 module.exports = router;
