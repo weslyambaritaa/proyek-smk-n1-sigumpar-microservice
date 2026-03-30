@@ -3,12 +3,9 @@ import toast from "react-hot-toast";
 import useGrades from "../../../hooks/userGrades";
 import { academicApi } from "../../../api/academicApi";
 
-const tahunAjarOptions = ["2023/2024", "2024/2025", "2025/2026"];
-
 const initialFilters = {
   mapel: "",
   kelas: "",
-  tahunAjar: "2023/2024",
   search: "",
 };
 
@@ -29,44 +26,6 @@ const NilaiPage = () => {
   } = useGrades();
 
   useEffect(() => {
-<<<<<<< HEAD
-    const fetchOptions = async () => {
-      try {
-        setLoadingOptions(true);
-        const [mapelRes, kelasRes] = await Promise.all([
-          academicApi.getAllMapel(),
-          academicApi.getAllKelas(),
-        ]);
-
-        const mapels = mapelRes.data?.data || mapelRes.data || [];
-        const kelas = kelasRes.data?.data || kelasRes.data || [];
-
-        const mapelNames = mapels.map((m) => m.nama_mapel);
-        const kelasNames = kelas.map((k) => k.nama_kelas);
-
-        setMapelOptions(mapelNames);
-        setKelasOptions(kelasNames);
-
-        // Set initial filters to first options if available
-        if (mapelNames.length > 0 && kelasNames.length > 0) {
-          setFilters((prev) => ({
-            ...prev,
-            mapel: mapelNames[0],
-            kelas: kelasNames[0],
-          }));
-        }
-      } catch (err) {
-        console.error("Failed to fetch options:", err);
-        toast.error("Gagal memuat data filter");
-      } finally {
-        setLoadingOptions(false);
-      }
-    };
-
-    fetchOptions();
-  }, []);
-
-=======
     fetchOptions();
   }, []);
 
@@ -103,7 +62,6 @@ const NilaiPage = () => {
     }
   };
 
->>>>>>> 4230e45464797b1cb4e9ca82f6d34278f9aa9c1e
   useEffect(() => {
     if (!loadingOptions && filters.mapel && filters.kelas) {
       handleCari();
@@ -121,7 +79,6 @@ const NilaiPage = () => {
     const resetFilters = {
       mapel: mapelOptions[0] || "",
       kelas: kelasOptions[0] || "",
-      tahunAjar: "2023/2024",
       search: "",
     };
     setFilters(resetFilters);
@@ -141,7 +98,6 @@ const NilaiPage = () => {
       const result = await saveAllGrades({
         mapel: filters.mapel,
         kelas: filters.kelas,
-        tahunAjar: filters.tahunAjar,
       });
 
       toast.success(result?.message || "Semua nilai berhasil disimpan");
@@ -179,16 +135,6 @@ const NilaiPage = () => {
               </label>
               <select
                 value={filters.mapel}
-<<<<<<< HEAD
-                onChange={(e) =>
-                  setFilters((prev) => ({ ...prev, mapel: e.target.value }))
-                }
-                disabled={loadingOptions}
-                className="w-full h-11 border border-gray-300 rounded-xl px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
-              >
-                {loadingOptions ? (
-                  <option>Loading...</option>
-=======
                 onChange={(e) => {
                   setFilters((prev) => ({ ...prev, mapel: e.target.value }));
                   loadGrades({ ...filters, mapel: e.target.value });
@@ -197,7 +143,6 @@ const NilaiPage = () => {
               >
                 {mapelOptions.length === 0 ? (
                   <option>Memuat mapel...</option>
->>>>>>> 4230e45464797b1cb4e9ca82f6d34278f9aa9c1e
                 ) : (
                   mapelOptions.map((item) => (
                     <option key={item} value={item}>
@@ -214,16 +159,6 @@ const NilaiPage = () => {
               </label>
               <select
                 value={filters.kelas}
-<<<<<<< HEAD
-                onChange={(e) =>
-                  setFilters((prev) => ({ ...prev, kelas: e.target.value }))
-                }
-                disabled={loadingOptions}
-                className="w-full h-11 border border-gray-300 rounded-xl px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
-              >
-                {loadingOptions ? (
-                  <option>Loading...</option>
-=======
                 onChange={(e) => {
                   setFilters((prev) => ({ ...prev, kelas: e.target.value }));
                   loadGrades({ ...filters, kelas: e.target.value });
@@ -232,7 +167,6 @@ const NilaiPage = () => {
               >
                 {kelasOptions.length === 0 ? (
                   <option>Memuat kelas...</option>
->>>>>>> 4230e45464797b1cb4e9ca82f6d34278f9aa9c1e
                 ) : (
                   kelasOptions.map((item) => (
                     <option key={item} value={item}>
@@ -240,28 +174,6 @@ const NilaiPage = () => {
                     </option>
                   ))
                 )}
-<<<<<<< HEAD
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                TAHUN AJAR
-              </label>
-              <select
-                value={filters.tahunAjar}
-                onChange={(e) =>
-                  setFilters((prev) => ({ ...prev, tahunAjar: e.target.value }))
-                }
-                className="w-full h-11 border border-gray-300 rounded-xl px-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                {tahunAjarOptions.map((item) => (
-                  <option key={item} value={item}>
-                    {item}
-                  </option>
-                ))}
-=======
->>>>>>> 4230e45464797b1cb4e9ca82f6d34278f9aa9c1e
               </select>
             </div>
 
