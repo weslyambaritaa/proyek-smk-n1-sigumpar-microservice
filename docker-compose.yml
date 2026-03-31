@@ -7,7 +7,7 @@ x-service-template: &service-template
     - NODE_ENV=development
     - KEYCLOAK_URL=http://keycloak:8080
     - KEYCLOAK_REALM=smk-sigumpar
-    - KEYCLOAK_CLIENT_ID=backend-client
+    - KEYCLOAK_CLIENT_ID=smk-sigumpar
     - DB_PASSWORD=password
 
 services:
@@ -107,6 +107,7 @@ services:
       - PORT=3007
       - DB_NAME=vocational_db
       - DB_USER=vocational_user
+      - DB_PASSWORD=password
       - DATABASE_URL=postgres://vocational_user:password@localhost:5432/vocational_db
     depends_on: [keycloak]
 

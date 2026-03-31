@@ -29,6 +29,7 @@ export const academicApi = {
     headers: { 'Content-Type': 'multipart/form-data' }
   }),
   deleteArsipSurat: (id) => axiosInstance.delete(`/api/academic/arsip-surat/${id}`),
+  downloadFile: (fileUrl) => axiosInstance.get(fileUrl, { responseType: 'blob' }),
 
   // Pencarian guru mapel ke auth-service (Asumsi Anda menggunakan role=guru)
   searchGuru: (query) => axiosInstance.get(`/api/auth/users/search?role=guru&q=${query}`),
@@ -44,4 +45,16 @@ export const academicApi = {
   createJadwal: (data) => axiosInstance.post('/api/academic/jadwal', data),
   updateJadwal: (id, data) => axiosInstance.put(`/api/academic/jadwal/${id}`, data),
   deleteJadwal: (id) => axiosInstance.delete(`/api/academic/jadwal/${id}`),
+
+  // --- JADWAL PIKET ---
+  getAllPiket: () => axiosInstance.get('/api/academic/piket'),
+  createPiket: (data) => axiosInstance.post('/api/academic/piket', data),
+  updatePiket: (id, data) => axiosInstance.put(`/api/academic/piket/${id}`, data),
+  deletePiket: (id) => axiosInstance.delete(`/api/academic/piket/${id}`),
+
+  // --- JADWAL UPACARA ---
+  getAllUpacara: () => axiosInstance.get('/api/academic/upacara'),
+  createUpacara: (data) => axiosInstance.post('/api/academic/upacara', data),
+  updateUpacara: (id, data) => axiosInstance.put(`/api/academic/upacara/${id}`, data),
+  deleteUpacara: (id) => axiosInstance.delete(`/api/academic/upacara/${id}`),
 };

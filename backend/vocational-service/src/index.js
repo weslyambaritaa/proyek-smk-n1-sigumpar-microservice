@@ -1,41 +1,43 @@
 const express = require("express");
-const cors = require("cors");
+// const cors = require("cors");
 const helmet = require("helmet");
 const morgan = require("morgan");
 const { errorHandler } = require("./middleware/errorHandler");
 
+const vocationalRoutes = require("./routes/vocationalRoutes"); 
+
 const app = express();
 const PORT = process.env.PORT || 3007;
+const path = require('path');
 
-// Middleware global (identik dengan users-service)
+// 1. PINDAHKAN CORS KE SINI (Harus di atas sebelum rute!)
+// app.use(cors());
 app.use(helmet());
-// app.use(cors({ origin: process.env.CORS_ORIGIN || "*" }));
 app.use(morgan("dev"));
 app.use(express.json());
 
-// Health check endpoint
 app.get("/health", (req, res) => {
   res.json({
     status: "OK",
-    service: "todos-service",
+    service: "vocational-service", 
     timestamp: new Date().toISOString(),
   });
 });
 
-// Mount routes
-app.use("/todos", todoRoutes);
+app.use("/api/vocational", vocationalRoutes);
 
-// 404 handler
 app.use((req, res) => {
   res.status(404).json({
     success: false,
-    message: `Route '${req.originalUrl}' tidak ditemukan`,
+    message: `Route '${req.originalUrl}' tidak ditemukan di Vocational Service`,
   });
 });
 
-// Error handler (selalu di akhir)
 app.use(errorHandler);
 
-app.listen(PORT, () => {
-  console.log(`Vocational Service berjalan di http://localhost:${PORT}`);
+// 2. TAMBAHKAN '0.0.0.0' AGAR BISA DIAKSES OLEH NGINX
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Vocational Service berjalan di port ${PORT}`);
 });
+
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));

@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS jadwal_mengajar (
     waktu_mulai TIME,
     waktu_berakhir TIME
 );
-CREATE TABLE IF NOT EXISTS jadwal_piket (id SERIAL PRIMARY KEY, hari VARCHAR(20), guru_id UUID);
+CREATE TABLE IF NOT EXISTS jadwal_piket (id SERIAL PRIMARY KEY, tanggal DATE, guru_id UUID);
 CREATE TABLE IF NOT EXISTS jadwal_upacara (id SERIAL PRIMARY KEY, tanggal DATE, petugas TEXT);
 
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO academic_user;
