@@ -1,29 +1,31 @@
-const express = require("express");
-const verifyToken = require('../middleware/auth'); // Import middleware
-const router = express.Router();
-const {
-  getAllTodos,
-  getTodoById,
-  createTodo,
-  updateTodo,
-  deleteTodo,
-} = require("../controllers/vocationalController");
+const express       = require("express");
+const router        = express.Router();
+const multer        = require("multer");
+const path          = require("path");
+const extractIdentity = require("../middleware/extractIdentity");
+const pklCtrl       = require("../controllers/pklController");
+const penempatanCtrl = require("../controllers/pklPenempatanController");
 
-/**
- * Routes untuk resource /todos
- *
- * GET    /todos       => Ambil semua todos (support filter via query params)
- * POST   /todos       => Buat todo baru
- * GET    /todos/:id   => Ambil todo tertentu
- * PUT    /todos/:id   => Update todo tertentu
- * DELETE /todos/:id   => Hapus todo tertentu
- */
+// Konfigurasi multer untuk upload foto penempatan
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, path.join(__dirname, '../../uploads/')),
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    cb(null, `${file.fieldname}-${Date.now()}${ext}`);
+  },
+});
+const upload = multer({ storage });
 
-router.route("/").get(getAllTodos).post(createTodo);
-router.route("/:id").get(getTodoById).put(updateTodo).delete(deleteTodo);
+// Semua route PKL memerlukan autentikasi
+router.use(extractIdentity);
 
-// Tambahkan verifyToken sebelum memanggil fungsi controller
-router.get('/', verifyToken, controller.getAll);
-router.post('/', verifyToken, controller.create);
+// --- Submissions ---
+router.get("/submissions",              pklCtrl.getAllPKL);
+router.post("/submissions",             pklCtrl.createSubmission);
+router.put("/submissions/:id/validate", pklCtrl.validateAndApprovePKL);
+
+// --- Penempatan ---
+router.get("/penempatan",  penempatanCtrl.getAll);
+router.post("/penempatan", upload.single("foto_lokasi"), penempatanCtrl.create);
 
 module.exports = router;
