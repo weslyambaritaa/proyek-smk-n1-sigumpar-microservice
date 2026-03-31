@@ -1,0 +1,31 @@
+name: CI Absensi Siswa Academic - Gloria 11S23030
+
+on:
+  push:
+    branches: ["crud-absensi-siswa"]
+
+jobs:
+  test-absensi:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        # Alamat folder sudah disesuaikan ke academic-service
+        working-directory: ./backend/academic-service
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: "./backend/academic-service/package-lock.json"
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Run Jest Testing
+        # Menggunakan npx agar jest ditemukan di server
+        run: npx jest src/controllers/absensiSiswa.test.js
