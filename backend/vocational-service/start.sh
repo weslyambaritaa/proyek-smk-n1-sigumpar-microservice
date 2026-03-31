@@ -26,6 +26,10 @@ sudo -u postgres psql -d $DB_NAME -f ./init.sql || true
 # Berikan izin akses ke user aplikasi
 sudo -u postgres psql -d $DB_NAME -c "GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO $DB_USER;" || true
 sudo -u postgres psql -d $DB_NAME -c "GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO $DB_USER;" || true
+# MEMBERIKAN IZIN AKSES (PRIVILEGES) KEPADA USER APLIKASI
+sudo -u postgres psql -d $DB_NAME -c "GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO $DB_USER;" || true
+sudo -u postgres psql -d $DB_NAME -c "GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO $DB_USER;" || true
+sudo -u postgres psql -d $DB_NAME -c "ALTER SCHEMA public OWNER TO $DB_USER;" || true
 
 # Menjalankan aplikasi Node.js
 npm run dev
