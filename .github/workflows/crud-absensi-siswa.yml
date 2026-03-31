@@ -2,14 +2,17 @@ name: CI Absensi Siswa Academic - Gloria 11S23030
 
 on:
   push:
-    branches: ["crud-absensi-siswa"]
+    # Menambahkan branch main dan master agar tetap jalan setelah merge
+    branches: ["main", "master", "crud-absensi-siswa"]
+  pull_request:
+    # Menjalankan tes saat ada pengajuan gabung kode (Pull Request)
+    branches: ["main", "master"]
 
 jobs:
   test-absensi:
     runs-on: ubuntu-latest
     defaults:
       run:
-        # Alamat folder sudah disesuaikan ke academic-service
         working-directory: ./backend/academic-service
 
     steps:
@@ -27,5 +30,4 @@ jobs:
         run: npm install
 
       - name: Run Jest Testing
-        # Menggunakan npx agar jest ditemukan di server
         run: npx jest src/controllers/absensiSiswa.test.js
