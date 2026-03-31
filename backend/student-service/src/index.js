@@ -1,32 +1,119 @@
+// File: backend/academic-service/src/index.js
+
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
 const morgan = require("morgan");
+const path = require("path");
+const fs = require("fs");
 
-const setupKeycloak = require("./middleware/auth");
+const academicRoutes = require("./routes/academicRoutes");
 const { errorHandler } = require("./middleware/errorHandler");
-
-// PERHATIKAN: Di student-service kita tidak boleh pakai userRoutes!
-// Jika Anda belum membuat studentRoutes, kita buat sementara seperti ini agar tidak error:
-const studentRoutes = express.Router();
-studentRoutes.get("/", (req, res) => res.json({ message: "Ini data students" }));
+const pool = require("./config/db");
 
 const app = express();
+const PORT = process.env.PORT || 3003;
 
+// ============================================
+// 🛡️ MIDDLEWARE GLOBAL
+// ============================================
 app.use(helmet());
-// app.use(cors({ origin: "*" }));
+app.use(
+  cors({
+    origin: process.env.CORS_ORIGIN || "*",
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
+    credentials: true,
+  })
+);
 app.use(morgan("dev"));
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-app.get("/health", (req, res) => res.status(200).send("OK"));
+// ============================================
+// 📁 SERVE STATIC FILES - UPLOADS
+// ============================================
+// Pastikan folder uploads ada
+const uploadsDir = path.join(__dirname, "../uploads");
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+  console.log(`📁 Folder uploads dibuat: ${uploadsDir}`);
+}
 
-const keycloak = setupKeycloak(app);
+// Serve folder uploads di path '/uploads'
+// Agar match dengan data foto_url: "/uploads/nama-file.png"
+app.use("/uploads", express.static(uploadsDir));
 
-// PERHATIKAN: Path-nya adalah /api/students
-app.use("/api/students", keycloak.protect(), studentRoutes);
+// ✅ Optional: Logging untuk request ke static files
+// app.use("/uploads", (req, res, next) => {
+//   console.log(`🖼️  Static file request: ${req.path}`);
+//   next();
+// }, express.static(uploadsDir));
 
-app.use((req, res) => res.status(404).json({ message: "Not found" }));
+// ============================================
+// 🏥 HEALTH CHECK
+// ============================================
+app.get("/health", (req, res) => {
+  res.json({
+    status: "OK",
+    service: "academic-service",
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+  });
+});
+
+// ============================================
+// 🗂️ MOUNT ROUTES
+// ============================================
+app.use("/api/academic", academicRoutes);
+
+// ============================================
+// ❌ 404 HANDLER (Harus setelah semua routes)
+// ============================================
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    message: `Route '${req.originalUrl}' tidak ditemukan`,
+    path: req.path,
+    method: req.method,
+  });
+});
+
+// ============================================
+// ⚠️ GLOBAL ERROR HANDLER (Selalu di paling akhir)
+// ============================================
 app.use(errorHandler);
 
-const PORT = process.env.PORT || 3008;
-app.listen(PORT, () => console.log(`Student service running on port ${PORT}`));
+// ============================================
+// 🚀 START SERVER
+// ============================================
+const startServer = async () => {
+  try {
+    // Test database connection
+    await pool.query("SELECT 1");
+    console.log("✅ Koneksi Database Berhasil");
+
+    app.listen(PORT, "0.0.0.0", () => {
+      console.log(`🎓 Academic Service running on port ${PORT}`);
+      console.log(`📁 Uploads served at: http://localhost:${PORT}/uploads/`);
+      console.log(`🔗 API Base: http://localhost:${PORT}/api/academic`);
+    });
+  } catch (err) {
+    console.error("❌ Failed to start server:", err.message);
+    process.exit(1);
+  }
+};
+
+startServer();
+
+// Graceful shutdown
+process.on("SIGTERM", () => {
+  console.log("🔄 SIGTERM received, shutting down gracefully");
+  pool.end();
+  process.exit(0);
+});
+
+process.on("SIGINT", () => {
+  console.log("🔄 SIGINT received, shutting down gracefully");
+  pool.end();
+  process.exit(0);
+});

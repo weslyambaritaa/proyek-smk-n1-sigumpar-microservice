@@ -2,7 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
 const morgan = require("morgan");
-const path = require('path'); // Posisikan import di atas
+const path = require('path');
 const academicRoutes = require('./routes/academicRoutes'); 
 const { errorHandler } = require("./middleware/errorHandler");
 
@@ -16,10 +16,9 @@ app.use(morgan("dev"));
 app.use(express.json());
 
 // =======================================================
-// POSISI YANG BENAR UNTUK FOLDER UPLOADS
-// Harus di atas 404 handler!
+// ✅ SERVE STATIC FILES - PATH DISESUAIKAN
 // =======================================================
-app.use('/api/academic/uploads', express.static(path.join(__dirname, '../uploads')));
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Health check endpoint
 app.get("/health", (req, res) => {
@@ -33,7 +32,7 @@ app.get("/health", (req, res) => {
 // Mount routes
 app.use('/api/academic', academicRoutes);
 
-// 404 handler (Akan dieksekusi JIKA tidak ada route atau file static yang cocok)
+// 404 handler
 app.use((req, res) => {
   res.status(404).json({
     success: false,
