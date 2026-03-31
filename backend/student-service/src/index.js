@@ -14,7 +14,7 @@ studentRoutes.get("/", (req, res) => res.json({ message: "Ini data students" }))
 const app = express();
 
 app.use(helmet());
-app.use(cors({ origin: "*" }));
+// app.use(cors({ origin: "*" }));
 app.use(morgan("dev"));
 app.use(express.json());
 

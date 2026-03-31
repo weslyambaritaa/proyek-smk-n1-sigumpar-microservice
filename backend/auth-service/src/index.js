@@ -10,7 +10,7 @@ const PORT = process.env.PORT || 3005;
 
 // Middleware global (identik dengan users-service)
 app.use(helmet());
-app.use(cors({ origin: process.env.CORS_ORIGIN || "*" }));
+// app.use(cors({ origin: process.env.CORS_ORIGIN || "*" }));
 app.use(morgan("dev"));
 app.use(express.json());
 
@@ -37,6 +37,6 @@ app.use((req, res) => {
 // Error handler (selalu di akhir)
 app.use(errorHandler);
 
-app.listen(PORT, () => {
-  console.log(`Auth Service running on port ${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Auth Service running on port ${PORT} (0.0.0.0)`);
 });

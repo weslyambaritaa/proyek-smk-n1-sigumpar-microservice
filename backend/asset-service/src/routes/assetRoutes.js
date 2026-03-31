@@ -7,7 +7,7 @@ const {
   createTodo,
   updateTodo,
   deleteTodo,
-} = require("../controllers/todoController");
+} = require("../controllers/assetController");
 
 /**
  * Routes untuk resource /todos

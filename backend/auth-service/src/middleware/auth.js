@@ -1,7 +1,9 @@
 const jwt = require('jsonwebtoken');
 const jwksClient = require('jwks-rsa');
 
-// Konfigurasi Client untuk mengambil kunci publik dari Keycloak
+// 1. TAMBAHKAN IMPORT CONTROLLER DI SINI
+const authController = require('../controllers/authController');
+
 const client = jwksClient({
   jwksUri: `http://keycloak:8080/realms/smk-sigumpar/protocol/openid-connect/certs`
 });
@@ -31,8 +33,16 @@ const verifyToken = (req, res, next) => {
       return res.status(403).json({ message: 'Token tidak valid' });
     }
     
-    // Simpan data user ke request agar bisa dipakai di controller
     req.user = decoded;
+
+    // 2. TAMBAHKAN LOGIK SINKRONISASI DI SINI
+    // Jalankan secara background agar tidak menghambat request
+    if (authController.syncUserFromToken) {
+      authController.syncUserFromToken(decoded).catch(err => {
+        console.error("Gagal sinkronisasi user ke database:", err.message);
+      });
+    }
+
     next();
   });
 };
