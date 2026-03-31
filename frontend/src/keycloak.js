@@ -1,16 +1,16 @@
-import Keycloak from 'keycloak-js';
+import Keycloak from "keycloak-js";
 
 const keycloakConfig = {
-  url: import.meta.env.VITE_KEYCLOAK_URL || 'http://localhost:8080',
-  realm: import.meta.env.VITE_KEYCLOAK_REALM || 'smk-sigumpar',
-  clientId: 'smk-sigumpar'
+  url: import.meta.env.VITE_KEYCLOAK_URL || "http://localhost:8080",
+  realm: import.meta.env.VITE_KEYCLOAK_REALM || "smk-sigumpar",
+  clientId: "smk-sigumpar",
 };
 
 const keycloak = new Keycloak(keycloakConfig);
 
 /**
  * Fungsi untuk mengecek apakah user memiliki role tertentu
- * @param {string} roleName 
+ * @param {string} roleName
  * @returns {boolean}
  */
 export const hasRole = (roleName) => {

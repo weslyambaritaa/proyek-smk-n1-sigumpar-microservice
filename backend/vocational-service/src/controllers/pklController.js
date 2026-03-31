@@ -1,4 +1,4 @@
-const pool = require('../config/db');
+const pool = require("../config/db");
 
 // ============================================================
 // PKL SUBMISSIONS
@@ -25,7 +25,8 @@ exports.getAllPKL = async (req, res) => {
 exports.getPKLById = async (req, res) => {
   const { id } = req.params;
   try {
-    const result = await pool.query(`
+    const result = await pool.query(
+      `
       SELECT 
         ps.*,
         pk.nama_program,
@@ -33,10 +34,14 @@ exports.getPKLById = async (req, res) => {
       FROM pkl_submissions ps
       LEFT JOIN program_keahlian pk ON ps.program_keahlian_id = pk.id
       WHERE ps.id = $1
-    `, [id]);
+    `,
+      [id],
+    );
 
     if (result.rowCount === 0) {
-      return res.status(404).json({ success: false, message: 'Data PKL tidak ditemukan' });
+      return res
+        .status(404)
+        .json({ success: false, message: "Data PKL tidak ditemukan" });
     }
     res.json({ success: true, data: result.rows[0] });
   } catch (err) {
@@ -46,25 +51,46 @@ exports.getPKLById = async (req, res) => {
 
 exports.createPKL = async (req, res) => {
   const {
-    siswa_id, nama_siswa, kelas, program_keahlian_id,
-    nama_perusahaan, alamat_perusahaan, kontak_perusahaan,
-    bidang_pekerjaan, tanggal_mulai, tanggal_selesai
+    siswa_id,
+    nama_siswa,
+    kelas,
+    program_keahlian_id,
+    nama_perusahaan,
+    alamat_perusahaan,
+    kontak_perusahaan,
+    bidang_pekerjaan,
+    tanggal_mulai,
+    tanggal_selesai,
   } = req.body;
 
   const guru_id = req.user?.sub || null;
   const nama_guru = req.user?.name || req.user?.preferred_username || null;
 
   try {
-    const result = await pool.query(`
+    const result = await pool.query(
+      `
       INSERT INTO pkl_submissions 
         (siswa_id, nama_siswa, kelas, program_keahlian_id, nama_perusahaan,
          alamat_perusahaan, kontak_perusahaan, bidang_pekerjaan,
          tanggal_mulai, tanggal_selesai, guru_pembimbing_id, nama_guru)
       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
       RETURNING *
-    `, [siswa_id, nama_siswa, kelas, program_keahlian_id || null,
-        nama_perusahaan, alamat_perusahaan, kontak_perusahaan,
-        bidang_pekerjaan, tanggal_mulai, tanggal_selesai, guru_id, nama_guru]);
+    `,
+      [
+        siswa_id,
+        nama_siswa,
+        kelas,
+        program_keahlian_id || null,
+        nama_perusahaan,
+        alamat_perusahaan,
+        kontak_perusahaan,
+        bidang_pekerjaan,
+        tanggal_mulai,
+        tanggal_selesai,
+        guru_id,
+        nama_guru,
+      ],
+    );
 
     res.status(201).json({ success: true, data: result.rows[0] });
   } catch (err) {
@@ -75,13 +101,20 @@ exports.createPKL = async (req, res) => {
 exports.updatePKL = async (req, res) => {
   const { id } = req.params;
   const {
-    nama_siswa, kelas, program_keahlian_id,
-    nama_perusahaan, alamat_perusahaan, kontak_perusahaan,
-    bidang_pekerjaan, tanggal_mulai, tanggal_selesai
+    nama_siswa,
+    kelas,
+    program_keahlian_id,
+    nama_perusahaan,
+    alamat_perusahaan,
+    kontak_perusahaan,
+    bidang_pekerjaan,
+    tanggal_mulai,
+    tanggal_selesai,
   } = req.body;
 
   try {
-    const result = await pool.query(`
+    const result = await pool.query(
+      `
       UPDATE pkl_submissions SET
         nama_siswa = $1, kelas = $2, program_keahlian_id = $3,
         nama_perusahaan = $4, alamat_perusahaan = $5, kontak_perusahaan = $6,
@@ -89,12 +122,25 @@ exports.updatePKL = async (req, res) => {
         updated_at = NOW()
       WHERE id = $10
       RETURNING *
-    `, [nama_siswa, kelas, program_keahlian_id || null,
-        nama_perusahaan, alamat_perusahaan, kontak_perusahaan,
-        bidang_pekerjaan, tanggal_mulai, tanggal_selesai, id]);
+    `,
+      [
+        nama_siswa,
+        kelas,
+        program_keahlian_id || null,
+        nama_perusahaan,
+        alamat_perusahaan,
+        kontak_perusahaan,
+        bidang_pekerjaan,
+        tanggal_mulai,
+        tanggal_selesai,
+        id,
+      ],
+    );
 
     if (result.rowCount === 0) {
-      return res.status(404).json({ success: false, message: 'Data PKL tidak ditemukan' });
+      return res
+        .status(404)
+        .json({ success: false, message: "Data PKL tidak ditemukan" });
     }
     res.json({ success: true, data: result.rows[0] });
   } catch (err) {
@@ -105,11 +151,16 @@ exports.updatePKL = async (req, res) => {
 exports.deletePKL = async (req, res) => {
   const { id } = req.params;
   try {
-    const result = await pool.query('DELETE FROM pkl_submissions WHERE id = $1 RETURNING id', [id]);
+    const result = await pool.query(
+      "DELETE FROM pkl_submissions WHERE id = $1 RETURNING id",
+      [id],
+    );
     if (result.rowCount === 0) {
-      return res.status(404).json({ success: false, message: 'Data PKL tidak ditemukan' });
+      return res
+        .status(404)
+        .json({ success: false, message: "Data PKL tidak ditemukan" });
     }
-    res.json({ success: true, message: 'Data PKL berhasil dihapus' });
+    res.json({ success: true, message: "Data PKL berhasil dihapus" });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
@@ -123,11 +174,14 @@ exports.approvePKL = async (req, res) => {
   const { pkl_id, status_kelayakan, status_approval, catatan_guru } = req.body;
 
   if (!pkl_id) {
-    return res.status(400).json({ success: false, message: 'pkl_id wajib diisi' });
+    return res
+      .status(400)
+      .json({ success: false, message: "pkl_id wajib diisi" });
   }
 
   try {
-    const result = await pool.query(`
+    const result = await pool.query(
+      `
       UPDATE pkl_submissions SET
         status_kelayakan = COALESCE($1, status_kelayakan),
         status_approval  = COALESCE($2, status_approval),
@@ -135,12 +189,20 @@ exports.approvePKL = async (req, res) => {
         updated_at       = NOW()
       WHERE id = $4
       RETURNING *
-    `, [status_kelayakan, status_approval, catatan_guru, pkl_id]);
+    `,
+      [status_kelayakan, status_approval, catatan_guru, pkl_id],
+    );
 
     if (result.rowCount === 0) {
-      return res.status(404).json({ success: false, message: 'Data PKL tidak ditemukan' });
+      return res
+        .status(404)
+        .json({ success: false, message: "Data PKL tidak ditemukan" });
     }
-    res.json({ success: true, data: result.rows[0], message: 'Status PKL berhasil diperbarui' });
+    res.json({
+      success: true,
+      data: result.rows[0],
+      message: "Status PKL berhasil diperbarui",
+    });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
@@ -154,8 +216,8 @@ exports.getAllMonitoring = async (req, res) => {
   const { pkl_id } = req.query;
   try {
     const query = pkl_id
-      ? 'SELECT * FROM pkl_monitoring WHERE pkl_id = $1 ORDER BY tanggal_kunjungan DESC'
-      : 'SELECT m.*, p.nama_siswa, p.nama_perusahaan FROM pkl_monitoring m LEFT JOIN pkl_submissions p ON m.pkl_id = p.id ORDER BY m.tanggal_kunjungan DESC';
+      ? "SELECT * FROM pkl_monitoring WHERE pkl_id = $1 ORDER BY tanggal_kunjungan DESC"
+      : "SELECT m.*, p.nama_siswa, p.nama_perusahaan FROM pkl_monitoring m LEFT JOIN pkl_submissions p ON m.pkl_id = p.id ORDER BY m.tanggal_kunjungan DESC";
 
     const result = pkl_id
       ? await pool.query(query, [pkl_id])
@@ -173,25 +235,39 @@ exports.addMonitoring = async (req, res) => {
   const nama_petugas = req.user?.name || req.user?.preferred_username || null;
 
   if (!pkl_id || !catatan) {
-    return res.status(400).json({ success: false, message: 'pkl_id dan catatan wajib diisi' });
+    return res
+      .status(400)
+      .json({ success: false, message: "pkl_id dan catatan wajib diisi" });
   }
 
   try {
     // Insert record monitoring
-    const monResult = await pool.query(`
+    const monResult = await pool.query(
+      `
       INSERT INTO pkl_monitoring (pkl_id, catatan, progres_saat_kunjungan, petugas_id, nama_petugas)
       VALUES ($1, $2, $3, $4, $5)
       RETURNING *
-    `, [pkl_id, catatan, progres_saat_kunjungan || 0, petugas_id, nama_petugas]);
+    `,
+      [pkl_id, catatan, progres_saat_kunjungan || 0, petugas_id, nama_petugas],
+    );
 
     // Update progres di tabel pkl_submissions
     if (progres_saat_kunjungan !== undefined) {
-      await pool.query(`
+      await pool.query(
+        `
         UPDATE pkl_submissions SET progres_terakhir = $1, updated_at = NOW() WHERE id = $2
-      `, [progres_saat_kunjungan, pkl_id]);
+      `,
+        [progres_saat_kunjungan, pkl_id],
+      );
     }
 
-    res.status(201).json({ success: true, data: monResult.rows[0], message: 'Monitoring berhasil dicatat' });
+    res
+      .status(201)
+      .json({
+        success: true,
+        data: monResult.rows[0],
+        message: "Monitoring berhasil dicatat",
+      });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
@@ -205,21 +281,24 @@ exports.inputNilai = async (req, res) => {
   const { pkl_id, nilai_akhir, predikat, keterangan_nilai } = req.body;
 
   if (!pkl_id || nilai_akhir === undefined) {
-    return res.status(400).json({ success: false, message: 'pkl_id dan nilai_akhir wajib diisi' });
+    return res
+      .status(400)
+      .json({ success: false, message: "pkl_id dan nilai_akhir wajib diisi" });
   }
 
   // Auto-hitung predikat jika tidak diisi
   let finalPredikat = predikat;
   if (!finalPredikat) {
-    if (nilai_akhir >= 90) finalPredikat = 'A';
-    else if (nilai_akhir >= 80) finalPredikat = 'B';
-    else if (nilai_akhir >= 70) finalPredikat = 'C';
-    else if (nilai_akhir >= 60) finalPredikat = 'D';
-    else finalPredikat = 'E';
+    if (nilai_akhir >= 90) finalPredikat = "A";
+    else if (nilai_akhir >= 80) finalPredikat = "B";
+    else if (nilai_akhir >= 70) finalPredikat = "C";
+    else if (nilai_akhir >= 60) finalPredikat = "D";
+    else finalPredikat = "E";
   }
 
   try {
-    const result = await pool.query(`
+    const result = await pool.query(
+      `
       UPDATE pkl_submissions SET
         nilai_akhir     = $1,
         predikat        = $2,
@@ -227,12 +306,20 @@ exports.inputNilai = async (req, res) => {
         updated_at      = NOW()
       WHERE id = $4
       RETURNING *
-    `, [nilai_akhir, finalPredikat, keterangan_nilai, pkl_id]);
+    `,
+      [nilai_akhir, finalPredikat, keterangan_nilai, pkl_id],
+    );
 
     if (result.rowCount === 0) {
-      return res.status(404).json({ success: false, message: 'Data PKL tidak ditemukan' });
+      return res
+        .status(404)
+        .json({ success: false, message: "Data PKL tidak ditemukan" });
     }
-    res.json({ success: true, data: result.rows[0], message: 'Nilai PKL berhasil disimpan' });
+    res.json({
+      success: true,
+      data: result.rows[0],
+      message: "Nilai PKL berhasil disimpan",
+    });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
@@ -244,7 +331,9 @@ exports.inputNilai = async (req, res) => {
 
 exports.getAllProgramKeahlian = async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM program_keahlian ORDER BY nama_program');
+    const result = await pool.query(
+      "SELECT * FROM program_keahlian ORDER BY nama_program",
+    );
     res.json({ success: true, data: result.rows });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
@@ -258,7 +347,7 @@ exports.getAllProgramKeahlian = async (req, res) => {
 exports.getStatistik = async (req, res) => {
   try {
     const [totalPKL, statusPKL, avgNilai, totalProyek] = await Promise.all([
-      pool.query('SELECT COUNT(*) AS total FROM pkl_submissions'),
+      pool.query("SELECT COUNT(*) AS total FROM pkl_submissions"),
       pool.query(`
         SELECT 
           status_approval,
@@ -271,22 +360,24 @@ exports.getStatistik = async (req, res) => {
         FROM pkl_submissions 
         WHERE nilai_akhir IS NOT NULL
       `),
-      pool.query('SELECT COUNT(*) AS total FROM proyek_vokasi'),
+      pool.query("SELECT COUNT(*) AS total FROM proyek_vokasi"),
     ]);
 
     const statusMap = {};
-    statusPKL.rows.forEach(r => { statusMap[r.status_approval] = parseInt(r.jumlah); });
+    statusPKL.rows.forEach((r) => {
+      statusMap[r.status_approval] = parseInt(r.jumlah);
+    });
 
     res.json({
       success: true,
       data: {
         total_pkl: parseInt(totalPKL.rows[0].total),
-        pkl_disetujui: statusMap['disetujui'] || 0,
-        pkl_pending: statusMap['pending'] || 0,
-        pkl_ditolak: statusMap['ditolak'] || 0,
+        pkl_disetujui: statusMap["disetujui"] || 0,
+        pkl_pending: statusMap["pending"] || 0,
+        pkl_ditolak: statusMap["ditolak"] || 0,
         rata_rata_nilai: parseFloat(avgNilai.rows[0].rata_rata) || 0,
         total_proyek: parseInt(totalProyek.rows[0].total),
-      }
+      },
     });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });

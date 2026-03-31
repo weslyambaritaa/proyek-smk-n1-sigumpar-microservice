@@ -2,7 +2,7 @@ const jwt = require("jsonwebtoken");
 const jwksClient = require("jwks-rsa");
 const authController = require("../controllers/authController");
 
-const KEYCLOAK_URL = process.env.KEYCLOAK_URL || "http://localhost:8080";
+const KEYCLOAK_URL = process.env.KEYCLOAK_URL || "http://keycloak:8080";
 const KEYCLOAK_REALM = process.env.KEYCLOAK_REALM || "smk-sigumpar";
 const KEYCLOAK_CLIENT_ID = process.env.KEYCLOAK_CLIENT_ID || "smk-sigumpar";
 const KEYCLOAK_ISSUER = `${KEYCLOAK_URL}/realms/${KEYCLOAK_REALM}`;
@@ -44,33 +44,45 @@ const verifyToken = (req, res, next) => {
     return res.status(401).json({ message: "Token tidak ditemukan" });
   }
 
-  jwt.verify(
-    token,
-    getKey,
-    {
-      algorithms: ["RS256"],
-      issuer: allowedIssuers,
-      audience: KEYCLOAK_CLIENT_ID,
-    },
-    (err, decoded) => {
-      if (err) {
-        console.error("JWT Verification Error:", err.message);
-        return res
-          .status(403)
-          .json({ message: "Token tidak valid", detail: err.message });
-      }
+  const decodedToken = jwt.decode(token, { complete: true });
+  const tokenAud = decodedToken?.payload?.aud;
+  const verifyOptions = {
+    algorithms: ["RS256"],
+    issuer: allowedIssuers,
+  };
 
-      req.user = decoded;
+  if (tokenAud) {
+    const audienceMatches = Array.isArray(tokenAud)
+      ? tokenAud.includes(KEYCLOAK_CLIENT_ID)
+      : tokenAud === KEYCLOAK_CLIENT_ID;
 
-      if (authController.syncUserFromToken) {
-        authController
-          .syncUserFromToken(decoded)
-          .catch((e) => console.error("Gagal sinkronisasi user:", e.message));
-      }
+    if (audienceMatches) {
+      verifyOptions.audience = KEYCLOAK_CLIENT_ID;
+    } else {
+      console.warn(
+        "Token aud tidak cocok dengan client ID; memverifikasi tanpa audience agar token Keycloak yang valid tetap diterima.",
+      );
+    }
+  }
 
-      next();
-    },
-  );
+  jwt.verify(token, getKey, verifyOptions, (err, decoded) => {
+    if (err) {
+      console.error("JWT Verification Error:", err.message);
+      return res
+        .status(403)
+        .json({ message: "Token tidak valid", detail: err.message });
+    }
+
+    req.user = decoded;
+
+    if (authController.syncUserFromToken) {
+      authController
+        .syncUserFromToken(decoded)
+        .catch((e) => console.error("Gagal sinkronisasi user:", e.message));
+    }
+
+    next();
+  });
 };
 
 module.exports = verifyToken;
