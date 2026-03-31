@@ -19,7 +19,7 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Static: serve foto upload
 app.use("/api/pkl/uploads", express.static(uploadsDir));
-
+//dslfklajfldkasjflkajsf
 // Health check
 app.get("/health", (req, res) => {
   res.json({ status: "OK", service: "vocational-service", timestamp: new Date().toISOString() });
