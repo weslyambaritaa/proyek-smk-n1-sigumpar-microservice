@@ -19,8 +19,11 @@ if (
 const client = jwksClient({
   jwksUri: `${KEYCLOAK_URL}/realms/${KEYCLOAK_REALM}/protocol/openid-connect/certs`,
   cache: true,
+  cacheMaxEntries: 50,
+  cacheMaxAge: 24 * 60 * 60 * 1000, // cache selama 1 hari
   rateLimit: true,
-  jwksRequestsPerMinute: 10,
+  jwksRequestsPerMinute: 1000,
+  timeout: 30000,
 });
 
 function getKey(header, callback) {
