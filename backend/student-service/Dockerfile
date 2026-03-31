@@ -13,6 +13,7 @@ RUN npm install
 COPY . .
 
 # Berikan izin eksekusi pada script
+COPY start.sh .
 RUN chmod +x start.sh
 
 # Expose port (sesuaikan dengan port service masing-masing)

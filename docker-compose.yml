@@ -97,6 +97,7 @@ services:
       - DB_NAME=student_db
       - DB_USER=student_user
       - DATABASE_URL=postgres://student_user:password@localhost:5432/student_db
+      - ACADEMIC_SERVICE_URL=http://academic-service:3003
     depends_on: [keycloak]
 
   vocational-service:
