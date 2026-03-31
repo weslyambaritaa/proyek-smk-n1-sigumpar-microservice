@@ -57,4 +57,9 @@ export const academicApi = {
   createUpacara: (data) => axiosInstance.post('/api/academic/upacara', data),
   updateUpacara: (id, data) => axiosInstance.put(`/api/academic/upacara/${id}`, data),
   deleteUpacara: (id) => axiosInstance.delete(`/api/academic/upacara/${id}`),
+
+  // --- NILAI SISWA ---
+getSiswaByKelas: (params) => axiosInstance.get('/api/academic/nilai/siswa-by-kelas', { params }),
+saveNilaiBulk: (data) => axiosInstance.post('/api/academic/nilai/bulk', data),
+getNilai: (params) => axiosInstance.get('/api/academic/nilai', { params }),
 };
