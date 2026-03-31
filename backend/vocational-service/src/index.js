@@ -8,6 +8,7 @@ const vocationalRoutes = require("./routes/vocationalRoutes");
 
 const app = express();
 const PORT = process.env.PORT || 3007;
+const path = require('path');
 
 // 1. PINDAHKAN CORS KE SINI (Harus di atas sebelum rute!)
 // app.use(cors());
@@ -38,3 +39,5 @@ app.use(errorHandler);
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Vocational Service berjalan di port ${PORT}`);
 });
+
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));

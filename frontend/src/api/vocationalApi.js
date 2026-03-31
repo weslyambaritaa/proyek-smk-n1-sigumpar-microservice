@@ -13,4 +13,7 @@ export const vocationalApi = {
   getAllKelas: () => axiosInstance.get('/api/vocational/kelas'), 
   getSiswaByRegu: (reguId) => axiosInstance.get(`/api/vocational/regu/${reguId}/siswa`), // <-- Diubah
   submitAbsensiPramuka: (data) => axiosInstance.post('/api/vocational/absensi', data),
+  uploadFileLaporan: (formData) => axiosInstance.post('/api/vocational/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+  }),
 };
