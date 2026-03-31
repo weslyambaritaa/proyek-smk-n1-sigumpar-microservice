@@ -16,6 +16,9 @@ import ReguPage from './pages/pramuka/regu/ReguPage';
 import AnggotaReguPage from './pages/pramuka/anggota_regu/AnggotaReguPage';
 import AbsensiPramukaPage from './pages/pramuka/absensi/AbsensiPramukaPage';
 import InputNilaiPage from './pages/guru-mapel/InputNilaiPage';
+import AbsensiSiswa from './pages/guru-mapel/absensi-siswa/AbsensiSiswa';
+import AbsensiGuruPage from './pages/guru-mapel/AbsensiGuruPage';
+import PerangkatPage from './pages/guru-mapel/perangkat/PerangkatPage';
 
 /**
  * Komponen reusable untuk grup menu per role (Dropdown)
@@ -129,6 +132,15 @@ const App = () => {
                 >
                   <NavLink to="/input-nilai" className={subNavClass}>
                     Input Nilai
+                  </NavLink>
+                  <NavLink to="/absensi-siswa" className={subNavClass}>
+                    Absensi Siswa
+                  </NavLink>
+                  <NavLink to="/absensi-guru" className={subNavClass}>
+                    Absensi Guru
+                  </NavLink>
+                  <NavLink to="/perangkat-pembelajaran" className={subNavClass}>
+                    RPP / Perangkat
                   </NavLink>
                 </NavDropdown>
               )}
@@ -245,6 +257,9 @@ const App = () => {
 
             {/* Guru Mapel Routes */}
             <Route path="/input-nilai" element={<InputNilaiPage />} />
+            <Route path="/absensi-siswa" element={<AbsensiSiswa />} />
+            <Route path="/absensi-guru" element={<AbsensiGuruPage />} />
+            <Route path="/perangkat-pembelajaran" element={<PerangkatPage />} />
 
             {/* Pramuka Routes */}
             <Route path="/vocational/regu" element={<ReguPage />} />

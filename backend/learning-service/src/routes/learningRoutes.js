@@ -1,28 +1,35 @@
 const express = require("express");
-const verifyToken = require('../middleware/auth'); // Import middleware
 const router = express.Router();
+const extractIdentity = require("../middleware/extractIdentity");
 const {
   getAllTodos,
   getTodoById,
   createTodo,
   updateTodo,
   deleteTodo,
+  getAllPerangkat,
+  uploadPerangkat,
+  downloadPerangkat,
+  deletePerangkat,
 } = require("../controllers/learningController");
+const {
+  getAllAbsensiGuru,
+  getAbsensiGuruById,
+  createAbsensiGuru,
+  updateAbsensiGuru,
+  deleteAbsensiGuru,
+} = require("../controllers/absensiGuruController");
 
-/**
- * Routes untuk resource /todos
- *
- * GET    /todos       => Ambil semua todos (support filter via query params)
- * POST   /todos       => Buat todo baru
- * GET    /todos/:id   => Ambil todo tertentu
- * PUT    /todos/:id   => Update todo tertentu
- * DELETE /todos/:id   => Hapus todo tertentu
- */
+router.use(extractIdentity);
 
-router.route("/").get(getAllTodos).post(createTodo);
-router.route("/:id").get(getTodoById).put(updateTodo).delete(deleteTodo);
+router.route("/todos").get(getAllTodos).post(createTodo);
+router.route("/todos/:id").get(getTodoById).put(updateTodo).delete(deleteTodo);
 
-router.get('/', verifyToken, controller.getAll);
-router.post('/', verifyToken, controller.create);
+router.route("/absensi-guru").get(getAllAbsensiGuru).post(createAbsensiGuru);
+router.route("/absensi-guru/:id").get(getAbsensiGuruById).put(updateAbsensiGuru).delete(deleteAbsensiGuru);
+
+router.route("/perangkat").get(getAllPerangkat).post(uploadPerangkat);
+router.get("/perangkat/:id/download", downloadPerangkat);
+router.delete("/perangkat/:id", deletePerangkat);
 
 module.exports = router;

@@ -12,6 +12,8 @@ const upload = require('../middleware/upload');
 const upacaraController = require('../controllers/upacaraController');
 const nilaiController = require('../controllers/nilaiController');
 const extractIdentity = require('../middleware/extractIdentity');
+const { createAbsensiSiswa, getAllAbsensiSiswa, getAbsensiSiswaById, updateAbsensiSiswa, deleteAbsensiSiswa } = require('../controllers/absensiSiswaController');
+const guruController = require('../controllers/guruController');
 
 // Rute Kelas
 router.get('/kelas', extractIdentity, kelasController.getAllKelas);
@@ -69,5 +71,20 @@ router.get('/nilai/siswa-by-kelas', extractIdentity, nilaiController.getSiswaByK
 router.post('/nilai/bulk', extractIdentity, nilaiController.saveNilaiBulk);
 router.put('/nilai/:id', extractIdentity, nilaiController.updateNilai);
 router.delete('/nilai/:id', extractIdentity, nilaiController.deleteNilai);
+
+
+// Rute Absensi Siswa
+router.post('/absensi-siswa', extractIdentity, createAbsensiSiswa);
+router.get('/absensi-siswa', extractIdentity, getAllAbsensiSiswa);
+router.get('/absensi-siswa/:id', extractIdentity, getAbsensiSiswaById);
+router.put('/absensi-siswa/:id', extractIdentity, updateAbsensiSiswa);
+router.delete('/absensi-siswa/:id', extractIdentity, deleteAbsensiSiswa);
+
+// Rute Guru Mapel untuk Absensi
+router.get('/teacher/classes', extractIdentity, guruController.getTeacherClasses);
+router.get('/teacher/classes/:classId/subjects', extractIdentity, guruController.getSubjectsByClass);
+router.get('/classes/:classId/students', extractIdentity, guruController.getClassStudents);
+router.get('/attendance/class/:classId', extractIdentity, guruController.getAttendanceByClass);
+router.post('/attendance/bulk', extractIdentity, guruController.saveBulkAttendance);
 
 module.exports = router;
