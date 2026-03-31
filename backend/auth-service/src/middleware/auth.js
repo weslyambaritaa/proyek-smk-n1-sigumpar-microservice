@@ -2,7 +2,6 @@ const jwt = require('jsonwebtoken');
 const jwksClient = require('jwks-rsa');
 const authController = require('../controllers/authController');
 
-// Ambil kunci publik dari Keycloak (pakai nama container, bukan localhost)
 const client = jwksClient({
   jwksUri: `http://keycloak:8080/realms/smk-sigumpar/protocol/openid-connect/certs`,
   cache: true,
@@ -27,11 +26,10 @@ const verifyToken = (req, res, next) => {
   }
 
   jwt.verify(token, getKey, {
-    // PERBAIKAN UTAMA: issuer harus pakai nama container Docker, BUKAN localhost
-    // Token Keycloak di-issue dengan issuer http://keycloak:8080/...
-    // tapi browser mengakses lewat localhost:8080, sehingga iss di token = localhost:8080
-    // Solusi: nonaktifkan cek issuer, biarkan jwks-rsa yang validasi signature-nya
     algorithms: ['RS256'],
+    // TIDAK pakai issuer check karena token dari browser ber-issuer localhost:8080
+    // tapi JWKS diambil dari keycloak:8080 (nama container Docker)
+    // Validasi signature RS256 sudah cukup aman
   }, (err, decoded) => {
     if (err) {
       console.error("JWT Verification Error:", err.message);

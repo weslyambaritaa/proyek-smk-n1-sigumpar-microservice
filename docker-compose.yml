@@ -1,5 +1,5 @@
 x-service-template: &service-template
-  restart: unless-stopped
+  restart: on-failure
   networks:
     - microservices-network
   privileged: true # Wajib untuk menjalankan postgres di dalam kontainer
@@ -42,10 +42,15 @@ services:
     volumes:
       - ./keycloak-init/realm-export.json:/opt/keycloak/data/import/realm.json:ro
     command: start-dev --import-realm
+    # Healthcheck pakai Java karena Keycloak 22 tidak punya curl/wget
     healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost:8080/realms/master || exit 1"]
-      interval: 15s
-      timeout: 10s
+      test:
+        [
+          "CMD-SHELL",
+          "exec 3<>/dev/tcp/localhost/8080 && echo -e 'GET /realms/master HTTP/1.0\r\nHost: localhost\r\n\r\n' >&3 && cat <&3 | grep -q '200 OK' || exit 1",
+        ]
+      interval: 20s
+      timeout: 15s
       retries: 15
       start_period: 120s
 
