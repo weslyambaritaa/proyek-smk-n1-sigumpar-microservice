@@ -1,0 +1,27 @@
+name: Unit Testing Wakasek
+
+on:
+  push:
+    branches: ["main", "master", "wakil-kepala-sekolah"]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend/learning-service
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: "./backend/learning-service/package-lock.json"
+
+      - name: Install
+        run: npm install
+
+      - name: Test
+        # Sekarang npm test akan jalan karena Jest sudah terdaftar
+        run: npx jest src/controllers/wakasekRole.test.js
