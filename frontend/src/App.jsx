@@ -12,6 +12,7 @@ import PengumumanPage from "./pages/tata-usaha/pengumuman/PengumumanPage";
 import JadwalPage from "./pages/tata-usaha/jadwal/JadwalPage";
 import PiketPage from "./pages/tata-usaha/piket/PiketPage";
 import UpacaraPage from "./pages/tata-usaha/upacara/UpacaraPage";
+import PelaporanLokasiPage from "./pages/vokasi/PelaporanLokasiPage";
 import ReguPage from './pages/pramuka/regu/ReguPage';
 import AnggotaReguPage from './pages/pramuka/anggota_regu/AnggotaReguPage';
 import AbsensiPramukaPage from './pages/pramuka/absensi/AbsensiPramukaPage';
@@ -203,8 +204,8 @@ const App = () => {
                   isOpen={openMenus["vokasi"]}
                   onClick={() => toggleMenu("vokasi")}
                 >
-                  <NavLink to="/proyek-vokasi" className={subNavClass}>
-                    Proyek Siswa
+                  <NavLink to="/pelaporan-lokasi-pkl" className={subNavClass}>
+                    Pelaporan Lokasi
                   </NavLink>
                 </NavDropdown>
               )}
@@ -241,6 +242,8 @@ const App = () => {
             <Route path="/academic/jadwal" element={<JadwalPage />} />
             <Route path="/academic/piket" element={<PiketPage />} />
             <Route path="/academic/upacara" element={<UpacaraPage />} />
+            <Route path="/pelaporan-lokasi-pkl" element={<PelaporanLokasiPage />} />
+            {/* Route lainnya bisa ditambahkan di sini */}
 
             {/* Pramuka Routes */}
             <Route path="/vocational/regu" element={<ReguPage />} />
