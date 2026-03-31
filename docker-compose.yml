@@ -42,6 +42,12 @@ services:
     volumes:
       - ./keycloak-init/realm-export.json:/opt/keycloak/data/import/realm.json:ro
     command: start-dev --import-realm
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8080/realms/master || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 15
+      start_period: 120s
 
   auth-service:
     <<: *service-template
@@ -52,7 +58,9 @@ services:
       - DB_NAME=auth_db
       - DB_USER=auth_user
       - DATABASE_URL=postgres://auth_user:password@localhost:5432/auth_db
-    depends_on: [keycloak]
+    depends_on:
+      keycloak:
+        condition: service_healthy
 
   academic-service:
     <<: *service-template
@@ -64,7 +72,9 @@ services:
       - DB_USER=academic_user
       - DATABASE_URL=postgres://academic_user:password@localhost:5432/academic_db
       - DB_PASSWORD=password
-    depends_on: [keycloak]
+    depends_on:
+      keycloak:
+        condition: service_healthy
 
   asset-service:
     <<: *service-template
@@ -74,8 +84,11 @@ services:
       - PORT=3004
       - DB_NAME=asset_db
       - DB_USER=asset_user
+      - DB_PASSWORD=password
       - DATABASE_URL=postgres://asset_user:password@localhost:5432/asset_db
-    depends_on: [keycloak]
+    depends_on:
+      keycloak:
+        condition: service_healthy
 
   learning-service:
     <<: *service-template
@@ -85,8 +98,11 @@ services:
       - PORT=3006
       - DB_NAME=learning_db
       - DB_USER=learning_user
+      - DB_PASSWORD=password
       - DATABASE_URL=postgres://learning_user:password@localhost:5432/learning_db
-    depends_on: [keycloak]
+    depends_on:
+      keycloak:
+        condition: service_healthy
 
   student-service:
     <<: *service-template
@@ -96,8 +112,12 @@ services:
       - PORT=3008
       - DB_NAME=student_db
       - DB_USER=student_user
+      - DB_PASSWORD=password
       - DATABASE_URL=postgres://student_user:password@localhost:5432/student_db
-    depends_on: [keycloak]
+      - ACADEMIC_SERVICE_URL=http://academic-service:3003
+    depends_on:
+      keycloak:
+        condition: service_healthy
 
   vocational-service:
     <<: *service-template
@@ -107,8 +127,11 @@ services:
       - PORT=3007
       - DB_NAME=vocational_db
       - DB_USER=vocational_user
+      - DB_PASSWORD=password
       - DATABASE_URL=postgres://vocational_user:password@localhost:5432/vocational_db
-    depends_on: [keycloak]
+    depends_on:
+      keycloak:
+        condition: service_healthy
 
   api-gateway:
     image: nginx:alpine
