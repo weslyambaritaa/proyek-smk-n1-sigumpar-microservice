@@ -85,7 +85,6 @@ services:
       - PORT=3006
       - DB_NAME=learning_db
       - DB_USER=learning_user
-      - DB_PASSWORD=password 
       - DATABASE_URL=postgres://learning_user:password@localhost:5432/learning_db
     depends_on: [keycloak]
 
