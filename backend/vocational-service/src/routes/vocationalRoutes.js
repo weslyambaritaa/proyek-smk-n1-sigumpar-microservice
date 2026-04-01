@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const pramukaController = require('../controllers/pramukaController');
+const vocationalController = require('../controllers/vocationalController');
 const upload = require('../middleware/upload');
 
 console.log("Cek Controller Regu:", typeof pramukaController.getAllRegu); // Debugging
@@ -23,5 +24,11 @@ router.post('/upload', upload.single('file_laporan'), (req, res) => {
     const fileUrl = `/uploads/${req.file.filename}`;
     res.json({ file_url: fileUrl });
 });
+
+// Laporan Lokasi PKL Routes
+router.get('/laporan-pkl', vocationalController.getAllLaporanPKL);
+router.post('/laporan-pkl', vocationalController.createLaporanPKL);
+router.put('/laporan-pkl/:id', vocationalController.updateLaporanPKL);
+router.delete('/laporan-pkl/:id', vocationalController.deleteLaporanPKL);
 
 module.exports = router;

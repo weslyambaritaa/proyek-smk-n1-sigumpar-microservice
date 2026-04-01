@@ -15,6 +15,7 @@ import UpacaraPage from "./pages/tata-usaha/upacara/UpacaraPage";
 import ReguPage from './pages/pramuka/regu/ReguPage';
 import AnggotaReguPage from './pages/pramuka/anggota_regu/AnggotaReguPage';
 import AbsensiPramukaPage from './pages/pramuka/absensi/AbsensiPramukaPage';
+import LaporanLokasiPKLPage from './pages/vocational/laporan-lokasi-pkl/LaporanLokasiPKLPage';
 
 /**
  * Komponen reusable untuk grup menu per role (Dropdown)
@@ -192,6 +193,8 @@ const App = () => {
                   <NavLink to="/vocational/regu" className={subNavClass}>Manajemen Regu</NavLink>
                   <NavLink to="/vocational/anggota-regu" className={subNavClass}>Plotting Anggota</NavLink>
                   <NavLink to="/vocational/absensi" className={subNavClass}>Absensi Pramuka</NavLink>
+                  
+                  
                 </NavDropdown>
               )}
 
@@ -203,9 +206,7 @@ const App = () => {
                   isOpen={openMenus["vokasi"]}
                   onClick={() => toggleMenu("vokasi")}
                 >
-                  <NavLink to="/proyek-vokasi" className={subNavClass}>
-                    Proyek Siswa
-                  </NavLink>
+                  <NavLink to="/vocational/laporan-lokasi-pkl" className={subNavClass}>Lokasi PKL</NavLink>
                 </NavDropdown>
               )}
             </div>
@@ -246,6 +247,8 @@ const App = () => {
             <Route path="/vocational/regu" element={<ReguPage />} />
             <Route path="/vocational/anggota-regu" element={<AnggotaReguPage />} />
             <Route path="/vocational/absensi" element={<AbsensiPramukaPage />} />
+
+            <Route path="/vocational/laporan-lokasi-pkl" element={<LaporanLokasiPKLPage />} />
           </Routes>
         </main>
       </div>
