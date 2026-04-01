@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useTeacherAttendance } from "../../../hooks/useTeacherAttendance";
 import Button from "../../../components/ui/Button";
 import Badge from "../../../components/ui/Badge";
+import toast from "react-hot-toast";
 
 const AbsensiSiswa = () => {
   const {
@@ -61,6 +62,19 @@ const AbsensiSiswa = () => {
   };
 
   const handleSave = async () => {
+    if (!selectedClass) {
+      toast?.error?.("Pilih kelas terlebih dahulu");
+      return;
+    }
+    if (!selectedSubject) {
+      toast?.error?.("Pilih mata pelajaran terlebih dahulu");
+      return;
+    }
+    const hasAnyStatus = Object.values(attendance).some((v) => v?.status);
+    if (!hasAnyStatus) {
+      toast?.error?.("Belum ada status absensi yang diisi");
+      return;
+    }
     setSaving(true);
     try {
       await saveAttendance(
@@ -78,8 +92,8 @@ const AbsensiSiswa = () => {
 
   const filteredStudents = students.filter(
     (s) =>
-      s.namasiswa.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      s.nis.toLowerCase().includes(searchTerm.toLowerCase()),
+      (s.namasiswa || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (s.nis || "").toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   if (loading && !classes.length)
@@ -188,7 +202,7 @@ const AbsensiSiswa = () => {
           )}
 
           {/* Pencarian siswa */}
-          <div className="mb-4">
+          <div className="mb-4 flex flex-col md:flex-row gap-3 items-start md:items-center">
             <input
               type="text"
               placeholder="Cari siswa (nama atau NIS)"
@@ -196,6 +210,19 @@ const AbsensiSiswa = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full md:w-96 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
+            <button
+              type="button"
+              onClick={() => {
+                const all = {};
+                students.forEach((s) => {
+                  all[s.id_siswa] = { status: "hadir", keterangan: attendance[s.id_siswa]?.keterangan || "" };
+                });
+                setAttendance(all);
+              }}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors whitespace-nowrap"
+            >
+              ✓ Tandai Semua Hadir
+            </button>
           </div>
 
           {/* Daftar Siswa */}

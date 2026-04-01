@@ -19,6 +19,7 @@ export default function AbsensiGuruPage() {
     user_id: keycloak.tokenParsed?.sub || "",
     mataPelajaran: "",
     keterangan: "",
+    status: "",
   });
 
   const loadData = async () => {
@@ -99,25 +100,34 @@ export default function AbsensiGuruPage() {
         <p className="text-sm text-gray-500">Input absensi guru dan lihat rekap harian.</p>
       </div>
 
-      <div className="grid md:grid-cols-3 gap-4">
+      <div className="grid md:grid-cols-6 gap-4">
         <div className="bg-white border rounded-xl p-4"><p className="text-sm text-gray-500">Total</p><p className="text-2xl font-bold">{summary.total}</p></div>
-        <div className="bg-white border rounded-xl p-4"><p className="text-sm text-gray-500">Hadir</p><p className="text-2xl font-bold">{summary.hadir}</p></div>
-        <div className="bg-white border rounded-xl p-4"><p className="text-sm text-gray-500">Terlambat</p><p className="text-2xl font-bold">{summary.terlambat}</p></div>
+        <div className="bg-green-50 border border-green-200 rounded-xl p-4"><p className="text-sm text-green-600">Hadir</p><p className="text-2xl font-bold text-green-700">{summary.hadir}</p></div>
+        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4"><p className="text-sm text-yellow-600">Terlambat</p><p className="text-2xl font-bold text-yellow-700">{summary.terlambat}</p></div>
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4"><p className="text-sm text-blue-600">Izin</p><p className="text-2xl font-bold text-blue-700">{summary.izin}</p></div>
+        <div className="bg-orange-50 border border-orange-200 rounded-xl p-4"><p className="text-sm text-orange-600">Sakit</p><p className="text-2xl font-bold text-orange-700">{summary.sakit}</p></div>
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4"><p className="text-sm text-red-600">Alpa</p><p className="text-2xl font-bold text-red-700">{summary.alpa}</p></div>
       </div>
 
       <form onSubmit={handleSubmit} className="bg-white border rounded-xl p-4 space-y-4">
         <div className="grid md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium mb-1">Nama Guru</label>
-            <input className="w-full border rounded-lg px-3 py-2" value={form.namaGuru} onChange={(e) => setForm({ ...form, namaGuru: e.target.value })} />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">User ID</label>
-            <input className="w-full border rounded-lg px-3 py-2" value={form.user_id} onChange={(e) => setForm({ ...form, user_id: e.target.value })} />
+            <input className="w-full border rounded-lg px-3 py-2 bg-gray-50" value={form.namaGuru} readOnly />
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Mata Pelajaran</label>
             <input className="w-full border rounded-lg px-3 py-2" value={form.mataPelajaran} onChange={(e) => setForm({ ...form, mataPelajaran: e.target.value })} placeholder="Contoh: Matematika" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Status Kehadiran</label>
+            <select className="w-full border rounded-lg px-3 py-2 bg-white" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
+              <option value="">-- Auto (Hadir/Terlambat) --</option>
+              <option value="izin">Izin</option>
+              <option value="sakit">Sakit</option>
+              <option value="alpa">Alpa</option>
+            </select>
+            <p className="text-xs text-gray-400 mt-1">Biarkan kosong untuk deteksi otomatis berdasarkan jam masuk</p>
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Tanggal Filter</label>
@@ -158,14 +168,24 @@ export default function AbsensiGuruPage() {
                   <td className="px-3 py-2">{row.mataPelajaran}</td>
                   <td className="px-3 py-2">{row.tanggal}</td>
                   <td className="px-3 py-2">{new Date(row.jamMasuk).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}</td>
-                  <td className="px-3 py-2 capitalize">{row.status}</td>
+                  <td className="px-3 py-2 capitalize">
+                    <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
+                      row.status === 'hadir' ? 'bg-green-100 text-green-700' :
+                      row.status === 'terlambat' ? 'bg-yellow-100 text-yellow-700' :
+                      row.status === 'izin' ? 'bg-blue-100 text-blue-700' :
+                      row.status === 'sakit' ? 'bg-orange-100 text-orange-700' :
+                      'bg-red-100 text-red-700'
+                    }`}>{row.status}</span>
+                  </td>
                   <td className="px-3 py-2">{row.keterangan || "-"}</td>
                   <td className="px-3 py-2">
                     <div className="flex flex-wrap gap-2">
-                      <button type="button" onClick={() => handleQuickStatus(row, "hadir")} className="px-2 py-1 rounded bg-green-100 text-green-700">Hadir</button>
-                      <button type="button" onClick={() => handleQuickStatus(row, "izin")} className="px-2 py-1 rounded bg-yellow-100 text-yellow-700">Izin</button>
-                      <button type="button" onClick={() => handleQuickStatus(row, "sakit")} className="px-2 py-1 rounded bg-blue-100 text-blue-700">Sakit</button>
-                      <button type="button" onClick={() => handleDelete(row)} className="px-2 py-1 rounded bg-red-100 text-red-700">Hapus</button>
+                      <button type="button" onClick={() => handleQuickStatus(row, "hadir")} className="px-2 py-1 rounded bg-green-100 text-green-700 text-xs font-semibold">Hadir</button>
+                      <button type="button" onClick={() => handleQuickStatus(row, "terlambat")} className="px-2 py-1 rounded bg-yellow-100 text-yellow-700 text-xs font-semibold">Terlambat</button>
+                      <button type="button" onClick={() => handleQuickStatus(row, "izin")} className="px-2 py-1 rounded bg-blue-100 text-blue-700 text-xs font-semibold">Izin</button>
+                      <button type="button" onClick={() => handleQuickStatus(row, "sakit")} className="px-2 py-1 rounded bg-orange-100 text-orange-700 text-xs font-semibold">Sakit</button>
+                      <button type="button" onClick={() => handleQuickStatus(row, "alpa")} className="px-2 py-1 rounded bg-red-100 text-red-700 text-xs font-semibold">Alpa</button>
+                      <button type="button" onClick={() => handleDelete(row)} className="px-2 py-1 rounded bg-gray-100 text-gray-700 text-xs font-semibold">Hapus</button>
                     </div>
                   </td>
                 </tr>

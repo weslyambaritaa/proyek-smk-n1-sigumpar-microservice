@@ -59,6 +59,7 @@ const PerangkatPage = () => {
     try {
       await promise;
       setNamaDokumen('');
+      setJenisDokumen('RPP');
       setFile(null);
       if (fileRef.current) fileRef.current.value = '';
       fetchDokumen();

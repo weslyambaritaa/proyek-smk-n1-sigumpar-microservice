@@ -56,9 +56,14 @@ const getAbsensiGuruById = (req, res, next) => {
 
 const createAbsensiGuru = (req, res, next) => {
   try {
-    const { user_id, namaGuru, mataPelajaran, keterangan = "", foto = null } = req.body;
+    const { user_id, namaGuru, mataPelajaran, keterangan = "", foto = null, status: statusOverride } = req.body;
     if (!user_id || !namaGuru || !mataPelajaran) {
       throw createError(400, "Field user_id, namaGuru, mataPelajaran wajib diisi");
+    }
+
+    const validStatuses = ["hadir", "terlambat", "izin", "sakit", "alpa"];
+    if (statusOverride && !validStatuses.includes(statusOverride)) {
+      throw createError(400, "Status tidak valid");
     }
 
     const rows = readData();
@@ -72,6 +77,8 @@ const createAbsensiGuru = (req, res, next) => {
       throw createError(409, "Anda sudah melakukan absensi hari ini");
     }
 
+    const status = statusOverride || (isTerlambat(now) ? "terlambat" : "hadir");
+
     const item = {
       id_absensiGuru: uuidv4(),
       user_id,
@@ -80,7 +87,7 @@ const createAbsensiGuru = (req, res, next) => {
       jamMasuk: now.toISOString(),
       tanggal,
       foto,
-      status: isTerlambat(now) ? "terlambat" : "hadir",
+      status,
       keterangan,
       created_at: now.toISOString(),
       updated_at: now.toISOString(),

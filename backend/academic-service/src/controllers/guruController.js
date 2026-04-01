@@ -4,11 +4,15 @@ const { createError } = require('../middleware/errorHandler');
 exports.getTeacherClasses = async (req, res, next) => {
   const guruId = req.user?.sub;
   try {
+    // Ambil kelas di mana guru adalah wali kelas ATAU mengajar mapel di kelas tersebut
     const query = `
       SELECT DISTINCT k.id, k.nama_kelas, k.tingkat
       FROM kelas k
-      LEFT JOIN mata_pelajaran m ON m.kelas_id = k.id AND m.guru_mapel_id = $1
-      WHERE k.wali_kelas_id = $1 OR m.id IS NOT NULL
+      WHERE k.wali_kelas_id = $1
+         OR EXISTS (
+           SELECT 1 FROM mata_pelajaran m
+           WHERE m.kelas_id = k.id AND m.guru_mapel_id = $1
+         )
       ORDER BY k.tingkat, k.nama_kelas`;
     const result = await pool.query(query, [guruId]);
     res.json(result.rows);
@@ -67,6 +71,9 @@ exports.saveBulkAttendance = async (req, res, next) => {
   if (!classId || !date || !subjectId || !Array.isArray(attendance)) {
     return next(createError(400, 'Data tidak lengkap'));
   }
+  if (attendance.length === 0) {
+    return res.json({ success: true, message: 'Tidak ada absensi yang disimpan' });
+  }
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -78,7 +85,7 @@ exports.saveBulkAttendance = async (req, res, next) => {
          VALUES ($1, $2, $3, $4, $5)
          ON CONFLICT (siswa_id, tanggal, mapel_id)
          DO UPDATE SET status = EXCLUDED.status, keterangan = EXCLUDED.keterangan, updated_at = NOW()`,
-        [id_siswa, date, status, keterangan || null, subjectId],
+        [parseInt(id_siswa), date, status, keterangan || null, parseInt(subjectId)],
       );
     }
     await client.query('COMMIT');

@@ -58,8 +58,10 @@ export const academicApi = {
   updateUpacara: (id, data) => axiosInstance.put(`/api/academic/upacara/${id}`, data),
   deleteUpacara: (id) => axiosInstance.delete(`/api/academic/upacara/${id}`),
 
-  // --- NILAI SISWA ---
-getSiswaByKelas: (params) => axiosInstance.get('/api/academic/nilai/siswa-by-kelas', { params }),
-saveNilaiBulk: (data) => axiosInstance.post('/api/academic/nilai/bulk', data),
-getNilai: (params) => axiosInstance.get('/api/academic/nilai', { params }),
+  // --- NILAI SISWA (Guru Mapel) ---
+  getSiswaByKelas: (params) => axiosInstance.get('/api/academic/nilai/siswa-by-kelas', { params }),
+  saveNilaiBulk: (data) => axiosInstance.post('/api/academic/nilai/bulk', data),
+  getNilai: (params) => axiosInstance.get('/api/academic/nilai', { params }),
+  updateNilai: (id, data) => axiosInstance.put(`/api/academic/nilai/${id}`, data),
+  deleteNilai: (id) => axiosInstance.delete(`/api/academic/nilai/${id}`),
 };
