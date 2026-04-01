@@ -19,6 +19,7 @@ import InputNilaiPage from './pages/guru-mapel/InputNilaiPage';
 import AbsensiSiswa from './pages/guru-mapel/absensi-siswa/AbsensiSiswa';
 import AbsensiGuruPage from './pages/guru-mapel/AbsensiGuruPage';
 import PerangkatPage from './pages/guru-mapel/perangkat/PerangkatPage';
+import GuruPage from './pages/tata-usaha/guru/GuruPage';
 
 /**
  * Komponen reusable untuk grup menu per role (Dropdown)
@@ -173,6 +174,9 @@ const App = () => {
                   <NavLink to="/academic/siswa" className={subNavClass}>
                     Data Siswa
                   </NavLink>
+                  <NavLink to="/academic/guru" className={subNavClass}>
+                    Data Guru
+                  </NavLink>
                   <NavLink to="/academic/pengumuman" className={subNavClass}>
                     Pengumuman
                   </NavLink>
@@ -254,6 +258,7 @@ const App = () => {
             <Route path="/academic/jadwal" element={<JadwalPage />} />
             <Route path="/academic/piket" element={<PiketPage />} />
             <Route path="/academic/upacara" element={<UpacaraPage />} />
+            <Route path="/academic/guru" element={<GuruPage />} />
 
             {/* Guru Mapel Routes */}
             <Route path="/input-nilai" element={<InputNilaiPage />} />
