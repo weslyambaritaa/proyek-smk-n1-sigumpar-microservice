@@ -2,8 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
 const morgan = require("morgan");
-
-const setupKeycloak = require("./middleware/auth");
+// const setupKeycloak = require("./middleware/auth");
 const { errorHandler } = require("./middleware/errorHandler");
 
 // PERHATIKAN: Di student-service kita tidak boleh pakai userRoutes!
@@ -20,10 +19,10 @@ app.use(express.json());
 
 app.get("/health", (req, res) => res.status(200).send("OK"));
 
-const keycloak = setupKeycloak(app);
+// const keycloak = setupKeycloak(app);
 
-// PERHATIKAN: Path-nya adalah /api/students
-app.use("/api/students", keycloak.protect(), studentRoutes);
+// // PERHATIKAN: Path-nya adalah /api/students
+// app.use("/api/students", keycloak.protect(), studentRoutes);
 
 app.use((req, res) => res.status(404).json({ message: "Not found" }));
 app.use(errorHandler);

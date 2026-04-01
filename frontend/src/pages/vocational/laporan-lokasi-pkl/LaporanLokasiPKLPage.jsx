@@ -4,28 +4,47 @@ import Button from '../../../components/ui/Button';
 import LokasiPKLDialog from './dialog/LokasiPKLDialog';
 
 const LaporanLokasiPKLPage = () => {
+    // State untuk menyimpan data tabel
     const [data, setData] = useState([]);
+    
+    // State untuk mengontrol buka/tutup Modal Dialog (PENTING)
     const [isDialogOpen, setIsDialogOpen] = useState(false);
+    
+    // State untuk menyimpan data yang sedang diedit (PENTING)
     const [selectedData, setSelectedData] = useState(null);
 
     const loadData = async () => {
-        try {
-            const res = await vocationalApi.getAllLaporanPKL();
+    try {
+        const res = await vocationalApi.getAllLaporanPKL();
+        // Memastikan data yang di-set ke state selalu berbentuk Array
+        if (res && res.data && Array.isArray(res.data)) {
             setData(res.data);
-        } catch (err) { console.error("Error load data", err); }
+        } else {
+            setData([]);
+        }
+    } catch (err) { 
+        console.error("Error load data", err);
+        setData([]); 
+    }
     };
 
-    useEffect(() => { loadData(); }, []);
+    useEffect(() => { 
+        loadData(); 
+    }, []);
 
     const handleEdit = (item) => {
-        setSelectedData(item);
-        setIsDialogOpen(true);
+        setSelectedData(item); // Masukkan data item ke state agar muncul di form dialog
+        setIsDialogOpen(true); // Buka dialog
     };
 
     const handleDelete = async (id) => {
         if (window.confirm("Hapus laporan ini?")) {
-            await vocationalApi.deleteLaporanPKL(id);
-            loadData();
+            try {
+                await vocationalApi.deleteLaporanPKL(id);
+                loadData();
+            } catch (err) {
+                alert("Gagal menghapus data");
+            }
         }
     };
 
@@ -33,6 +52,7 @@ const LaporanLokasiPKLPage = () => {
         <div className="p-6">
             <div className="flex justify-between items-center mb-6">
                 <h1 className="text-2xl font-bold text-gray-800">Laporan Lokasi PKL</h1>
+                {/* Tombol Tambah: Reset selectedData menjadi null agar form kosong */}
                 <Button onClick={() => { setSelectedData(null); setIsDialogOpen(true); }}>
                     + Tambah Lokasi
                 </Button>
@@ -67,6 +87,7 @@ const LaporanLokasiPKLPage = () => {
                 </table>
             </div>
 
+            {/* Komponen Dialog */}
             <LokasiPKLDialog 
                 isOpen={isDialogOpen} 
                 onClose={() => setIsDialogOpen(false)} 
