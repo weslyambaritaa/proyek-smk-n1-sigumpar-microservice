@@ -105,6 +105,7 @@ services:
       - DB_USER=learning_user
       - DB_PASSWORD=password
       - DATABASE_URL=postgres://learning_user:password@localhost:5432/learning_db
+      - ACADEMIC_SERVICE_URL=http://academic-service:3003
     depends_on:
       keycloak:
         condition: service_healthy
