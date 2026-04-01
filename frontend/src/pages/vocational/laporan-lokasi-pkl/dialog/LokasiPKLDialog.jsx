@@ -3,6 +3,8 @@ import Modal from '../../../../components/ui/Modal';
 import Input from '../../../../components/ui/Input';
 import Button from '../../../../components/ui/Button';
 import { vocationalApi } from '../../../../api/vocationalApi';
+import { academicApi } from '../../../../api/academicApi';
+import toast from 'react-hot-toast'; // <-- Import toast di sini
 
 const LokasiPKLDialog = ({ isOpen, onClose, onSuccess, selectedData }) => {
     // Inisialisasi state dengan nilai default yang aman
@@ -12,9 +14,32 @@ const LokasiPKLDialog = ({ isOpen, onClose, onSuccess, selectedData }) => {
         alamat: '' 
     });
     const [searchTerm, setSearchTerm] = useState('');
-    const [siswaOptions, setSiswaOptions] = useState([]); // Selalu pastikan ini Array
+    const [allSiswa, setAllSiswa] = useState([]); 
+    const [siswaOptions, setSiswaOptions] = useState([]); 
     const [showDropdown, setShowDropdown] = useState(false);
     const [loadingSearch, setLoadingSearch] = useState(false);
+
+    // Fetch semua data siswa SATU KALI saat dialog dibuka
+    useEffect(() => {
+        if (isOpen) {
+            const fetchSiswa = async () => {
+                setLoadingSearch(true);
+                try {
+                    const res = await academicApi.getAllSiswa(); 
+                    setAllSiswa(Array.isArray(res.data) ? res.data : []);
+                } catch (error) {
+                    console.error("Gagal mengambil data siswa:", error);
+                    setAllSiswa([]);
+                } finally {
+                    setLoadingSearch(false);
+                }
+            };
+            
+            if (allSiswa.length === 0) {
+                fetchSiswa();
+            }
+        }
+    }, [isOpen]); 
 
     // Sinkronisasi data saat mode Edit atau Tambah Baru
     useEffect(() => {
@@ -35,24 +60,21 @@ const LokasiPKLDialog = ({ isOpen, onClose, onSuccess, selectedData }) => {
         }
     }, [isOpen, selectedData]);
 
-    // Fungsi pencarian siswa dengan validasi Array (Mencegah c.map is not a function)
-    const handleSearchSiswa = async (val) => {
+    // Fungsi pencarian siswa (FILTER LOKAL)
+    const handleSearchSiswa = (val) => {
         setSearchTerm(val);
+        
         if (val.length > 1) {
-            setLoadingSearch(true);
-            try {
-                const res = await vocationalApi.searchSiswa(val);
-                // PERBAIKAN KRITIKAL: Validasi apakah res.data benar-benar Array
-                const dataSiswa = (res && res.data && Array.isArray(res.data)) ? res.data : [];
-                setSiswaOptions(dataSiswa);
-                setShowDropdown(dataSiswa.length > 0);
-            } catch (err) { 
-                console.error("Gagal mencari siswa:", err);
-                setSiswaOptions([]); 
-                setShowDropdown(false);
-            } finally {
-                setLoadingSearch(false);
-            }
+            const filteredSiswa = allSiswa.filter(siswa => {
+                const namaMatch = siswa?.nama_lengkap?.toLowerCase().includes(val.toLowerCase()) || 
+                                  siswa?.nama?.toLowerCase().includes(val.toLowerCase());
+                const kelasMatch = siswa?.nama_kelas?.toLowerCase().includes(val.toLowerCase()) ||
+                                   siswa?.kelas?.toLowerCase().includes(val.toLowerCase());
+                return namaMatch || kelasMatch;
+            });
+            
+            setSiswaOptions(filteredSiswa);
+            setShowDropdown(filteredSiswa.length > 0);
         } else {
             setSiswaOptions([]);
             setShowDropdown(false);
@@ -61,7 +83,10 @@ const LokasiPKLDialog = ({ isOpen, onClose, onSuccess, selectedData }) => {
 
     const selectSiswa = (siswa) => {
         setFormData((prev) => ({ ...prev, siswa_id: siswa.id }));
-        setSearchTerm(`${siswa.nama} (${siswa.kelas})`);
+        const nama = siswa.nama_lengkap || siswa.nama;
+        const kelas = siswa.nama_kelas || siswa.kelas || '-';
+        
+        setSearchTerm(`${nama} (${kelas})`);
         setShowDropdown(false);
     };
 
@@ -70,22 +95,27 @@ const LokasiPKLDialog = ({ isOpen, onClose, onSuccess, selectedData }) => {
         
         // Validasi sebelum kirim
         if (!formData.siswa_id) {
-            alert("Silakan pilih siswa dari hasil pencarian terlebih dahulu.");
+            toast.error("Silakan pilih siswa dari hasil pencarian terlebih dahulu.");
             return;
         }
 
-        try {
-            if (selectedData) {
-                await vocationalApi.updateLaporanPKL(selectedData.id, formData);
-            } else {
-                await vocationalApi.createLaporanPKL(formData);
-            }
-            onSuccess();
-            onClose();
-        } catch (err) { 
+        // Gunakan Promise agar toast bisa mendeteksi status loading, success, dan error
+        const actionPromise = selectedData 
+            ? vocationalApi.updateLaporanPKL(selectedData.id, formData)
+            : vocationalApi.createLaporanPKL(formData);
+
+        toast.promise(actionPromise, {
+            loading: selectedData ? "Menyimpan perubahan..." : "Menambahkan lokasi PKL...",
+            success: selectedData ? "Data berhasil diperbarui!" : "Lokasi PKL berhasil ditambahkan!",
+            error: "Terjadi kesalahan saat menyimpan data."
+        })
+        .then(() => {
+            onSuccess(); // Refresh tabel di halaman utama
+            onClose();   // Tutup modal
+        })
+        .catch((err) => {
             console.error("Gagal simpan:", err);
-            alert("Terjadi kesalahan saat menyimpan data."); 
-        }
+        });
     };
 
     return (
@@ -115,8 +145,8 @@ const LokasiPKLDialog = ({ isOpen, onClose, onSuccess, selectedData }) => {
                                     onClick={() => selectSiswa(s)} 
                                     className="px-4 py-2 hover:bg-blue-50 cursor-pointer border-b border-gray-50 last:border-0 text-sm transition-colors"
                                 >
-                                    <div className="font-semibold text-gray-800">{s.nama}</div>
-                                    <div className="text-xs text-gray-500">Kelas: {s.kelas} | NISN: {s.nisn || '-'}</div>
+                                    <div className="font-semibold text-gray-800">{s.nama_lengkap || s.nama}</div>
+                                    <div className="text-xs text-gray-500">Kelas: {s.nama_kelas || s.kelas || '-'} | NISN: {s.nisn || '-'}</div>
                                 </li>
                             ))}
                         </ul>
