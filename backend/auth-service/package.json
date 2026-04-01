@@ -1,7 +1,7 @@
 {
-  "name": "todos-service",
+  "name": "auth-service",
   "version": "1.0.0",
-  "description": "",
+  "description": "Auth Service - Autentikasi & Otorisasi via Keycloak",
   "main": "index.js",
   "scripts": {
     "start": "node src/index.js",
