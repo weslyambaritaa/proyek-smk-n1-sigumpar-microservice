@@ -19,6 +19,7 @@ const {
   updateAbsensiGuru,
   deleteAbsensiGuru,
 } = require("../controllers/absensiGuruController");
+const { getEvaluasiGuru, saveEvaluasiGuru, getKepsekDashboard } = require('../controllers/kepsekController');
 
 router.use(extractIdentity);
 
@@ -31,5 +32,8 @@ router.route("/absensi-guru/:id").get(getAbsensiGuruById).put(updateAbsensiGuru)
 router.route("/perangkat").get(getAllPerangkat).post(uploadPerangkat);
 router.get("/perangkat/:id/download", downloadPerangkat);
 router.delete("/perangkat/:id", deletePerangkat);
+router.get('/evaluasi-guru', getEvaluasiGuru);
+router.post('/evaluasi-guru', saveEvaluasiGuru);
+router.get('/kepsek/dashboard', getKepsekDashboard);
 
 module.exports = router;

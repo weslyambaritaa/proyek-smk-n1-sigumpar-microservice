@@ -1,283 +1,110 @@
-import { BrowserRouter, Routes, Route, NavLink } from "react-router-dom";
-import { useState } from "react";
-import KelasPage from "./pages/tata-usaha/kelas/KelasPage";
-import SiswaPage from "./pages/tata-usaha/siswa/SiswaPage";
-import keycloak, { hasRole } from "./keycloak";
-import { Toaster } from "react-hot-toast";
-import Dashboard from "./pages/dashboard/Dashboard";
-import DetailPengumuman from "./pages/dashboard/DetailPengumuman";
-import ArsipSuratPage from "./pages/tata-usaha/arsip-surat/ArsipSuratPage";
-import MapelPage from "./pages/tata-usaha/mapel/MapelPage";
-import PengumumanPage from "./pages/tata-usaha/pengumuman/PengumumanPage";
-import JadwalPage from "./pages/tata-usaha/jadwal/JadwalPage";
-import PiketPage from "./pages/tata-usaha/piket/PiketPage";
-import UpacaraPage from "./pages/tata-usaha/upacara/UpacaraPage";
-import ReguPage from './pages/pramuka/regu/ReguPage';
-import AnggotaReguPage from './pages/pramuka/anggota_regu/AnggotaReguPage';
-import AbsensiPramukaPage from './pages/pramuka/absensi/AbsensiPramukaPage';
+import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
+import AppShell from './components/layout/AppShell';
+import { hasRole } from './keycloak';
+import Dashboard from './pages/dashboard/Dashboard';
+import DetailPengumuman from './pages/dashboard/DetailPengumuman';
+import KelasPage from './pages/tata-usaha/kelas/KelasPage';
+import SiswaPage from './pages/tata-usaha/siswa/SiswaPage';
+import ArsipSuratPage from './pages/tata-usaha/arsip-surat/ArsipSuratPage';
+import MapelPage from './pages/tata-usaha/mapel/MapelPage';
+import PengumumanPage from './pages/tata-usaha/pengumuman/PengumumanPage';
+import JadwalPage from './pages/tata-usaha/jadwal/JadwalPage';
+import PiketPage from './pages/tata-usaha/piket/PiketPage';
+import UpacaraPage from './pages/tata-usaha/upacara/UpacaraPage';
 import InputNilaiPage from './pages/guru-mapel/InputNilaiPage';
 import AbsensiSiswa from './pages/guru-mapel/absensi-siswa/AbsensiSiswa';
 import AbsensiGuruPage from './pages/guru-mapel/AbsensiGuruPage';
 import PerangkatPage from './pages/guru-mapel/perangkat/PerangkatPage';
+import ReguPage from './pages/pramuka/regu/ReguPage';
+import AnggotaReguPage from './pages/pramuka/anggota_regu/AnggotaReguPage';
+import AbsensiPramukaPage from './pages/pramuka/absensi/AbsensiPramukaPage';
+import AbsensiWaliPage from './pages/wali-kelas/AbsensiWaliPage';
+import RekapNilaiWaliPage from './pages/wali-kelas/RekapNilaiWaliPage';
+import ParentingPage from './pages/wali-kelas/ParentingPage';
+import KebersihanPage from './pages/wali-kelas/KebersihanPage';
+import RefleksiPage from './pages/wali-kelas/RefleksiPage';
+import LokasiPklPage from './pages/vokasi/LokasiPklPage';
+import ProgresPklPage from './pages/vokasi/ProgresPklPage';
+import KepsekDashboardPage from './pages/kepala-sekolah/KepsekDashboardPage';
+import EvaluasiGuruPage from './pages/kepala-sekolah/EvaluasiGuruPage';
 
-/**
- * Komponen reusable untuk grup menu per role (Dropdown)
- */
-const NavDropdown = ({ title, icon, children, isOpen, onClick }) => {
-  return (
-    <div className="mb-2">
-      <button
-        onClick={onClick}
-        className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-100 transition-all"
-      >
-        <div className="flex items-center gap-3">
-          <span>{icon}</span>
-          <span>{title}</span>
-        </div>
-        <span
-          className={`transition-transform duration-200 text-[10px] ${isOpen ? "rotate-180" : ""}`}
-        >
-          ▼
-        </span>
-      </button>
-      {isOpen && (
-        <div className="ml-9 mt-1 space-y-1 border-l-2 border-gray-100">
-          {children}
-        </div>
-      )}
-    </div>
-  );
+const menuByRole = {
+  'tata-usaha': [{ title: 'Tata Usaha', items: [
+    { to: '/', label: 'Beranda', icon: '⌂' },
+    { to: '/academic/siswa', label: 'Input Data Siswa', icon: '◫' },
+    { to: '/academic/kelas', label: 'Input Data Guru', icon: '◫' },
+    { to: '/academic/arsip-surat', label: 'Arsip Surat', icon: '▣' },
+    { to: '/academic/jadwal', label: 'Jadwal Guru', icon: '▣' },
+    { to: '/academic/upacara', label: 'Jadwal Upacara', icon: '▣' },
+    { to: '/academic/piket', label: 'Jadwal Piket', icon: '▣' },
+    { to: '/academic/pengumuman', label: 'Pengumuman', icon: '•' },
+  ] }],
+  'guru-mapel': [{ title: 'Guru Mapel', items: [
+    { to: '/', label: 'Beranda', icon: '⌂' },
+    { to: '/absensi-guru', label: 'Absensi Guru', icon: '◫' },
+    { to: '/absensi-siswa', label: 'Absensi Siswa', icon: '◫' },
+    { to: '/perangkat-pembelajaran', label: 'Perangkat Pembelajaran', icon: '▣' },
+    { to: '/input-nilai', label: 'Input & Kelola Nilai', icon: '✓' },
+  ] }],
+  'wali-kelas': [{ title: 'Wali Kelas', items: [
+    { to: '/', label: 'Beranda', icon: '⌂' },
+    { to: '/wali-kelas/absensi-siswa', label: 'Absensi Siswa', icon: '◫' },
+    { to: '/wali-kelas/rekap-nilai', label: 'Rekap Nilai', icon: '✓' },
+    { to: '/wali-kelas/parenting', label: 'Parenting', icon: '•' },
+    { to: '/wali-kelas/kebersihan', label: 'Kebersihan Kelas', icon: '•' },
+    { to: '/wali-kelas/refleksi', label: 'Refleksi', icon: '•' },
+  ] }],
+  pramuka: [{ title: 'Pramuka', items: [
+    { to: '/', label: 'Beranda', icon: '⌂' },
+    { to: '/vocational/regu', label: 'Manajemen Regu', icon: '◫' },
+    { to: '/vocational/anggota-regu', label: 'Plotting Anggota', icon: '◫' },
+    { to: '/vocational/absensi', label: 'Absensi Pramuka', icon: '✓' },
+  ] }],
+  vokasi: [{ title: 'Guru Vokasi', items: [
+    { to: '/', label: 'Beranda', icon: '⌂' },
+    { to: '/vokasi/lokasi-pkl', label: 'Pelaporan Lokasi PKL', icon: '◫' },
+    { to: '/vokasi/progres-pkl', label: 'Pelaporan Progres PKL', icon: '✓' },
+  ] }],
+  'kepala-sekolah': [{ title: 'Kepala Sekolah', items: [
+    { to: '/', label: 'Beranda', icon: '⌂' },
+    { to: '/absensi-guru', label: 'Absensi Guru', icon: '◫' },
+    { to: '/absensi-siswa', label: 'Absensi Siswa', icon: '◫' },
+    { to: '/perangkat-pembelajaran', label: 'Perangkat Ajar', icon: '▣' },
+    { to: '/kepsek/evaluasi-guru', label: 'Evaluasi Kinerja Guru', icon: '✓' },
+    { to: '/vokasi/progres-pkl', label: 'PKL', icon: '•' },
+  ] }],
 };
 
-const App = () => {
-  // State untuk mengontrol dropdown mana yang sedang terbuka
-  const [openMenus, setOpenMenus] = useState({});
+const firstRole = ['kepala-sekolah','vokasi','wali-kelas','guru-mapel','pramuka','tata-usaha'].find((r) => hasRole(r)) || 'tata-usaha';
 
-  const toggleMenu = (menuName) => {
-    setOpenMenus((prev) => ({
-      ...prev,
-      [menuName]: !prev[menuName],
-    }));
-  };
-
-  return (
-    <BrowserRouter>
-      {/* === TOAST NOTIFIKASI BESAR & DI TENGAH === */}
-      <Toaster
-        position="top-center"
-        reverseOrder={false}
-        toastOptions={{
-          style: {
-            padding: "20px 30px",
-            fontSize: "16px",
-            maxWidth: "600px",
-            fontWeight: "500",
-            textAlign: "center",
-            boxShadow:
-              "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
-          },
-          success: { duration: 3000 },
-          error: { duration: 4000 },
-        }}
-      />
-      <div className="flex min-h-screen bg-gray-50">
-        {/* === SIDEBAR === */}
-        <aside className="w-64 bg-white border-r border-gray-200 flex flex-col sticky top-0 h-screen">
-          <div className="p-6 border-b border-gray-100">
-            <h1 className="text-xl font-bold text-blue-600">SMK N1 Sigumpar</h1>
-          </div>
-
-          <nav className="flex-1 p-4 overflow-y-auto shadow-inner">
-            {/* Dashboard umum */}
-            <NavLink to="/" className={navClass}>
-              <span className="mr-3">🏠</span> Dashboard
-            </NavLink>
-
-            <div className="mt-4 space-y-1">
-              {/* Dropdown Kepala Sekolah */}
-              {hasRole("kepala-sekolah") && (
-                <NavDropdown
-                  title="Kepala Sekolah"
-                  icon="👨‍💼"
-                  isOpen={openMenus["kepsek"]}
-                  onClick={() => toggleMenu("kepsek")}
-                >
-                  <NavLink to="/laporan-tahunan" className={subNavClass}>
-                    Laporan Tahunan
-                  </NavLink>
-                </NavDropdown>
-              )}
-
-              {/* Dropdown Waka Sekolah */}
-              {hasRole("waka-sekolah") && (
-                <NavDropdown
-                  title="Waka Sekolah"
-                  icon="👨‍🏫"
-                  isOpen={openMenus["waka"]}
-                  onClick={() => toggleMenu("waka")}
-                >
-                  <NavLink to="/kurikulum" className={subNavClass}>
-                    Kurikulum
-                  </NavLink>
-                </NavDropdown>
-              )}
-
-              {/* Dropdown Guru Mapel */}
-              {hasRole("guru-mapel") && (
-                <NavDropdown
-                  title="Guru Mapel"
-                  icon="📝"
-                  isOpen={openMenus["guru"]}
-                  onClick={() => toggleMenu("guru")}
-                >
-                  <NavLink to="/input-nilai" className={subNavClass}>
-                    Input Nilai
-                  </NavLink>
-                  <NavLink to="/absensi-siswa" className={subNavClass}>
-                    Absensi Siswa
-                  </NavLink>
-                  <NavLink to="/absensi-guru" className={subNavClass}>
-                    Absensi Guru
-                  </NavLink>
-                  <NavLink to="/perangkat-pembelajaran" className={subNavClass}>
-                    RPP / Perangkat
-                  </NavLink>
-                </NavDropdown>
-              )}
-
-              {/* Dropdown Wali Kelas */}
-              {hasRole("wali-kelas") && (
-                <NavDropdown
-                  title="Wali Kelas"
-                  icon="🏫"
-                  isOpen={openMenus["walas"]}
-                  onClick={() => toggleMenu("walas")}
-                >
-                  <NavLink to="/presensi-kelas" className={subNavClass}>
-                    Presensi Kelas
-                  </NavLink>
-                </NavDropdown>
-              )}
-
-              {/* Dropdown Tata Usaha */}
-              {hasRole("tata-usaha") && (
-                <NavDropdown
-                  title="Tata Usaha"
-                  icon="📂"
-                  isOpen={openMenus["tu"]}
-                  onClick={() => toggleMenu("tu")}
-                >
-                  <NavLink to="/academic/kelas" className={subNavClass}>
-                    Data Kelas
-                  </NavLink>
-                  <NavLink to="/academic/siswa" className={subNavClass}>
-                    Data Siswa
-                  </NavLink>
-                  <NavLink to="/academic/pengumuman" className={subNavClass}>
-                    Pengumuman
-                  </NavLink>
-                  <NavLink to="/academic/arsip-surat" className={subNavClass}>
-                    Arsip Surat
-                  </NavLink>
-                  <NavLink to="/academic/mapel" className={subNavClass}>
-                    Mata Pelajaran
-                  </NavLink>
-                  <NavLink to="/academic/jadwal" className={subNavClass}>
-                    Jadwal Mengajar
-                  </NavLink>
-                  <NavLink to="/academic/piket" className={subNavClass}>
-                    Jadwal Piket
-                  </NavLink>
-                  <NavLink to="/academic/upacara" className={subNavClass}>
-                    Jadwal Upacara
-                  </NavLink>
-                </NavDropdown>
-              )}
-
-              {/* Dropdown Pramuka - UPDATED */}
-              {hasRole("pramuka") && (
-                <NavDropdown
-                  title="Pramuka"
-                  icon="⛺"
-                  isOpen={openMenus["pramuka"]}
-                  onClick={() => toggleMenu("pramuka")}
-                >
-                  <NavLink to="/vocational/regu" className={subNavClass}>Manajemen Regu</NavLink>
-                  <NavLink to="/vocational/anggota-regu" className={subNavClass}>Plotting Anggota</NavLink>
-                  <NavLink to="/vocational/absensi" className={subNavClass}>Absensi Pramuka</NavLink>
-                </NavDropdown>
-              )}
-
-              {/* Dropdown Vokasi */}
-              {hasRole("vokasi") && (
-                <NavDropdown
-                  title="Vokasi"
-                  icon="🛠️"
-                  isOpen={openMenus["vokasi"]}
-                  onClick={() => toggleMenu("vokasi")}
-                >
-                  <NavLink to="/proyek-vokasi" className={subNavClass}>
-                    Proyek Siswa
-                  </NavLink>
-                </NavDropdown>
-              )}
-            </div>
-          </nav>
-
-          {/* Profil User di Bawah Sidebar */}
-          <div className="p-4 border-t bg-gray-50">
-            <p className="text-xs text-gray-500 mb-1 italic">Logged in as:</p>
-            <p className="text-sm font-bold text-gray-800 truncate mb-3">
-              {keycloak.tokenParsed?.name || "User SMK"}
-            </p>
-            <button
-              onClick={() => keycloak.logout()}
-              className="w-full bg-red-500 text-white py-2 rounded-lg text-xs font-bold hover:bg-red-600 transition-colors shadow-sm"
-            >
-              LOGOUT
-            </button>
-          </div>
-        </aside>
-
-        {/* === KONTEN UTAMA === */}
-        <main className="flex-1 p-8 overflow-y-auto">
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/pengumuman/:id" element={<DetailPengumuman />} />
-            
-            {/* Academic Routes */}
-            <Route path="/academic/kelas" element={<KelasPage />} />
-            <Route path="/academic/siswa" element={<SiswaPage />} />
-            <Route path="/academic/pengumuman" element={<PengumumanPage />} />
-            <Route path="/academic/arsip-surat" element={<ArsipSuratPage />} />
-            <Route path="/academic/mapel" element={<MapelPage />} />
-            <Route path="/academic/jadwal" element={<JadwalPage />} />
-            <Route path="/academic/piket" element={<PiketPage />} />
-            <Route path="/academic/upacara" element={<UpacaraPage />} />
-
-            {/* Guru Mapel Routes */}
-            <Route path="/input-nilai" element={<InputNilaiPage />} />
-            <Route path="/absensi-siswa" element={<AbsensiSiswa />} />
-            <Route path="/absensi-guru" element={<AbsensiGuruPage />} />
-            <Route path="/perangkat-pembelajaran" element={<PerangkatPage />} />
-
-            {/* Pramuka Routes */}
-            <Route path="/vocational/regu" element={<ReguPage />} />
-            <Route path="/vocational/anggota-regu" element={<AnggotaReguPage />} />
-            <Route path="/vocational/absensi" element={<AbsensiPramukaPage />} />
-          </Routes>
-        </main>
-      </div>
-    </BrowserRouter>
-  );
-};
-
-const navClass = ({ isActive }) =>
-  `flex items-center px-4 py-2.5 rounded-xl text-sm font-semibold transition-all mb-1
-  ${isActive ? "bg-blue-600 text-white shadow-md" : "text-gray-600 hover:bg-gray-100"}`;
-
-const subNavClass = ({ isActive }) =>
-  `block px-4 py-2 text-xs font-medium rounded-lg transition-all
-  ${isActive ? "text-blue-600 bg-blue-50 font-bold" : "text-gray-500 hover:text-blue-600 hover:bg-gray-50"}`;
-
-export default App;
+export default function App(){
+  const home = hasRole('kepala-sekolah') ? <KepsekDashboardPage /> : <Dashboard />;
+  return <BrowserRouter><Toaster position="top-center" /><AppShell menuGroups={menuByRole[firstRole] || menuByRole['tata-usaha']}><Routes>
+    <Route path="/" element={home} />
+    <Route path="/pengumuman/:id" element={<DetailPengumuman />} />
+    <Route path="/academic/kelas" element={<KelasPage />} />
+    <Route path="/academic/siswa" element={<SiswaPage />} />
+    <Route path="/academic/pengumuman" element={<PengumumanPage />} />
+    <Route path="/academic/arsip-surat" element={<ArsipSuratPage />} />
+    <Route path="/academic/mapel" element={<MapelPage />} />
+    <Route path="/academic/jadwal" element={<JadwalPage />} />
+    <Route path="/academic/piket" element={<PiketPage />} />
+    <Route path="/academic/upacara" element={<UpacaraPage />} />
+    <Route path="/input-nilai" element={<InputNilaiPage />} />
+    <Route path="/absensi-siswa" element={<AbsensiSiswa />} />
+    <Route path="/absensi-guru" element={<AbsensiGuruPage />} />
+    <Route path="/perangkat-pembelajaran" element={<PerangkatPage />} />
+    <Route path="/vocational/regu" element={<ReguPage />} />
+    <Route path="/vocational/anggota-regu" element={<AnggotaReguPage />} />
+    <Route path="/vocational/absensi" element={<AbsensiPramukaPage />} />
+    <Route path="/wali-kelas/absensi-siswa" element={<AbsensiWaliPage />} />
+    <Route path="/wali-kelas/rekap-nilai" element={<RekapNilaiWaliPage />} />
+    <Route path="/wali-kelas/parenting" element={<ParentingPage />} />
+    <Route path="/wali-kelas/kebersihan" element={<KebersihanPage />} />
+    <Route path="/wali-kelas/refleksi" element={<RefleksiPage />} />
+    <Route path="/vokasi/lokasi-pkl" element={<LokasiPklPage />} />
+    <Route path="/vokasi/progres-pkl" element={<ProgresPklPage />} />
+    <Route path="/kepsek/evaluasi-guru" element={<EvaluasiGuruPage />} />
+  </Routes></AppShell></BrowserRouter>
+}

@@ -1,0 +1,10 @@
+import React, { useEffect, useState } from 'react';
+import { vocationalApi } from '../../api/vocationalApi';
+import { Field, PageHeader, Panel, SimpleTable, inputClass, primaryButton, StatCard } from '../../components/role/RolePage';
+export default function ProgresPklPage(){
+ const [items,setItems]=useState([]); const [form,setForm]=useState({nama_siswa:'',tanggal:'',judul_pekerjaan:'',deskripsi:'',nilai_progress:''});
+ const load=async()=>{try{const res=await vocationalApi.getProgresPkl();setItems(res.data.data||[]);}catch{setItems([])}}; useEffect(()=>{load()},[]);
+ const submit=async(e)=>{e.preventDefault(); const fd=new FormData(); Object.entries(form).forEach(([k,v])=>fd.append(k,v)); await vocationalApi.createProgresPkl(fd); setForm({nama_siswa:'',tanggal:'',judul_pekerjaan:'',deskripsi:'',nilai_progress:''}); load();};
+ const avg = items.length ? Math.round(items.reduce((a,b)=>a+Number(b.nilai_progress||0),0)/items.length) : 0;
+ return <div className="max-w-6xl mx-auto space-y-6"><PageHeader title="Pelaporan Progres & Nilai PKL" subtitle="Monitoring & penilaian harian siswa vokasi" /><div className="grid md:grid-cols-3 gap-4"><StatCard label="Total Laporan" value={items.length} /><StatCard label="Rata-rata Nilai" value={avg} tone="green" /><StatCard label="Nilai Tertinggi" value={items.reduce((m,i)=>Math.max(m,Number(i.nilai_progress||0)),0)} tone="yellow" /></div><Panel title="Catat Laporan & Beri Nilai Progress"><form onSubmit={submit} className="grid md:grid-cols-3 gap-4 items-end">{Object.keys(form).map(k=><Field key={k} label={k.replaceAll('_',' ')}><input className={inputClass} value={form[k]} onChange={e=>setForm(v=>({...v,[k]:e.target.value}))} /></Field>)}<button className={primaryButton}>Kirim Laporan & Nilai</button></form></Panel><Panel title="Histori Laporan & Penilaian"><SimpleTable data={items} columns={[{key:'no',label:'No',render:(_,i)=>i+1},{key:'nama_siswa',label:'Informasi Siswa'},{key:'judul_pekerjaan',label:'Judul & Deskripsi'},{key:'tanggal',label:'Tanggal'},{key:'nilai_progress',label:'Nilai'}]} /></Panel></div>
+}

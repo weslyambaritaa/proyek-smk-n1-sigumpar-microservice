@@ -41,3 +41,10 @@ export const learningApi = {
 
   deletePerangkat: (id) => api.delete(`/api/learning/perangkat/${id}`),
 };
+
+
+export const kepsekApi = {
+  getEvaluasiGuru: (params) => api.get('/api/learning/evaluasi-guru', { params }),
+  saveEvaluasiGuru: (data) => api.post('/api/learning/evaluasi-guru', data),
+  getKepsekDashboard: () => api.get('/api/learning/kepsek/dashboard'),
+};

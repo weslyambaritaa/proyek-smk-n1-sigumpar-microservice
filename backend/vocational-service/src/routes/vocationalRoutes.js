@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const pramukaController = require('../controllers/pramukaController');
 const upload = require('../middleware/upload');
+const pklController = require('../controllers/pklController');
 
 console.log("Cek Controller Regu:", typeof pramukaController.getAllRegu); // Debugging
 
@@ -23,5 +24,12 @@ router.post('/upload', upload.single('file_laporan'), (req, res) => {
     const fileUrl = `/uploads/${req.file.filename}`;
     res.json({ file_url: fileUrl });
 });
+
+
+router.get('/pkl/lokasi', pklController.getLokasiPkl);
+router.post('/pkl/lokasi', pklController.createLokasiPkl);
+router.get('/pkl/progres', pklController.getProgresPkl);
+router.post('/pkl/progres', pklController.createProgresPkl);
+router.get('/pkl/dashboard', pklController.getDashboardPkl);
 
 module.exports = router;
