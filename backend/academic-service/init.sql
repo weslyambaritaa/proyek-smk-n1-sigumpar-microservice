@@ -6,6 +6,18 @@ CREATE TABLE IF NOT EXISTS kelas (
     wali_kelas_id UUID  -- TAMBAHKAN BARIS INI
 );
 
+CREATE TABLE IF NOT EXISTS guru (
+    id SERIAL PRIMARY KEY,
+    nip VARCHAR(30) UNIQUE NOT NULL,
+    nama_lengkap VARCHAR(150) NOT NULL,
+    email VARCHAR(100),
+    jabatan VARCHAR(100),
+    mata_pelajaran VARCHAR(100),
+    no_telepon VARCHAR(20),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS siswa (
     id SERIAL PRIMARY KEY,
     nisn VARCHAR(20) UNIQUE NOT NULL,

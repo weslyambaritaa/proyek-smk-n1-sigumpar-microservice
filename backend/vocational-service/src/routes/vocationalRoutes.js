@@ -8,6 +8,8 @@ console.log("Cek Controller Regu:", typeof pramukaController.getAllRegu); // Deb
 // --- REGU & ANGGOTA ---
 router.get('/regu', pramukaController.getAllRegu);
 router.post('/regu', pramukaController.createRegu);
+router.put('/regu/:id', pramukaController.updateRegu);
+router.delete('/regu/:id', pramukaController.deleteRegu);
 router.get('/regu/siswa-tersedia', pramukaController.getSiswaTersedia);
 router.post('/regu/assign', pramukaController.assignSiswaToRegu);
 
