@@ -89,25 +89,3 @@ exports.submitAbsensiPramuka = async (req, res) => {
         res.json({ message: "Absensi berhasil disimpan" });
     } catch (err) { res.status(500).json({ error: err.message }); }
 };
-// Update Regu
-exports.updateRegu = async (req, res) => {
-    const { id } = req.params;
-    const { nama_regu } = req.body;
-    try {
-        const result = await db.query(
-            'UPDATE kelas_pramuka SET nama_regu = $1 WHERE id = $2 RETURNING *',
-            [nama_regu, id]
-        );
-        if (result.rows.length === 0) return res.status(404).json({ error: 'Regu tidak ditemukan' });
-        res.json(result.rows[0]);
-    } catch (err) { res.status(500).json({ error: err.message }); }
-};
-
-// Delete Regu
-exports.deleteRegu = async (req, res) => {
-    const { id } = req.params;
-    try {
-        await db.query('DELETE FROM kelas_pramuka WHERE id = $1', [id]);
-        res.json({ message: 'Regu berhasil dihapus' });
-    } catch (err) { res.status(500).json({ error: err.message }); }
-};

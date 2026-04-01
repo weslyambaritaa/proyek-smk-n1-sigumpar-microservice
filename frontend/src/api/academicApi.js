@@ -6,18 +6,13 @@ export const academicApi = {
   updateKelas: (id, data) => axiosInstance.put(`/api/academic/kelas/${id}`, data),
   deleteKelas: (id) => axiosInstance.delete(`/api/academic/kelas/${id}`),
 
+  // Pencarian wali kelas ke auth-service melalui gateway
   searchWaliKelas: (query) => axiosInstance.get(`/api/auth/users/search?role=wali_kelas&q=${query}`),
 
   getAllSiswa: () => axiosInstance.get('/api/academic/siswa'),
   createSiswa: (data) => axiosInstance.post('/api/academic/siswa', data),
   updateSiswa: (id, data) => axiosInstance.put(`/api/academic/siswa/${id}`, data),
   deleteSiswa: (id) => axiosInstance.delete(`/api/academic/siswa/${id}`),
-
-  // --- GURU ---
-  getAllGuru: () => axiosInstance.get('/api/academic/guru'),
-  createGuru: (data) => axiosInstance.post('/api/academic/guru', data),
-  updateGuru: (id, data) => axiosInstance.put(`/api/academic/guru/${id}`, data),
-  deleteGuru: (id) => axiosInstance.delete(`/api/academic/guru/${id}`),
 
   // --- PENGUMUMAN ---
   getAllPengumuman: () => axiosInstance.get('/api/academic/pengumuman'),
@@ -36,6 +31,7 @@ export const academicApi = {
   deleteArsipSurat: (id) => axiosInstance.delete(`/api/academic/arsip-surat/${id}`),
   downloadFile: (fileUrl) => axiosInstance.get(fileUrl, { responseType: 'blob' }),
 
+  // Pencarian guru mapel ke auth-service (Asumsi Anda menggunakan role=guru)
   searchGuru: (query) => axiosInstance.get(`/api/auth/users/search?role=guru&q=${query}`),
 
   // --- MATA PELAJARAN ---
@@ -62,7 +58,7 @@ export const academicApi = {
   updateUpacara: (id, data) => axiosInstance.put(`/api/academic/upacara/${id}`, data),
   deleteUpacara: (id) => axiosInstance.delete(`/api/academic/upacara/${id}`),
 
-  // --- NILAI SISWA ---
+  // --- NILAI SISWA (Guru Mapel) ---
   getSiswaByKelas: (params) => axiosInstance.get('/api/academic/nilai/siswa-by-kelas', { params }),
   saveNilaiBulk: (data) => axiosInstance.post('/api/academic/nilai/bulk', data),
   getNilai: (params) => axiosInstance.get('/api/academic/nilai', { params }),
