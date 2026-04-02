@@ -53,15 +53,3 @@ CREATE TABLE IF NOT EXISTS review_wakasek (
   perangkat_id INTEGER,
   komentar TEXT
 );
-
-
-CREATE TABLE IF NOT EXISTS evaluasi_kinerja_guru (
-  id SERIAL PRIMARY KEY,
-  guru_nama VARCHAR(150),
-  mapel VARCHAR(120),
-  semester VARCHAR(50),
-  status VARCHAR(50),
-  skor INTEGER,
-  catatan TEXT,
-  created_at TIMESTAMP DEFAULT NOW()
-);

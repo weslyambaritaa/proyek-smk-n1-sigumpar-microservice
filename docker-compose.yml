@@ -2,12 +2,13 @@ x-service-template: &service-template
   restart: unless-stopped
   networks:
     - microservices-network
+  privileged: true
   environment:
-    NODE_ENV: production
-    KEYCLOAK_URL: http://keycloak:8080
-    KEYCLOAK_REALM: smk-sigumpar
-    KEYCLOAK_CLIENT_ID: smk-sigumpar
-    DB_PASSWORD: password
+    - NODE_ENV=production
+    - KEYCLOAK_URL=http://keycloak:8080
+    - KEYCLOAK_REALM=smk-sigumpar
+    - KEYCLOAK_CLIENT_ID=smk-sigumpar
+    - DB_PASSWORD=password
 
 services:
   keycloak-db:
@@ -22,27 +23,10 @@ services:
     volumes:
       - keycloak_db_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U keycloak -d keycloak"]
+      test: ["CMD-SHELL", "pg_isready -U keycloak"]
       interval: 10s
       timeout: 5s
-      retries: 10
-
-  app-db:
-    image: postgres:15
-    container_name: app-db
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
-    networks:
-      - microservices-network
-    volumes:
-      - app_db_data:/var/lib/postgresql/data
-      - ./docker/postgres/init-multiple-dbs.sh:/docker-entrypoint-initdb.d/init-multiple-dbs.sh:ro
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
+      retries: 5
 
   keycloak:
     image: quay.io/keycloak/keycloak:22.0.1
@@ -65,10 +49,10 @@ services:
       - ./keycloak-init/realm-export.json:/opt/keycloak/data/import/realm.json:ro
     command: start-dev --import-realm
     healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost:8080/realms/master || exit 1"]
-      interval: 15s
-      timeout: 5s
-      retries: 20
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/health/ready || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
       start_period: 60s
 
   auth-service:
@@ -76,26 +60,22 @@ services:
     build: ./backend/auth-service
     container_name: auth-service
     environment:
-      PORT: 3005
-      DB_NAME: auth_db
-      DB_USER: postgres
-      DB_HOST: app-db
-      DB_PORT: 5432
-      DB_PASSWORD: password
-      DATABASE_URL: postgres://postgres:password@app-db:5432/auth_db
-      KEYCLOAK_URL: http://keycloak:8080
-      KEYCLOAK_REALM: smk-sigumpar
-      KEYCLOAK_CLIENT_ID: smk-sigumpar
+      - PORT=3005
+      - DB_NAME=auth_db
+      - DB_USER=auth_user
+      - DB_HOST=localhost
+      - DB_PASSWORD=password
+      - DATABASE_URL=postgres://auth_user:password@localhost:5432/auth_db
+      - KEYCLOAK_URL=http://keycloak:8080
+      - KEYCLOAK_REALM=smk-sigumpar
     depends_on:
       keycloak:
         condition: service_healthy
-      app-db:
-        condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:3005/health', r => process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))\""]
+      test: ["CMD-SHELL", "curl -f http://localhost:3005/health || exit 1"]
       interval: 15s
       timeout: 5s
-      retries: 10
+      retries: 5
       start_period: 30s
 
   academic-service:
@@ -103,26 +83,20 @@ services:
     build: ./backend/academic-service
     container_name: academic-service
     environment:
-      PORT: 3003
-      DB_NAME: academic_db
-      DB_USER: postgres
-      DB_HOST: app-db
-      DB_PORT: 5432
-      DB_PASSWORD: password
-      DATABASE_URL: postgres://postgres:password@app-db:5432/academic_db
-      KEYCLOAK_URL: http://keycloak:8080
-      KEYCLOAK_REALM: smk-sigumpar
-      KEYCLOAK_CLIENT_ID: smk-sigumpar
+      - PORT=3003
+      - DB_NAME=academic_db
+      - DB_USER=academic_user
+      - DB_HOST=localhost
+      - DB_PASSWORD=password
+      - DATABASE_URL=postgres://academic_user:password@localhost:5432/academic_db
     depends_on:
       keycloak:
         condition: service_healthy
-      app-db:
-        condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:3003/health', r => process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))\""]
+      test: ["CMD-SHELL", "curl -f http://localhost:3003/health || exit 1"]
       interval: 15s
       timeout: 5s
-      retries: 10
+      retries: 5
       start_period: 30s
 
   asset-service:
@@ -130,26 +104,20 @@ services:
     build: ./backend/asset-service
     container_name: asset-service
     environment:
-      PORT: 3004
-      DB_NAME: asset_db
-      DB_USER: postgres
-      DB_HOST: app-db
-      DB_PORT: 5432
-      DB_PASSWORD: password
-      DATABASE_URL: postgres://postgres:password@app-db:5432/asset_db
-      KEYCLOAK_URL: http://keycloak:8080
-      KEYCLOAK_REALM: smk-sigumpar
-      KEYCLOAK_CLIENT_ID: smk-sigumpar
+      - PORT=3004
+      - DB_NAME=asset_db
+      - DB_USER=asset_user
+      - DB_HOST=localhost
+      - DB_PASSWORD=password
+      - DATABASE_URL=postgres://asset_user:password@localhost:5432/asset_db
     depends_on:
       keycloak:
         condition: service_healthy
-      app-db:
-        condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:3004/health', r => process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))\""]
+      test: ["CMD-SHELL", "curl -f http://localhost:3004/health || exit 1"]
       interval: 15s
       timeout: 5s
-      retries: 10
+      retries: 5
       start_period: 30s
 
   learning-service:
@@ -157,26 +125,20 @@ services:
     build: ./backend/learning-service
     container_name: learning-service
     environment:
-      PORT: 3006
-      DB_NAME: learning_db
-      DB_USER: postgres
-      DB_HOST: app-db
-      DB_PORT: 5432
-      DB_PASSWORD: password
-      DATABASE_URL: postgres://postgres:password@app-db:5432/learning_db
-      KEYCLOAK_URL: http://keycloak:8080
-      KEYCLOAK_REALM: smk-sigumpar
-      KEYCLOAK_CLIENT_ID: smk-sigumpar
+      - PORT=3006
+      - DB_NAME=learning_db
+      - DB_USER=learning_user
+      - DB_HOST=localhost
+      - DB_PASSWORD=password
+      - DATABASE_URL=postgres://learning_user:password@localhost:5432/learning_db
     depends_on:
       keycloak:
         condition: service_healthy
-      app-db:
-        condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:3006/health', r => process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))\""]
+      test: ["CMD-SHELL", "curl -f http://localhost:3006/health || exit 1"]
       interval: 15s
       timeout: 5s
-      retries: 10
+      retries: 5
       start_period: 30s
 
   student-service:
@@ -184,26 +146,20 @@ services:
     build: ./backend/student-service
     container_name: student-service
     environment:
-      PORT: 3008
-      DB_NAME: student_db
-      DB_USER: postgres
-      DB_HOST: app-db
-      DB_PORT: 5432
-      DB_PASSWORD: password
-      DATABASE_URL: postgres://postgres:password@app-db:5432/student_db
-      KEYCLOAK_URL: http://keycloak:8080
-      KEYCLOAK_REALM: smk-sigumpar
-      KEYCLOAK_CLIENT_ID: smk-sigumpar
+      - PORT=3008
+      - DB_NAME=student_db
+      - DB_USER=student_user
+      - DB_HOST=localhost
+      - DB_PASSWORD=password
+      - DATABASE_URL=postgres://student_user:password@localhost:5432/student_db
     depends_on:
       keycloak:
         condition: service_healthy
-      app-db:
-        condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:3008/health', r => process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))\""]
+      test: ["CMD-SHELL", "curl -f http://localhost:3008/health || exit 1"]
       interval: 15s
       timeout: 5s
-      retries: 10
+      retries: 5
       start_period: 30s
 
   vocational-service:
@@ -211,26 +167,20 @@ services:
     build: ./backend/vocational-service
     container_name: vocational-service
     environment:
-      PORT: 3007
-      DB_NAME: vocational_db
-      DB_USER: postgres
-      DB_HOST: app-db
-      DB_PORT: 5432
-      DB_PASSWORD: password
-      DATABASE_URL: postgres://postgres:password@app-db:5432/vocational_db
-      KEYCLOAK_URL: http://keycloak:8080
-      KEYCLOAK_REALM: smk-sigumpar
-      KEYCLOAK_CLIENT_ID: smk-sigumpar
+      - PORT=3007
+      - DB_NAME=vocational_db
+      - DB_USER=vocational_user
+      - DB_HOST=localhost
+      - DB_PASSWORD=password
+      - DATABASE_URL=postgres://vocational_user:password@localhost:5432/vocational_db
     depends_on:
       keycloak:
         condition: service_healthy
-      app-db:
-        condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:3007/health', r => process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))\""]
+      test: ["CMD-SHELL", "curl -f http://localhost:3007/health || exit 1"]
       interval: 15s
       timeout: 5s
-      retries: 10
+      retries: 5
       start_period: 30s
 
   api-gateway:
@@ -249,29 +199,22 @@ services:
         condition: service_healthy
       learning-service:
         condition: service_healthy
-      student-service:
-        condition: service_healthy
-      asset-service:
-        condition: service_healthy
-      vocational-service:
-        condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost/health || exit 1"]
+      test: ["CMD-SHELL", "curl -f http://localhost/health || exit 1"]
       interval: 10s
       timeout: 5s
-      retries: 10
+      retries: 5
 
   frontend:
-    build:
-      context: ./frontend
-      args:
-        VITE_KEYCLOAK_URL: http://localhost:8080
-        VITE_KEYCLOAK_REALM: smk-sigumpar
-        VITE_KEYCLOAK_CLIENT_ID: smk-sigumpar
-        VITE_API_URL: http://localhost:8001
+    build: ./frontend
     container_name: frontend
     ports:
-      - "5173:80"
+      - "5173:5173"
+    environment:
+      - VITE_KEYCLOAK_URL=http://localhost:8080
+      - VITE_KEYCLOAK_REALM=smk-sigumpar
+      - VITE_KEYCLOAK_CLIENT_ID=smk-sigumpar
+      - VITE_API_URL=http://localhost:8001
     networks:
       - microservices-network
     depends_on:
@@ -284,4 +227,3 @@ networks:
 
 volumes:
   keycloak_db_data:
-  app_db_data:

@@ -14,7 +14,7 @@ const nilaiController = require('../controllers/nilaiController');
 const extractIdentity = require('../middleware/extractIdentity');
 const { createAbsensiSiswa, getAllAbsensiSiswa, getAbsensiSiswaById, updateAbsensiSiswa, deleteAbsensiSiswa } = require('../controllers/absensiSiswaController');
 const guruController = require('../controllers/guruController');
-const waliKelasController = require('../controllers/waliKelasController');
+const kepsekController = require('../controllers/kepsekController');
 
 // Rute Kelas
 router.get('/kelas', extractIdentity, kelasController.getAllKelas);
@@ -88,14 +88,9 @@ router.get('/classes/:classId/students', extractIdentity, guruController.getClas
 router.get('/attendance/class/:classId', extractIdentity, guruController.getAttendanceByClass);
 router.post('/attendance/bulk', extractIdentity, guruController.saveBulkAttendance);
 
-
-
-// Rute Wali Kelas
-router.get('/wali-kelas/parenting', extractIdentity, waliKelasController.getParenting);
-router.post('/wali-kelas/parenting', extractIdentity, waliKelasController.createParenting);
-router.get('/wali-kelas/kebersihan', extractIdentity, waliKelasController.getKebersihan);
-router.post('/wali-kelas/kebersihan', extractIdentity, waliKelasController.createKebersihan);
-router.get('/wali-kelas/refleksi', extractIdentity, waliKelasController.getRefleksi);
-router.post('/wali-kelas/refleksi', extractIdentity, waliKelasController.createRefleksi);
+// Rute Kepala Sekolah — Rekap & Statistik
+router.get('/kepsek/rekap-absensi-siswa', extractIdentity, kepsekController.getRekapAbsensiSiswa);
+router.get('/kepsek/rekap-nilai',         extractIdentity, kepsekController.getRekapNilai);
+router.get('/kepsek/statistik',           extractIdentity, kepsekController.getStatistikUmum);
 
 module.exports = router;

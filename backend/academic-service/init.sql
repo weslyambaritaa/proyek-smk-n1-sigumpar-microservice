@@ -71,27 +71,3 @@ CREATE TABLE IF NOT EXISTS absensi_siswa (
 CREATE INDEX IF NOT EXISTS idx_absensi_siswa_siswa_id ON absensi_siswa(siswa_id);
 CREATE INDEX IF NOT EXISTS idx_absensi_siswa_tanggal ON absensi_siswa(tanggal);
 CREATE INDEX IF NOT EXISTS idx_absensi_siswa_mapel_id ON absensi_siswa(mapel_id);
-
-
-CREATE TABLE IF NOT EXISTS parenting_log (
-    id SERIAL PRIMARY KEY,
-    siswa_nama VARCHAR(150),
-    topik VARCHAR(150),
-    catatan TEXT,
-    tanggal DATE DEFAULT CURRENT_DATE
-);
-
-CREATE TABLE IF NOT EXISTS kebersihan_kelas (
-    id SERIAL PRIMARY KEY,
-    area VARCHAR(120),
-    status VARCHAR(50),
-    catatan TEXT,
-    tanggal DATE DEFAULT CURRENT_DATE
-);
-
-CREATE TABLE IF NOT EXISTS refleksi_wali_kelas (
-    id SERIAL PRIMARY KEY,
-    judul VARCHAR(150),
-    isi TEXT,
-    tanggal DATE DEFAULT CURRENT_DATE
-);

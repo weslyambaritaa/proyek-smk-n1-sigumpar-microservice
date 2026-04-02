@@ -30,25 +30,19 @@ CREATE TABLE IF NOT EXISTS laporan_pramuka (
 CREATE TABLE IF NOT EXISTS laporan_lokasi_pkl (id SERIAL PRIMARY KEY, siswa_id INTEGER, nama_perusahaan VARCHAR(150), alamat TEXT);
 CREATE TABLE IF NOT EXISTS laporan_progres_pkl (id SERIAL PRIMARY KEY, siswa_id INTEGER, minggu_ke INTEGER, deskripsi TEXT);
 
-CREATE TABLE IF NOT EXISTS penempatan_pkl (
-    id SERIAL PRIMARY KEY,
-    nama_siswa VARCHAR(150),
-    nama_perusahaan VARCHAR(150),
-    alamat TEXT,
-    posisi VARCHAR(150),
-    deskripsi TEXT,
-    pembimbing_industri VARCHAR(150),
-    kontak_pembimbing VARCHAR(100),
-    tanggal DATE DEFAULT CURRENT_DATE,
-    foto_url TEXT
+-- 5. Tabel Nilai PKL (Guru Vokasi menginput nilai praktik kerja lapangan)
+CREATE TABLE IF NOT EXISTS nilai_pkl (
+    id             SERIAL PRIMARY KEY,
+    siswa_id       INTEGER NOT NULL,
+    kelas_id       INTEGER,
+    nilai_praktik  NUMERIC(5,2) DEFAULT 0,
+    nilai_sikap    NUMERIC(5,2) DEFAULT 0,
+    nilai_laporan  NUMERIC(5,2) DEFAULT 0,
+    created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT unique_nilai_pkl UNIQUE (siswa_id, kelas_id)
 );
 
-CREATE TABLE IF NOT EXISTS progres_pkl (
-    id SERIAL PRIMARY KEY,
-    nama_siswa VARCHAR(150),
-    tanggal DATE DEFAULT CURRENT_DATE,
-    judul_pekerjaan VARCHAR(150),
-    deskripsi TEXT,
-    nilai_progress INTEGER,
-    foto_bukti_url TEXT
-);
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO vocational_user;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO vocational_user;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO vocational_user;

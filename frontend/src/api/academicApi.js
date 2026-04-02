@@ -65,13 +65,8 @@ export const academicApi = {
   updateNilai: (id, data) => axiosInstance.put(`/api/academic/nilai/${id}`, data),
   deleteNilai: (id) => axiosInstance.delete(`/api/academic/nilai/${id}`),
 
-
-  // --- WALI KELAS ---
-  getParenting: () => axiosInstance.get('/api/academic/wali-kelas/parenting'),
-  createParenting: (data) => axiosInstance.post('/api/academic/wali-kelas/parenting', data),
-  getKebersihan: () => axiosInstance.get('/api/academic/wali-kelas/kebersihan'),
-  createKebersihan: (data) => axiosInstance.post('/api/academic/wali-kelas/kebersihan', data),
-  getRefleksi: () => axiosInstance.get('/api/academic/wali-kelas/refleksi'),
-  createRefleksi: (data) => axiosInstance.post('/api/academic/wali-kelas/refleksi', data),
-
+  // --- KEPALA SEKOLAH ---
+  getStatistikUmum: () => axiosInstance.get('/api/academic/kepsek/statistik'),
+  getRekapAbsensiSiswa: (params) => axiosInstance.get('/api/academic/kepsek/rekap-absensi-siswa', { params }),
+  getRekapNilai: (params) => axiosInstance.get('/api/academic/kepsek/rekap-nilai', { params }),
 };
