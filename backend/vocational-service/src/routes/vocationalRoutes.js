@@ -5,37 +5,41 @@ const pklController     = require('../controllers/pklController');
 const upload = require('../middleware/upload');
 const extractIdentity = require('../middleware/extractIdentity');
 
-// ── PRAMUKA: REGU & ANGGOTA ───────────────────────────────────
+// ── PRAMUKA: REGU & ANGGOTA ───────────────────────────────────────────────
 router.get('/regu',                pramukaController.getAllRegu);
 router.post('/regu',               pramukaController.createRegu);
 router.get('/regu/siswa-tersedia', pramukaController.getSiswaTersedia);
 router.post('/regu/assign',        pramukaController.assignSiswaToRegu);
-
-// ── PRAMUKA: ABSENSI (berbasis regu) ─────────────────────────
 router.get('/regu/:regu_id/siswa', pramukaController.getSiswaByRegu);
+
+// ── PRAMUKA: ABSENSI ──────────────────────────────────────────────────────
+router.get('/absensi',             pramukaController.getAbsensiPramuka);
 router.post('/absensi',            pramukaController.submitAbsensiPramuka);
 
-// ── PRAMUKA: UPLOAD LAPORAN ───────────────────────────────────
+// ── PRAMUKA: SILABUS ──────────────────────────────────────────────────────
+router.get('/silabus',             pramukaController.getAllSilabus);
+router.post('/silabus',            upload.single('file'), pramukaController.createSilabus);
+router.delete('/silabus/:id',      pramukaController.deleteSilabus);
+
+// ── PRAMUKA: UPLOAD FILE ──────────────────────────────────────────────────
 router.post('/upload', upload.single('file_laporan'), (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ error: 'Tidak ada file yang diupload' });
-  }
+  if (!req.file) return res.status(400).json({ error: 'Tidak ada file yang diupload' });
   res.json({ file_url: `/uploads/${req.file.filename}` });
 });
 
-// ── PKL: LOKASI ───────────────────────────────────────────────
+// ── PKL: LOKASI ───────────────────────────────────────────────────────────
 router.get('/pkl/lokasi',        extractIdentity, pklController.getAllLokasiPKL);
-router.post('/pkl/lokasi',       extractIdentity, pklController.createLokasiPKL);
-router.put('/pkl/lokasi/:id',    extractIdentity, pklController.updateLokasiPKL);
+router.post('/pkl/lokasi',       extractIdentity, upload.single('foto'), pklController.createLokasiPKL);
+router.put('/pkl/lokasi/:id',    extractIdentity, upload.single('foto'), pklController.updateLokasiPKL);
 router.delete('/pkl/lokasi/:id', extractIdentity, pklController.deleteLokasiPKL);
 
-// ── PKL: PROGRES ──────────────────────────────────────────────
+// ── PKL: PROGRES ──────────────────────────────────────────────────────────
 router.get('/pkl/progres',        extractIdentity, pklController.getAllProgresPKL);
 router.post('/pkl/progres',       extractIdentity, pklController.createProgresPKL);
 router.put('/pkl/progres/:id',    extractIdentity, pklController.updateProgresPKL);
 router.delete('/pkl/progres/:id', extractIdentity, pklController.deleteProgresPKL);
 
-// ── PKL: NILAI ────────────────────────────────────────────────
+// ── PKL: NILAI ────────────────────────────────────────────────────────────
 router.get('/pkl/nilai',        extractIdentity, pklController.getNilaiPKL);
 router.post('/pkl/nilai',       extractIdentity, pklController.saveNilaiPKLBulk);
 router.delete('/pkl/nilai/:id', extractIdentity, pklController.deleteNilaiPKL);

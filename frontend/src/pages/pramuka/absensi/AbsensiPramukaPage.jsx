@@ -1,226 +1,279 @@
-import React, { useState, useEffect } from 'react';
-import { vocationalApi } from '../../../api/vocationalApi';
-import toast from 'react-hot-toast';
+import { useState, useEffect, useMemo } from "react";
+import { vocationalApi } from "../../../api/vocationalApi";
+import toast from "react-hot-toast";
 
-const AbsensiPramukaPage = () => {
-  // State Data Master
-  const [reguList, setReguList] = useState([]);
-  const [selectedRegu, setSelectedRegu] = useState('');
-  const [siswaAbsensi, setSiswaAbsensi] = useState([]);
-  
-  // State Form Absensi & Laporan
-  const [tanggal, setTanggal] = useState(new Date().toISOString().split('T')[0]);
-  const [deskripsi, setDeskripsi] = useState('');
-  const [fileLaporan, setFileLaporan] = useState(null); // Menyimpan objek file asli
-  const [isSubmitting, setIsSubmitting] = useState(false); // Efek loading saat submit
-
-  // Ambil daftar regu saat halaman dimuat
-  useEffect(() => {
-    const fetch = async () => {
-      try {
-        const res = await vocationalApi.getAllRegu();
-        setReguList(res.data || []);
-      } catch (error) {
-        toast.error("Gagal memuat daftar regu");
-      }
-    };
-    fetch();
-  }, []);
-
-  // Ambil daftar siswa ketika regu dipilih/diubah
-  useEffect(() => {
-    if (selectedRegu) {
-      const loadSiswa = async () => {
-        try {
-          const res = await vocationalApi.getSiswaByRegu(selectedRegu);
-          // Tambahkan field status_kehadiran bawaan (Hadir) untuk dicentang dari awal
-          setSiswaAbsensi(res.data.map(s => ({ ...s, status_kehadiran: 'Hadir' })));
-        } catch (error) { 
-          toast.error("Gagal mengambil data siswa dari regu tersebut"); 
-        }
-      };
-      loadSiswa();
-    } else {
-      setSiswaAbsensi([]);
-    }
-  }, [selectedRegu]);
-
-  // Fungsi toggle checkbox kehadiran
-  const toggleKehadiran = (idSiswa) => {
-    setSiswaAbsensi(siswaAbsensi.map(s => 
-      s.id === idSiswa 
-        ? { ...s, status_kehadiran: s.status_kehadiran === 'Hadir' ? 'Alpa' : 'Hadir' }
-        : s
-    ));
-  };
-
-  // Fungsi Submit Absensi dan File Laporan
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!selectedRegu) return toast.error("Pilih regu terlebih dahulu!");
-    if (!deskripsi) return toast.error("Deskripsi laporan wajib diisi!");
-    
-    setIsSubmitting(true);
-    let uploadedFileUrl = '';
-
-    try {
-      // 1. JIKA ADA FILE, UPLOAD TERLEBIH DAHULU KE BACKEND
-      if (fileLaporan) {
-        const formData = new FormData();
-        formData.append('file_laporan', fileLaporan);
-        
-        // Panggil API upload (pastikan sudah ditambahkan di vocationalApi.js)
-        const uploadRes = await vocationalApi.uploadFileLaporan(formData);
-        uploadedFileUrl = uploadRes.data.file_url; // Dapatkan path file dari server
-      }
-
-      // 2. KIRIM DATA ABSENSI & LAPORAN
-      const payload = {
-        regu_id: selectedRegu,
-        tanggal: tanggal,
-        deskripsi: deskripsi,
-        file_url: uploadedFileUrl, // Berisi URL gambar atau string kosong jika tidak ada file
-        data_absensi: siswaAbsensi.map(s => ({
-          siswa_id: s.id,
-          status: s.status_kehadiran
-        }))
-      };
-
-      await vocationalApi.submitAbsensiPramuka(payload);
-      toast.success('Absensi & Laporan berhasil disimpan!');
-      
-      // Reset form setelah berhasil menyimpan
-      setSelectedRegu(''); 
-      setDeskripsi('');
-      setFileLaporan(null);
-      // Reset input file secara manual di DOM
-      document.getElementById('fileUploadInput').value = '';
-      
-    } catch (error) { 
-      toast.error('Gagal menyimpan data absensi dan laporan'); 
-      console.error(error);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  return (
-    <div className="p-6 max-w-5xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6">Absensi & Laporan Pramuka</h1>
-      
-      {/* Bagian Filter Regu & Tanggal */}
-      <div className="flex gap-4 mb-6">
-        <select value={selectedRegu} onChange={(e) => setSelectedRegu(e.target.value)} className="flex-1 rounded-lg border-gray-300 p-2.5 shadow-sm">
-          <option value="">-- Pilih Regu Pramuka --</option>
-          {reguList.map(r => <option key={r.id} value={r.id}>{r.nama_regu}</option>)}
-        </select>
-        
-        <input 
-          type="date" 
-          value={tanggal} 
-          onChange={(e) => setTanggal(e.target.value)} 
-          className="rounded-lg border-gray-300 p-2.5 shadow-sm" 
-          required 
-        />
-      </div>
-
-      {selectedRegu && siswaAbsensi.length > 0 && (
-        <form onSubmit={handleSubmit} className="bg-white p-6 rounded-xl border shadow-sm">
-          
-          {/* TABEL KEHADIRAN SISWA */}
-          <h2 className="text-lg font-bold mb-4 border-b pb-2 text-gray-700">Daftar Kehadiran Anggota</h2>
-          <table className="w-full text-left mb-8">
-            <thead>
-              <tr className="bg-gray-100 text-gray-600 text-sm">
-                <th className="p-3 rounded-tl-lg w-16">No</th>
-                <th className="p-3">Nama Siswa</th>
-                <th className="p-3 text-center w-24">Hadir</th>
-                <th className="p-3 rounded-tr-lg w-32">Keterangan</th>
-              </tr>
-            </thead>
-            <tbody>
-              {siswaAbsensi.map((s, index) => (
-                <tr key={s.id} className="border-b last:border-0 hover:bg-gray-50">
-                  <td className="p-3 text-sm">{index + 1}</td>
-                  {/* Gunakan s.nama_lengkap agar data sesuai dengan backend Academic Service */}
-                  <td className="p-3 font-medium text-gray-800">{s.nama_lengkap || 'Tanpa Nama'}</td>
-                  <td className="p-3 text-center">
-                    <input 
-                      type="checkbox" 
-                      className="w-5 h-5 text-green-600 rounded cursor-pointer"
-                      checked={s.status_kehadiran === 'Hadir'}
-                      onChange={() => toggleKehadiran(s.id)}
-                    />
-                  </td>
-                  <td className="p-3 text-sm">
-                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${s.status_kehadiran === 'Hadir' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                      {s.status_kehadiran}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
-          {/* FORM PELAPORAN KEGIATAN */}
-          <div className="bg-gray-50 p-5 rounded-lg border mb-6">
-            <h2 className="text-lg font-bold mb-4 text-gray-700">Laporan Kegiatan</h2>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">Deskripsi Kegiatan <span className="text-red-500">*</span></label>
-                <textarea 
-                  rows="3" 
-                  className="w-full rounded-lg border-gray-300 p-3 shadow-sm focus:ring-blue-500 focus:border-blue-500" 
-                  placeholder="Misal: Latihan PBB, Pionering, dan Semaphore regu hari ini..."
-                  value={deskripsi}
-                  onChange={(e) => setDeskripsi(e.target.value)}
-                  required
-                ></textarea>
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">Upload Bukti Foto Kegiatan (Opsional)</label>
-                <input 
-                  id="fileUploadInput"
-                  type="file" 
-                  accept="image/*,.pdf,.doc,.docx"
-                  className="w-full rounded-lg border-gray-300 p-2 border bg-white shadow-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer" 
-                  onChange={(e) => setFileLaporan(e.target.files[0])}
-                />
-                <p className="text-xs text-gray-500 mt-1">Format didukung: JPG, PNG, PDF, DOC (Maks. ukuran direkomendasikan 2MB)</p>
-              </div>
-            </div>
-          </div>
-
-          {/* TOMBOL SUBMIT DENGAN EFEK LOADING */}
-          <div className="flex justify-end border-t pt-4">
-            <button 
-              type="submit" 
-              disabled={isSubmitting} 
-              className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-bold transition flex items-center gap-2 disabled:bg-gray-400 disabled:cursor-not-allowed"
-            >
-              {isSubmitting ? (
-                <>
-                  <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                  Menyimpan Data...
-                </>
-              ) : (
-                'Simpan Absensi & Laporan'
-              )}
-            </button>
-          </div>
-        </form>
-      )}
-
-      {/* STATE KETIKA REGU KOSONG ATAU BELUM ADA ANGGOTA */}
-      {selectedRegu && siswaAbsensi.length === 0 && (
-        <div className="text-center p-12 bg-gray-50 border rounded-lg text-gray-500 flex flex-col items-center">
-          <svg className="w-16 h-16 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
-          <p className="font-semibold text-lg">Belum Ada Anggota</p>
-          <p className="text-sm">Belum ada anggota yang di-plotting ke regu ini. Silakan plot anggota terlebih dahulu.</p>
-        </div>
-      )}
-    </div>
-  );
+const STATUS_OPTS = ["Hadir", "Izin", "Sakit", "Alpa"];
+const STATUS_COLOR = {
+  Hadir: "bg-green-500 text-white", Izin: "bg-yellow-400 text-white",
+  Sakit: "bg-blue-500 text-white",  Alpa: "bg-red-500 text-white",
 };
 
-export default AbsensiPramukaPage;
+export default function AbsensiPramukaPage() {
+  const [reguList,      setReguList]      = useState([]);
+  const [selectedRegu,  setSelectedRegu]  = useState("");
+  const [siswaAbsensi,  setSiswaAbsensi]  = useState([]);
+  const [tanggal,       setTanggal]       = useState(new Date().toISOString().slice(0, 10));
+  const [deskripsi,     setDeskripsi]     = useState("");
+  const [fileLaporan,   setFileLaporan]   = useState(null);
+  const [isSubmitting,  setIsSubmitting]  = useState(false);
+  const [riwayat,       setRiwayat]       = useState([]);
+  const [loadingRiwayat, setLoadingRiwayat] = useState(false);
+  const [showRiwayat,   setShowRiwayat]   = useState(false);
+
+  useEffect(() => {
+    vocationalApi.getAllRegu()
+      .then((res) => setReguList(Array.isArray(res.data) ? res.data : []))
+      .catch(() => toast.error("Gagal memuat daftar regu"));
+  }, []);
+
+  useEffect(() => {
+    if (!selectedRegu) { setSiswaAbsensi([]); return; }
+    vocationalApi.getSiswaByRegu(selectedRegu)
+      .then((res) => {
+        const siswa = Array.isArray(res.data) ? res.data : [];
+        setSiswaAbsensi(siswa.map((s) => ({ ...s, status_kehadiran: "Hadir" })));
+      })
+      .catch(() => toast.error("Gagal mengambil data siswa dari regu"));
+  }, [selectedRegu]);
+
+  const loadRiwayat = async () => {
+    setLoadingRiwayat(true);
+    try {
+      const params = {};
+      if (selectedRegu) params.regu_id = selectedRegu;
+      const res = await vocationalApi.getAbsensiPramuka(params);
+      setRiwayat(Array.isArray(res.data?.data) ? res.data.data : []);
+    } catch { setRiwayat([]); }
+    finally { setLoadingRiwayat(false); }
+  };
+
+  const stats = useMemo(() => {
+    const s = { Hadir: 0, Izin: 0, Sakit: 0, Alpa: 0 };
+    siswaAbsensi.forEach((x) => { if (x.status_kehadiran) s[x.status_kehadiran] = (s[x.status_kehadiran] || 0) + 1; });
+    return s;
+  }, [siswaAbsensi]);
+
+  const setStatusSiswa = (id, status) =>
+    setSiswaAbsensi((prev) => prev.map((s) => s.id === id ? { ...s, status_kehadiran: status } : s));
+
+  const tandaiSemua = (status) =>
+    setSiswaAbsensi((prev) => prev.map((s) => ({ ...s, status_kehadiran: status })));
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!selectedRegu) { toast.error("Pilih regu terlebih dahulu!"); return; }
+    if (!deskripsi.trim()) { toast.error("Deskripsi laporan wajib diisi!"); return; }
+    setIsSubmitting(true);
+    let uploadedFileUrl = "";
+    try {
+      if (fileLaporan) {
+        const fd = new FormData();
+        fd.append("file_laporan", fileLaporan);
+        const up = await vocationalApi.uploadFileLaporan(fd);
+        uploadedFileUrl = up.data.file_url || "";
+      }
+      await vocationalApi.submitAbsensiPramuka({
+        regu_id: selectedRegu, tanggal, deskripsi,
+        file_url: uploadedFileUrl,
+        data_absensi: siswaAbsensi.map((s) => ({ siswa_id: s.id, status: s.status_kehadiran })),
+      });
+      toast.success("Absensi & Laporan berhasil disimpan!");
+      setDeskripsi("");
+      setFileLaporan(null);
+      document.getElementById("fileUploadInput") && (document.getElementById("fileUploadInput").value = "");
+      if (showRiwayat) loadRiwayat();
+    } catch { toast.error("Gagal menyimpan data absensi dan laporan"); }
+    finally { setIsSubmitting(false); }
+  };
+
+  const namaRegu = reguList.find((r) => String(r.id) === String(selectedRegu))?.nama_regu || "";
+
+  return (
+    <div className="min-h-screen bg-gray-100">
+      <div className="bg-white border-b px-8 py-5">
+        <h1 className="text-2xl font-bold text-gray-800 tracking-tight">ABSENSI PRAMUKA</h1>
+        <p className="text-sm text-gray-500 mt-0.5">Laporan kehadiran anggota pramuka</p>
+      </div>
+
+      <div className="px-8 py-6 max-w-5xl mx-auto space-y-5">
+        {/* Filter */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5">
+          <div className="flex flex-col md:flex-row gap-4 items-end">
+            <div className="flex-1">
+              <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Pilih Regu</label>
+              <div className="relative">
+                <select value={selectedRegu} onChange={(e) => setSelectedRegu(e.target.value)}
+                  className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm bg-white appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <option value="">-- Pilih Regu Pramuka --</option>
+                  {reguList.map((r) => <option key={r.id} value={r.id}>{r.nama_regu}</option>)}
+                </select>
+                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">▼</span>
+              </div>
+            </div>
+            <div className="flex-1">
+              <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Tanggal</label>
+              <input type="date" value={tanggal} onChange={(e) => setTanggal(e.target.value)}
+                className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <button type="button"
+              onClick={() => { setShowRiwayat(!showRiwayat); if (!showRiwayat) loadRiwayat(); }}
+              className="px-6 py-2.5 border border-gray-300 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-all">
+              {showRiwayat ? "Tutup Riwayat" : "Lihat Riwayat"}
+            </button>
+          </div>
+        </div>
+
+        {/* Statistik */}
+        {selectedRegu && siswaAbsensi.length > 0 && (
+          <div className="grid grid-cols-4 gap-3">
+            {[{ l: "Hadir", c: "text-green-600", b: "border-green-400" },
+              { l: "Izin",  c: "text-yellow-500", b: "border-yellow-400" },
+              { l: "Sakit", c: "text-blue-600",   b: "border-blue-400" },
+              { l: "Alpa",  c: "text-red-500",    b: "border-red-400" },
+            ].map(({ l, c, b }) => (
+              <div key={l} className={`bg-white rounded-xl p-4 text-center shadow-sm border-b-4 ${b}`}>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-1">{l}</p>
+                <p className={`text-3xl font-bold ${c}`}>{stats[l] || 0}</p>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Form Absensi */}
+        {selectedRegu && siswaAbsensi.length > 0 && (
+          <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+            {/* Header tabel */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+              <h2 className="font-bold text-gray-800">
+                Daftar Kehadiran — <span className="text-blue-600">{namaRegu}</span>
+              </h2>
+              <div className="flex gap-1.5">
+                {STATUS_OPTS.map((s) => (
+                  <button key={s} type="button" onClick={() => tandaiSemua(s)}
+                    className={`text-[10px] font-bold uppercase px-2 py-1 rounded ${STATUS_COLOR[s]}`}>
+                    Semua {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 text-xs font-bold text-gray-500 uppercase tracking-wider">
+                <tr>
+                  <th className="px-5 py-3 text-left w-10">No</th>
+                  <th className="px-5 py-3 text-left">Nama Anggota</th>
+                  <th className="px-5 py-3 text-left">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {siswaAbsensi.map((s, i) => (
+                  <tr key={s.id} className="hover:bg-gray-50/70">
+                    <td className="px-5 py-3 text-gray-400">{i + 1}</td>
+                    <td className="px-5 py-3 font-semibold text-gray-800">{s.nama_lengkap || "Anggota"}</td>
+                    <td className="px-5 py-3">
+                      {s.status_kehadiran ? (
+                        <span onClick={() => {
+                          const idx = STATUS_OPTS.indexOf(s.status_kehadiran);
+                          setStatusSiswa(s.id, STATUS_OPTS[(idx + 1) % STATUS_OPTS.length]);
+                        }} className={`inline-block px-3 py-1 rounded-full text-xs font-bold uppercase cursor-pointer ${STATUS_COLOR[s.status_kehadiran]}`}>
+                          {s.status_kehadiran}
+                        </span>
+                      ) : (
+                        <div className="flex gap-1.5">
+                          {STATUS_OPTS.map((st) => (
+                            <button key={st} type="button" onClick={() => setStatusSiswa(s.id, st)}
+                              className="text-xs font-bold uppercase px-2 py-0.5 rounded border border-gray-300 text-gray-500 hover:bg-gray-100">
+                              {st}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            {/* Laporan Kegiatan */}
+            <div className="bg-gray-50 p-5 border-t border-gray-100 space-y-4">
+              <h3 className="font-bold text-gray-700 text-sm uppercase tracking-wide">Laporan Kegiatan</h3>
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">
+                  Deskripsi Kegiatan <span className="text-red-500">*</span>
+                </label>
+                <textarea rows={3} value={deskripsi} onChange={(e) => setDeskripsi(e.target.value)}
+                  placeholder="Misal: Latihan PBB, Pionering, dan Semaphore regu hari ini..."
+                  required
+                  className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">
+                  Upload Bukti Foto Kegiatan <span className="text-gray-400 font-normal normal-case">(opsional)</span>
+                </label>
+                <input id="fileUploadInput" type="file" accept="image/*,.pdf,.doc,.docx"
+                  onChange={(e) => setFileLaporan(e.target.files[0])}
+                  className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm file:mr-2 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700" />
+              </div>
+            </div>
+
+            <div className="px-6 py-4 border-t border-gray-100 flex justify-end bg-white">
+              <button type="submit" disabled={isSubmitting}
+                className="px-10 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-bold text-sm rounded-xl shadow-sm transition-all active:scale-95">
+                {isSubmitting ? "Menyimpan..." : "Simpan Absensi & Laporan"}
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* Empty state */}
+        {selectedRegu && siswaAbsensi.length === 0 && (
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 py-16 text-center text-gray-400">
+            <p className="text-4xl mb-3">👥</p>
+            <p className="font-semibold">Belum Ada Anggota</p>
+            <p className="text-sm mt-1">Belum ada anggota yang di-plotting ke regu ini.</p>
+          </div>
+        )}
+
+        {/* Riwayat */}
+        {showRiwayat && (
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+              <h2 className="font-bold text-gray-800 text-sm uppercase tracking-wide">Riwayat Absensi Pramuka</h2>
+              <button onClick={loadRiwayat} className="text-xs text-blue-600 hover:underline">Refresh</button>
+            </div>
+            {loadingRiwayat ? (
+              <div className="py-10 text-center text-gray-400">Memuat...</div>
+            ) : riwayat.length === 0 ? (
+              <div className="py-10 text-center text-gray-400 text-sm">Belum ada riwayat absensi</div>
+            ) : (
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 text-xs font-bold text-gray-500 uppercase tracking-wider">
+                  <tr>
+                    <th className="px-5 py-3 text-left">Tanggal</th>
+                    <th className="px-5 py-3 text-left">Regu</th>
+                    <th className="px-5 py-3 text-left">Nama Anggota</th>
+                    <th className="px-5 py-3 text-center">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {riwayat.slice(0, 50).map((r) => (
+                    <tr key={r.id} className="hover:bg-gray-50/70">
+                      <td className="px-5 py-3 text-gray-600">{r.tanggal}</td>
+                      <td className="px-5 py-3 text-gray-500">{r.nama_regu || "-"}</td>
+                      <td className="px-5 py-3 font-semibold text-gray-800">{r.nama_lengkap || `Siswa #${r.siswa_id}`}</td>
+                      <td className="px-5 py-3 text-center">
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${STATUS_COLOR[r.status] || "bg-gray-100 text-gray-500"}`}>
+                          {r.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

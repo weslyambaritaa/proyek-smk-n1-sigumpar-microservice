@@ -1,13 +1,11 @@
 const db = require('../config/db');
 
-// ── LOKASI PKL ────────────────────────────────────────────────
+// ── LOKASI PKL ────────────────────────────────────────────────────────────
 
 exports.getAllLokasiPKL = async (req, res) => {
   try {
-    const result = await db.query(
-      'SELECT * FROM laporan_lokasi_pkl ORDER BY id ASC'
-    );
-    res.json(result.rows);
+    const result = await db.query('SELECT * FROM laporan_lokasi_pkl ORDER BY created_at DESC, id ASC');
+    res.json({ success: true, data: result.rows });
   } catch (err) {
     console.error('[getAllLokasiPKL]', err);
     res.status(500).json({ error: err.message });
@@ -15,16 +13,32 @@ exports.getAllLokasiPKL = async (req, res) => {
 };
 
 exports.createLokasiPKL = async (req, res) => {
-  const { siswa_id, nama_perusahaan, alamat } = req.body;
-  if (!siswa_id || !nama_perusahaan) {
-    return res.status(400).json({ error: 'siswa_id dan nama_perusahaan wajib diisi' });
+  const {
+    siswa_id, nama_siswa, nama_perusahaan, alamat, posisi,
+    deskripsi_pekerjaan, pembimbing_industri, kontak_pembimbing, tanggal
+  } = req.body;
+
+  let foto_url = null;
+  if (req.file) foto_url = `/uploads/${req.file.filename}`;
+
+  if (!nama_perusahaan) {
+    return res.status(400).json({ error: 'nama_perusahaan wajib diisi' });
   }
+
   try {
     const result = await db.query(
-      'INSERT INTO laporan_lokasi_pkl (siswa_id, nama_perusahaan, alamat) VALUES ($1, $2, $3) RETURNING *',
-      [siswa_id, nama_perusahaan, alamat || null]
+      `INSERT INTO laporan_lokasi_pkl
+       (siswa_id, nama_siswa, nama_perusahaan, alamat, posisi,
+        deskripsi_pekerjaan, pembimbing_industri, kontak_pembimbing, tanggal, foto_url)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
+      [
+        siswa_id || null, nama_siswa || null, nama_perusahaan,
+        alamat || null, posisi || null, deskripsi_pekerjaan || null,
+        pembimbing_industri || null, kontak_pembimbing || null,
+        tanggal || new Date().toISOString().slice(0,10), foto_url
+      ]
     );
-    res.status(201).json(result.rows[0]);
+    res.status(201).json({ success: true, data: result.rows[0] });
   } catch (err) {
     console.error('[createLokasiPKL]', err);
     res.status(500).json({ error: err.message });
@@ -33,57 +47,62 @@ exports.createLokasiPKL = async (req, res) => {
 
 exports.updateLokasiPKL = async (req, res) => {
   const { id } = req.params;
-  const { nama_perusahaan, alamat } = req.body;
+  const {
+    nama_siswa, nama_perusahaan, alamat, posisi,
+    deskripsi_pekerjaan, pembimbing_industri, kontak_pembimbing, tanggal
+  } = req.body;
+  let foto_url = req.body.foto_url || null;
+  if (req.file) foto_url = `/uploads/${req.file.filename}`;
+
   try {
     const result = await db.query(
-      'UPDATE laporan_lokasi_pkl SET nama_perusahaan=$1, alamat=$2 WHERE id=$3 RETURNING *',
-      [nama_perusahaan, alamat, id]
+      `UPDATE laporan_lokasi_pkl SET
+        nama_siswa=$1, nama_perusahaan=$2, alamat=$3, posisi=$4,
+        deskripsi_pekerjaan=$5, pembimbing_industri=$6, kontak_pembimbing=$7,
+        tanggal=$8, foto_url=COALESCE($9, foto_url)
+       WHERE id=$10 RETURNING *`,
+      [nama_siswa, nama_perusahaan, alamat, posisi,
+       deskripsi_pekerjaan, pembimbing_industri, kontak_pembimbing,
+       tanggal, foto_url, id]
     );
     if (result.rowCount === 0) return res.status(404).json({ error: 'Data tidak ditemukan' });
-    res.json(result.rows[0]);
+    res.json({ success: true, data: result.rows[0] });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
 
 exports.deleteLokasiPKL = async (req, res) => {
-  const { id } = req.params;
   try {
-    const result = await db.query('DELETE FROM laporan_lokasi_pkl WHERE id=$1 RETURNING id', [id]);
+    const result = await db.query('DELETE FROM laporan_lokasi_pkl WHERE id=$1 RETURNING id', [req.params.id]);
     if (result.rowCount === 0) return res.status(404).json({ error: 'Data tidak ditemukan' });
-    res.json({ message: 'Data berhasil dihapus' });
+    res.json({ success: true, message: 'Data berhasil dihapus' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
 
-// ── PROGRES PKL ───────────────────────────────────────────────
+// ── PROGRES PKL ───────────────────────────────────────────────────────────
 
 exports.getAllProgresPKL = async (req, res) => {
   try {
-    const result = await db.query(
-      'SELECT * FROM laporan_progres_pkl ORDER BY siswa_id, minggu_ke ASC'
-    );
-    res.json(result.rows);
+    const result = await db.query('SELECT * FROM laporan_progres_pkl ORDER BY siswa_id, minggu_ke ASC');
+    res.json({ success: true, data: result.rows });
   } catch (err) {
-    console.error('[getAllProgresPKL]', err);
     res.status(500).json({ error: err.message });
   }
 };
 
 exports.createProgresPKL = async (req, res) => {
   const { siswa_id, minggu_ke, deskripsi } = req.body;
-  if (!siswa_id || !minggu_ke) {
-    return res.status(400).json({ error: 'siswa_id dan minggu_ke wajib diisi' });
-  }
+  if (!siswa_id || !minggu_ke) return res.status(400).json({ error: 'siswa_id dan minggu_ke wajib diisi' });
   try {
     const result = await db.query(
       'INSERT INTO laporan_progres_pkl (siswa_id, minggu_ke, deskripsi) VALUES ($1, $2, $3) RETURNING *',
       [siswa_id, minggu_ke, deskripsi || null]
     );
-    res.status(201).json(result.rows[0]);
+    res.status(201).json({ success: true, data: result.rows[0] });
   } catch (err) {
-    console.error('[createProgresPKL]', err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -97,38 +116,40 @@ exports.updateProgresPKL = async (req, res) => {
       [minggu_ke, deskripsi, id]
     );
     if (result.rowCount === 0) return res.status(404).json({ error: 'Data tidak ditemukan' });
-    res.json(result.rows[0]);
+    res.json({ success: true, data: result.rows[0] });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
 
 exports.deleteProgresPKL = async (req, res) => {
-  const { id } = req.params;
   try {
-    const result = await db.query('DELETE FROM laporan_progres_pkl WHERE id=$1 RETURNING id', [id]);
-    if (result.rowCount === 0) return res.status(404).json({ error: 'Data tidak ditemukan' });
-    res.json({ message: 'Data berhasil dihapus' });
+    await db.query('DELETE FROM laporan_progres_pkl WHERE id=$1', [req.params.id]);
+    res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
 
-// ── NILAI PKL ─────────────────────────────────────────────────
+// ── NILAI PKL ─────────────────────────────────────────────────────────────
 
 exports.getNilaiPKL = async (req, res) => {
   try {
     const { kelas_id, siswa_id } = req.query;
-    let query = 'SELECT * FROM nilai_pkl WHERE 1=1';
+    let query = `
+      SELECT n.*, s.nama_lengkap AS nama_siswa, k.nama_kelas
+      FROM nilai_pkl n
+      LEFT JOIN laporan_lokasi_pkl l ON n.siswa_id = l.siswa_id
+      LEFT JOIN kelas_pramuka k ON n.kelas_id = k.id
+      WHERE 1=1`;
     const params = [];
     let idx = 1;
-    if (kelas_id)  { query += ` AND kelas_id = $${idx++}`;  params.push(kelas_id); }
-    if (siswa_id)  { query += ` AND siswa_id = $${idx++}`;  params.push(siswa_id); }
-    query += ' ORDER BY siswa_id ASC';
+    if (kelas_id) { query += ` AND n.kelas_id = $${idx++}`; params.push(kelas_id); }
+    if (siswa_id) { query += ` AND n.siswa_id = $${idx++}`; params.push(siswa_id); }
+    query += ' ORDER BY n.siswa_id ASC';
     const result = await db.query(query, params);
     res.json({ success: true, data: result.rows });
   } catch (err) {
-    console.error('[getNilaiPKL]', err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -163,7 +184,6 @@ exports.saveNilaiPKLBulk = async (req, res) => {
     res.json({ success: true, message: 'Nilai PKL berhasil disimpan', data: results });
   } catch (err) {
     await client.query('ROLLBACK');
-    console.error('[saveNilaiPKLBulk]', err);
     res.status(500).json({ error: err.message });
   } finally {
     client.release();
@@ -171,10 +191,9 @@ exports.saveNilaiPKLBulk = async (req, res) => {
 };
 
 exports.deleteNilaiPKL = async (req, res) => {
-  const { id } = req.params;
   try {
-    await db.query('DELETE FROM nilai_pkl WHERE id=$1', [id]);
-    res.json({ success: true, message: 'Nilai PKL berhasil dihapus' });
+    await db.query('DELETE FROM nilai_pkl WHERE id=$1', [req.params.id]);
+    res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

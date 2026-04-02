@@ -1,154 +1,84 @@
-const fs = require("fs");
-const path = require("path");
-const { v4: uuidv4 } = require("uuid");
-const { createError } = require("../middleware/errorHandler");
+const pool = require('../config/db');
+const { createError } = require('../middleware/errorHandler');
 
-const DATA_FILE = path.join(__dirname, "../data/absensiGuru.json");
-
-const ensureDataFile = () => {
-  if (!fs.existsSync(DATA_FILE)) {
-    fs.writeFileSync(DATA_FILE, "[]", "utf-8");
-  }
-};
-
-const readData = () => {
-  ensureDataFile();
-  return JSON.parse(fs.readFileSync(DATA_FILE, "utf-8"));
-};
-
-const writeData = (rows) => {
-  fs.writeFileSync(DATA_FILE, JSON.stringify(rows, null, 2), "utf-8");
-};
-
-const isTerlambat = (date) => {
-  const hour = date.getHours();
-  const minute = date.getMinutes();
-  return hour > 7 || (hour === 7 && minute > 30);
-};
-
-const getAllAbsensiGuru = (req, res, next) => {
+const getAllAbsensiGuru = async (req, res, next) => {
   try {
-    let rows = readData();
     const { user_id, tanggal, status } = req.query;
-
-    if (user_id) rows = rows.filter((r) => String(r.user_id) === String(user_id));
-    if (tanggal) rows = rows.filter((r) => r.tanggal === tanggal);
-    if (status) rows = rows.filter((r) => r.status === status);
-
-    rows.sort((a, b) => new Date(b.jamMasuk) - new Date(a.jamMasuk));
-
-    res.json({ success: true, count: rows.length, data: rows });
-  } catch (err) {
-    next(err);
-  }
+    let query = `SELECT * FROM absensi_guru WHERE 1=1`;
+    const params = [];
+    let idx = 1;
+    if (user_id) { query += ` AND user_id = $${idx++}`; params.push(user_id); }
+    if (tanggal) { query += ` AND tanggal = $${idx++}`; params.push(tanggal); }
+    if (status)  { query += ` AND status = $${idx++}`;  params.push(status); }
+    query += ` ORDER BY "jamMasuk" DESC`;
+    const result = await pool.query(query, params);
+    res.json({ success: true, count: result.rows.length, data: result.rows });
+  } catch (err) { next(err); }
 };
 
-const getAbsensiGuruById = (req, res, next) => {
+const getAbsensiGuruById = async (req, res, next) => {
   try {
-    const rows = readData();
-    const item = rows.find((r) => r.id_absensiGuru === req.params.id);
-    if (!item) throw createError(404, "Absensi guru tidak ditemukan");
-    res.json({ success: true, data: item });
-  } catch (err) {
-    next(err);
-  }
+    const result = await pool.query('SELECT * FROM absensi_guru WHERE "id_absensiGuru" = $1', [req.params.id]);
+    if (result.rows.length === 0) throw createError(404, 'Absensi guru tidak ditemukan');
+    res.json({ success: true, data: result.rows[0] });
+  } catch (err) { next(err); }
 };
 
-const createAbsensiGuru = (req, res, next) => {
+const createAbsensiGuru = async (req, res, next) => {
   try {
-    const { user_id, namaGuru, mataPelajaran, keterangan = "", foto = null, status: statusOverride } = req.body;
-    if (!user_id || !namaGuru || !mataPelajaran) {
-      throw createError(400, "Field user_id, namaGuru, mataPelajaran wajib diisi");
-    }
+    const { user_id, namaGuru, mataPelajaran, keterangan = '', foto = null, status: statusOverride } = req.body;
+    if (!user_id || !namaGuru) throw createError(400, 'Field user_id dan namaGuru wajib diisi');
 
-    const validStatuses = ["hadir", "terlambat", "izin", "sakit", "alpa"];
-    if (statusOverride && !validStatuses.includes(statusOverride)) {
-      throw createError(400, "Status tidak valid");
-    }
-
-    const rows = readData();
     const now = new Date();
     const tanggal = now.toISOString().slice(0, 10);
-    const already = rows.find(
-      (r) => String(r.user_id) === String(user_id) && r.tanggal === tanggal,
+
+    // Cek duplikasi
+    const existing = await pool.query(
+      'SELECT id_absensiGuru FROM absensi_guru WHERE user_id = $1 AND tanggal = $2',
+      [user_id, tanggal]
     );
+    if (existing.rows.length > 0) throw createError(409, 'Anda sudah melakukan absensi hari ini');
 
-    if (already) {
-      throw createError(409, "Anda sudah melakukan absensi hari ini");
-    }
+    const isTerlambat = now.getHours() > 7 || (now.getHours() === 7 && now.getMinutes() > 30);
+    const status = statusOverride || (isTerlambat ? 'terlambat' : 'hadir');
 
-    const status = statusOverride || (isTerlambat(now) ? "terlambat" : "hadir");
-
-    const item = {
-      id_absensiGuru: uuidv4(),
-      user_id,
-      namaGuru,
-      mataPelajaran,
-      jamMasuk: now.toISOString(),
-      tanggal,
-      foto,
-      status,
-      keterangan,
-      created_at: now.toISOString(),
-      updated_at: now.toISOString(),
-    };
-
-    rows.push(item);
-    writeData(rows);
-
-    res.status(201).json({
-      success: true,
-      message: "Absensi guru berhasil dicatat",
-      data: item,
-    });
-  } catch (err) {
-    next(err);
-  }
+    const result = await pool.query(
+      `INSERT INTO absensi_guru (user_id, "namaGuru", "mataPelajaran", "jamMasuk", tanggal, foto, status, keterangan)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       RETURNING *`,
+      [user_id, namaGuru, mataPelajaran || '-', now, tanggal, foto, status, keterangan]
+    );
+    res.status(201).json({ success: true, message: 'Absensi guru berhasil dicatat', data: result.rows[0] });
+  } catch (err) { next(err); }
 };
 
-const updateAbsensiGuru = (req, res, next) => {
+const updateAbsensiGuru = async (req, res, next) => {
   try {
-    const rows = readData();
-    const idx = rows.findIndex((r) => r.id_absensiGuru === req.params.id);
-    if (idx === -1) throw createError(404, "Absensi guru tidak ditemukan");
-
     const { status, keterangan, foto } = req.body;
-    if (status === undefined && keterangan === undefined && foto === undefined) {
-      throw createError(400, "Tidak ada field yang akan diupdate");
-    }
-
-    rows[idx] = {
-      ...rows[idx],
-      ...(status !== undefined ? { status } : {}),
-      ...(keterangan !== undefined ? { keterangan } : {}),
-      ...(foto !== undefined ? { foto } : {}),
-      updated_at: new Date().toISOString(),
-    };
-
-    writeData(rows);
-    res.json({ success: true, message: "Absensi guru berhasil diperbarui", data: rows[idx] });
-  } catch (err) {
-    next(err);
-  }
+    const updates = [];
+    const params = [];
+    let idx = 1;
+    if (status !== undefined)     { updates.push(`status = $${idx++}`);      params.push(status); }
+    if (keterangan !== undefined) { updates.push(`keterangan = $${idx++}`);  params.push(keterangan); }
+    if (foto !== undefined)       { updates.push(`foto = $${idx++}`);        params.push(foto); }
+    if (updates.length === 0)     throw createError(400, 'Tidak ada field yang akan diupdate');
+    updates.push(`updated_at = NOW()`);
+    params.push(req.params.id);
+    const result = await pool.query(
+      `UPDATE absensi_guru SET ${updates.join(', ')} WHERE "id_absensiGuru" = $${idx} RETURNING *`,
+      params
+    );
+    if (result.rowCount === 0) throw createError(404, 'Absensi guru tidak ditemukan');
+    res.json({ success: true, message: 'Absensi guru berhasil diperbarui', data: result.rows[0] });
+  } catch (err) { next(err); }
 };
 
-const deleteAbsensiGuru = (req, res, next) => {
+const deleteAbsensiGuru = async (req, res, next) => {
   try {
-    const rows = readData();
-    const idx = rows.findIndex((r) => r.id_absensiGuru === req.params.id);
-    if (idx === -1) throw createError(404, "Absensi guru tidak ditemukan");
-    rows.splice(idx, 1);
-    writeData(rows);
-    res.json({ success: true, message: "Absensi guru berhasil dihapus" });
-  } catch (err) {
-    next(err);
-  }
+    const result = await pool.query('DELETE FROM absensi_guru WHERE "id_absensiGuru" = $1 RETURNING *', [req.params.id]);
+    if (result.rowCount === 0) throw createError(404, 'Absensi guru tidak ditemukan');
+    res.json({ success: true, message: 'Absensi guru berhasil dihapus' });
+  } catch (err) { next(err); }
 };
 
-module.exports = {
-  getAllAbsensiGuru,
-  getAbsensiGuruById,
-  createAbsensiGuru,
-  updateAbsensiGuru,
-  deleteAbsensiGuru,
-};
+module.exports = { getAllAbsensiGuru, getAbsensiGuruById, createAbsensiGuru, updateAbsensiGuru, deleteAbsensiGuru };

@@ -7,7 +7,6 @@ const siswaController = require('../controllers/siswaController');
 const mapelController = require('../controllers/mapelController');
 const jadwalController = require('../controllers/jadwalController');
 const piketController = require('../controllers/piketController');
-// const verifyToken = require('../middleware/auth'); 
 const upload = require('../middleware/upload');
 const upacaraController = require('../controllers/upacaraController');
 const nilaiController = require('../controllers/nilaiController');
@@ -15,6 +14,7 @@ const extractIdentity = require('../middleware/extractIdentity');
 const { createAbsensiSiswa, getAllAbsensiSiswa, getAbsensiSiswaById, updateAbsensiSiswa, deleteAbsensiSiswa } = require('../controllers/absensiSiswaController');
 const guruController = require('../controllers/guruController');
 const kepsekController = require('../controllers/kepsekController');
+const waliKelasController = require('../controllers/waliKelasController');
 
 // Rute Kelas
 router.get('/kelas', extractIdentity, kelasController.getAllKelas);
@@ -36,7 +36,6 @@ router.delete('/pengumuman/:id', extractIdentity, pengumumanController.deletePen
 
 // Rute Arsip Surat
 router.get('/arsip-surat', extractIdentity, arsipSuratController.getAllArsipSurat);
-// Gunakan upload.single('file') untuk memproses form-data yang memiliki input field bernama 'file'
 router.post('/arsip-surat', extractIdentity, upload.single('file'), arsipSuratController.createArsipSurat);
 router.put('/arsip-surat/:id', extractIdentity, upload.single('file'), arsipSuratController.updateArsipSurat);
 router.delete('/arsip-surat/:id', extractIdentity, arsipSuratController.deleteArsipSurat);
@@ -65,14 +64,12 @@ router.post('/upacara', extractIdentity, upacaraController.createUpacara);
 router.put('/upacara/:id', extractIdentity, upacaraController.updateUpacara);
 router.delete('/upacara/:id', extractIdentity, upacaraController.deleteUpacara);
 
-
 // Rute Nilai
 router.get('/nilai', extractIdentity, nilaiController.getNilai);
 router.get('/nilai/siswa-by-kelas', extractIdentity, nilaiController.getSiswaByKelas);
 router.post('/nilai/bulk', extractIdentity, nilaiController.saveNilaiBulk);
 router.put('/nilai/:id', extractIdentity, nilaiController.updateNilai);
 router.delete('/nilai/:id', extractIdentity, nilaiController.deleteNilai);
-
 
 // Rute Absensi Siswa
 router.post('/absensi-siswa', extractIdentity, createAbsensiSiswa);
@@ -88,9 +85,17 @@ router.get('/classes/:classId/students', extractIdentity, guruController.getClas
 router.get('/attendance/class/:classId', extractIdentity, guruController.getAttendanceByClass);
 router.post('/attendance/bulk', extractIdentity, guruController.saveBulkAttendance);
 
-// Rute Kepala Sekolah — Rekap & Statistik
+// Rute Wali Kelas
+router.get('/wali/parenting', extractIdentity, waliKelasController.getParenting);
+router.post('/wali/parenting', extractIdentity, upload.single('foto'), waliKelasController.createParenting);
+router.get('/wali/kebersihan', extractIdentity, waliKelasController.getKebersihan);
+router.post('/wali/kebersihan', extractIdentity, upload.single('foto'), waliKelasController.createKebersihan);
+router.get('/wali/refleksi', extractIdentity, waliKelasController.getRefleksi);
+router.post('/wali/refleksi', extractIdentity, waliKelasController.createRefleksi);
+
+// Rute Kepala Sekolah
 router.get('/kepsek/rekap-absensi-siswa', extractIdentity, kepsekController.getRekapAbsensiSiswa);
-router.get('/kepsek/rekap-nilai',         extractIdentity, kepsekController.getRekapNilai);
-router.get('/kepsek/statistik',           extractIdentity, kepsekController.getStatistikUmum);
+router.get('/kepsek/rekap-nilai', extractIdentity, kepsekController.getRekapNilai);
+router.get('/kepsek/statistik', extractIdentity, kepsekController.getStatistikUmum);
 
 module.exports = router;

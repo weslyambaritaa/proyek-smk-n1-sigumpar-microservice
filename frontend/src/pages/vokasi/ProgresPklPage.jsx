@@ -15,7 +15,7 @@ export default function ProgresPKLPage() {
     setLoading(true);
     try {
       const res = await vocationalApi.getAllProgresPKL();
-      setRows(Array.isArray(res.data) ? res.data : []);
+      setRows(Array.isArray(res.data?.data) ? res.data.data : (Array.isArray(res.data) ? res.data : []));
     } catch { setRows([]); }
     finally { setLoading(false); }
   };

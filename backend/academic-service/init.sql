@@ -71,3 +71,46 @@ CREATE TABLE IF NOT EXISTS absensi_siswa (
 CREATE INDEX IF NOT EXISTS idx_absensi_siswa_siswa_id ON absensi_siswa(siswa_id);
 CREATE INDEX IF NOT EXISTS idx_absensi_siswa_tanggal ON absensi_siswa(tanggal);
 CREATE INDEX IF NOT EXISTS idx_absensi_siswa_mapel_id ON absensi_siswa(mapel_id);
+
+-- ─── TABEL WALI KELAS ────────────────────────────────────────────────────
+
+CREATE TABLE IF NOT EXISTS parenting_log (
+    id SERIAL PRIMARY KEY,
+    kelas_id INTEGER REFERENCES kelas(id) ON DELETE SET NULL,
+    wali_id UUID,
+    tanggal DATE NOT NULL DEFAULT CURRENT_DATE,
+    kehadiran_ortu INTEGER DEFAULT 0,
+    agenda VARCHAR(255),
+    ringkasan TEXT,
+    foto_url TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS kebersihan_kelas (
+    id SERIAL PRIMARY KEY,
+    kelas_id INTEGER REFERENCES kelas(id) ON DELETE SET NULL,
+    tanggal DATE NOT NULL DEFAULT CURRENT_DATE,
+    penilaian JSONB DEFAULT '{}',
+    catatan TEXT,
+    foto_url TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS refleksi_wali_kelas (
+    id SERIAL PRIMARY KEY,
+    kelas_id INTEGER REFERENCES kelas(id) ON DELETE SET NULL,
+    wali_id UUID,
+    tanggal DATE NOT NULL DEFAULT CURRENT_DATE,
+    capaian TEXT,
+    tantangan TEXT,
+    rencana TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO academic_user;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO academic_user;
+
+-- Fix unique constraint untuk absensi siswa (saat mapel_id null)
+ALTER TABLE absensi_siswa DROP CONSTRAINT IF EXISTS unique_absensi_siswa;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_absensi_siswa 
+  ON absensi_siswa (siswa_id, tanggal, COALESCE(mapel_id, 0));
