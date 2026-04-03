@@ -1,7 +1,7 @@
 {
-  "name": "academic-service",
+  "name": "todos-service",
   "version": "1.0.0",
-  "description": "Academic Service - Kelas, Siswa, Mapel, Nilai, Absensi",
+  "description": "",
   "main": "index.js",
   "scripts": {
     "start": "node src/index.js",

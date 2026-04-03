@@ -101,34 +101,3 @@ exports.deleteArsipSurat = async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 };
-// Preview Arsip Surat — stream file ke browser (inline)
-exports.previewArsipSurat = async (req, res) => {
-  try {
-    const result = await pool.query('SELECT * FROM arsip_surat WHERE id = $1', [req.params.id]);
-    if (result.rows.length === 0) return res.status(404).json({ error: 'Dokumen tidak ditemukan' });
-
-    const arsip = result.rows[0];
-    // Coba dari file_data (jika disimpan sebagai bytea)
-    if (arsip.file_data) {
-      const mime = arsip.file_mime || arsip.jenis_file || 'application/octet-stream';
-      res.set('Content-Type', mime);
-      res.set('Content-Disposition', `inline; filename="${arsip.nama_file || 'dokumen'}"`);
-      return res.send(arsip.file_data);
-    }
-    // Fallback: dari path file di disk
-    if (arsip.file_url || arsip.file_path) {
-      const filePath = path.join(__dirname, '../../uploads', path.basename(arsip.file_url || arsip.file_path));
-      if (fs.existsSync(filePath)) {
-        const ext = path.extname(filePath).toLowerCase();
-        const mimeMap = { '.pdf': 'application/pdf', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.gif': 'image/gif', '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' };
-        res.set('Content-Type', mimeMap[ext] || 'application/octet-stream');
-        res.set('Content-Disposition', `inline; filename="${path.basename(filePath)}"`);
-        return fs.createReadStream(filePath).pipe(res);
-      }
-    }
-    return res.status(404).json({ error: 'File tidak ditemukan di server' });
-  } catch (err) {
-    console.error('[previewArsipSurat]', err);
-    res.status(500).json({ error: err.message });
-  }
-};

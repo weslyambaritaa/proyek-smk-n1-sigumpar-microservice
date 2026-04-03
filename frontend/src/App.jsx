@@ -1,53 +1,24 @@
 import { BrowserRouter, Routes, Route, NavLink } from "react-router-dom";
 import { useState } from "react";
-import keycloak, { hasRole } from "./keycloak";
-import { Toaster } from "react-hot-toast";
-
-// --- Dashboard ---
-import Dashboard from "./pages/dashboard/Dashboard";
-import DetailPengumuman from "./pages/dashboard/DetailPengumuman";
-
-// --- Tata Usaha ---
 import KelasPage from "./pages/tata-usaha/kelas/KelasPage";
 import SiswaPage from "./pages/tata-usaha/siswa/SiswaPage";
-import PengumumanPage from "./pages/tata-usaha/pengumuman/PengumumanPage";
+import keycloak, { hasRole } from "./keycloak";
+import { Toaster } from "react-hot-toast";
+import Dashboard from "./pages/dashboard/Dashboard";
+import DetailPengumuman from "./pages/dashboard/DetailPengumuman";
 import ArsipSuratPage from "./pages/tata-usaha/arsip-surat/ArsipSuratPage";
 import MapelPage from "./pages/tata-usaha/mapel/MapelPage";
+import PengumumanPage from "./pages/tata-usaha/pengumuman/PengumumanPage";
 import JadwalPage from "./pages/tata-usaha/jadwal/JadwalPage";
 import PiketPage from "./pages/tata-usaha/piket/PiketPage";
 import UpacaraPage from "./pages/tata-usaha/upacara/UpacaraPage";
-
-// --- Guru Mapel ---
-import AbsensiGuruPage from "./pages/guru-mapel/AbsensiGuruPage";
-import AbsensiSiswa from "./pages/guru-mapel/absensi-siswa/AbsensiSiswa";
-import PerangkatPage from "./pages/guru-mapel/perangkat/PerangkatPage";
-import InputNilaiPage from "./pages/guru-mapel/InputNilaiPage";
-
-// --- Wali Kelas ---
-import PresensiKelasPage from "./pages/wali-kelas/PresensiKelasPage";
-import RekapKehadiranPage from "./pages/wali-kelas/RekapKehadiranPage";
-import RekapNilaiPage from "./pages/wali-kelas/RekapNilaiPage";
-import ParentingPage from "./pages/wali-kelas/ParentingPage";
-import KebersihanKelasPage from "./pages/wali-kelas/KebersihanKelasPage";
-import RefleksiPage from "./pages/wali-kelas/RefleksiPage";
-
-// --- Pramuka ---
-import AbsensiPramukaPage from "./pages/pramuka/absensi/AbsensiPramukaPage";
-import GuruPage from "./pages/tata-usaha/guru/GuruPage";
-import SilabusKegiatanPage from "./pages/pramuka/SilabusKegiatanPage";
-import LaporanKegiatanPage from "./pages/pramuka/LaporanKegiatanPage";
-
-// --- Vokasi ---
-import LokasiPKLPage from "./pages/vokasi/LokasiPKLPage";
-import ProgresPKLPage from "./pages/vokasi/ProgresPKLPage";
-import NilaiPKLPage from "./pages/vokasi/NilaiPKLPage";
-
-// --- Kepala Sekolah ---
-import RekapAbsensiGuruPage from "./pages/kepala-sekolah/RekapAbsensiGuruPage";
-import RekapAbsensiSiswaPage from "./pages/kepala-sekolah/RekapAbsensiSiswaPage";
-import PemeriksaanPerangkatPage from "./pages/kepala-sekolah/PemeriksaanPerangkatPage";
-import EvaluasiKinerjaPage from "./pages/kepala-sekolah/EvaluasiKinerjaPage";
-import PKLKepsekPage from "./pages/kepala-sekolah/PKLKepsekPage";
+import ReguPage from './pages/pramuka/regu/ReguPage';
+import AnggotaReguPage from './pages/pramuka/anggota_regu/AnggotaReguPage';
+import AbsensiPramukaPage from './pages/pramuka/absensi/AbsensiPramukaPage';
+import InputNilaiPage from './pages/guru-mapel/InputNilaiPage';
+import AbsensiSiswa from './pages/guru-mapel/absensi-siswa/AbsensiSiswa';
+import AbsensiGuruPage from './pages/guru-mapel/AbsensiGuruPage';
+import PerangkatPage from './pages/guru-mapel/perangkat/PerangkatPage';
 
 /**
  * Komponen reusable untuk grup menu per role (Dropdown)
@@ -79,6 +50,7 @@ const NavDropdown = ({ title, icon, children, isOpen, onClick }) => {
 };
 
 const App = () => {
+  // State untuk mengontrol dropdown mana yang sedang terbuka
   const [openMenus, setOpenMenus] = useState({});
 
   const toggleMenu = (menuName) => {
@@ -90,6 +62,7 @@ const App = () => {
 
   return (
     <BrowserRouter>
+      {/* === TOAST NOTIFIKASI BESAR & DI TENGAH === */}
       <Toaster
         position="top-center"
         reverseOrder={false}
@@ -116,7 +89,7 @@ const App = () => {
 
           <nav className="flex-1 p-4 overflow-y-auto shadow-inner">
             {/* Dashboard umum */}
-            <NavLink to="/" end className={navClass}>
+            <NavLink to="/" className={navClass}>
               <span className="mr-3">🏠</span> Dashboard
             </NavLink>
 
@@ -129,20 +102,22 @@ const App = () => {
                   isOpen={openMenus["kepsek"]}
                   onClick={() => toggleMenu("kepsek")}
                 >
-                  <NavLink to="/kepsek/absensi-guru" className={subNavClass}>
-                    Rekap Absensi Guru
+                  <NavLink to="/laporan-tahunan" className={subNavClass}>
+                    Laporan Tahunan
                   </NavLink>
-                  <NavLink to="/kepsek/absensi-siswa" className={subNavClass}>
-                    Rekap Absensi Siswa
-                  </NavLink>
-                  <NavLink to="/kepsek/perangkat-ajar" className={subNavClass}>
-                    Pemeriksaan Perangkat
-                  </NavLink>
-                  <NavLink to="/kepsek/evaluasi-kinerja" className={subNavClass}>
-                    Evaluasi Kinerja Guru
-                  </NavLink>
-                  <NavLink to="/kepsek/pkl" className={subNavClass}>
-                    PKL
+                </NavDropdown>
+              )}
+
+              {/* Dropdown Waka Sekolah */}
+              {hasRole("waka-sekolah") && (
+                <NavDropdown
+                  title="Waka Sekolah"
+                  icon="👨‍🏫"
+                  isOpen={openMenus["waka"]}
+                  onClick={() => toggleMenu("waka")}
+                >
+                  <NavLink to="/kurikulum" className={subNavClass}>
+                    Kurikulum
                   </NavLink>
                 </NavDropdown>
               )}
@@ -178,23 +153,8 @@ const App = () => {
                   isOpen={openMenus["walas"]}
                   onClick={() => toggleMenu("walas")}
                 >
-                  <NavLink to="/wali/absensi-siswa" className={subNavClass}>
+                  <NavLink to="/presensi-kelas" className={subNavClass}>
                     Presensi Kelas
-                  </NavLink>
-                  <NavLink to="/wali/rekap-kehadiran" className={subNavClass}>
-                    Rekap Kehadiran
-                  </NavLink>
-                  <NavLink to="/wali/rekap-nilai" className={subNavClass}>
-                    Rekap Nilai
-                  </NavLink>
-                  <NavLink to="/wali/parenting" className={subNavClass}>
-                    Parenting
-                  </NavLink>
-                  <NavLink to="/wali/kebersihan-kelas" className={subNavClass}>
-                    Kebersihan Kelas
-                  </NavLink>
-                  <NavLink to="/wali/refleksi" className={subNavClass}>
-                    Refleksi
                   </NavLink>
                 </NavDropdown>
               )}
@@ -212,9 +172,6 @@ const App = () => {
                   </NavLink>
                   <NavLink to="/academic/siswa" className={subNavClass}>
                     Data Siswa
-                  </NavLink>
-                  <NavLink to="/academic/guru" className={subNavClass}>
-                    Data Guru
                   </NavLink>
                   <NavLink to="/academic/pengumuman" className={subNavClass}>
                     Pengumuman
@@ -237,7 +194,7 @@ const App = () => {
                 </NavDropdown>
               )}
 
-              {/* Dropdown Pramuka */}
+              {/* Dropdown Pramuka - UPDATED */}
               {hasRole("pramuka") && (
                 <NavDropdown
                   title="Pramuka"
@@ -245,15 +202,9 @@ const App = () => {
                   isOpen={openMenus["pramuka"]}
                   onClick={() => toggleMenu("pramuka")}
                 >
-                  <NavLink to="/vocational/absensi" className={subNavClass}>
-                    Absensi Pramuka
-                  </NavLink>
-                  <NavLink to="/pramuka/silabus" className={subNavClass}>
-                    Silabus & Kegiatan
-                  </NavLink>
-                  <NavLink to="/pramuka/laporan" className={subNavClass}>
-                    Laporan Kegiatan
-                  </NavLink>
+                  <NavLink to="/vocational/regu" className={subNavClass}>Manajemen Regu</NavLink>
+                  <NavLink to="/vocational/anggota-regu" className={subNavClass}>Plotting Anggota</NavLink>
+                  <NavLink to="/vocational/absensi" className={subNavClass}>Absensi Pramuka</NavLink>
                 </NavDropdown>
               )}
 
@@ -265,14 +216,8 @@ const App = () => {
                   isOpen={openMenus["vokasi"]}
                   onClick={() => toggleMenu("vokasi")}
                 >
-                  <NavLink to="/vokasi/lokasi-pkl" className={subNavClass}>
-                    Pelaporan Lokasi PKL
-                  </NavLink>
-                  <NavLink to="/vokasi/progres-pkl" className={subNavClass}>
-                    Pelaporan Progres PKL
-                  </NavLink>
-                  <NavLink to="/vokasi/nilai-pkl" className={subNavClass}>
-                    Input Nilai PKL
+                  <NavLink to="/proyek-vokasi" className={subNavClass}>
+                    Proyek Siswa
                   </NavLink>
                 </NavDropdown>
               )}
@@ -299,11 +244,10 @@ const App = () => {
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/pengumuman/:id" element={<DetailPengumuman />} />
-
-            {/* Tata Usaha */}
+            
+            {/* Academic Routes */}
             <Route path="/academic/kelas" element={<KelasPage />} />
             <Route path="/academic/siswa" element={<SiswaPage />} />
-            <Route path="/academic/guru" element={<GuruPage />} />
             <Route path="/academic/pengumuman" element={<PengumumanPage />} />
             <Route path="/academic/arsip-surat" element={<ArsipSuratPage />} />
             <Route path="/academic/mapel" element={<MapelPage />} />
@@ -311,36 +255,16 @@ const App = () => {
             <Route path="/academic/piket" element={<PiketPage />} />
             <Route path="/academic/upacara" element={<UpacaraPage />} />
 
-            {/* Guru Mapel */}
+            {/* Guru Mapel Routes */}
             <Route path="/input-nilai" element={<InputNilaiPage />} />
             <Route path="/absensi-siswa" element={<AbsensiSiswa />} />
             <Route path="/absensi-guru" element={<AbsensiGuruPage />} />
             <Route path="/perangkat-pembelajaran" element={<PerangkatPage />} />
 
-            {/* Wali Kelas */}
-            <Route path="/wali/absensi-siswa" element={<PresensiKelasPage />} />
-            <Route path="/wali/rekap-kehadiran" element={<RekapKehadiranPage />} />
-            <Route path="/wali/rekap-nilai" element={<RekapNilaiPage />} />
-            <Route path="/wali/parenting" element={<ParentingPage />} />
-            <Route path="/wali/kebersihan-kelas" element={<KebersihanKelasPage />} />
-            <Route path="/wali/refleksi" element={<RefleksiPage />} />
-
-            {/* Pramuka — Regu & Anggota dihapus, Absensi diganti per-kelas */}
+            {/* Pramuka Routes */}
+            <Route path="/vocational/regu" element={<ReguPage />} />
+            <Route path="/vocational/anggota-regu" element={<AnggotaReguPage />} />
             <Route path="/vocational/absensi" element={<AbsensiPramukaPage />} />
-            <Route path="/pramuka/silabus" element={<SilabusKegiatanPage />} />
-            <Route path="/pramuka/laporan" element={<LaporanKegiatanPage />} />
-
-            {/* Vokasi */}
-            <Route path="/vokasi/lokasi-pkl" element={<LokasiPKLPage />} />
-            <Route path="/vokasi/progres-pkl" element={<ProgresPKLPage />} />
-            <Route path="/vokasi/nilai-pkl" element={<NilaiPKLPage />} />
-
-            {/* Kepala Sekolah */}
-            <Route path="/kepsek/absensi-guru" element={<RekapAbsensiGuruPage />} />
-            <Route path="/kepsek/absensi-siswa" element={<RekapAbsensiSiswaPage />} />
-            <Route path="/kepsek/perangkat-ajar" element={<PemeriksaanPerangkatPage />} />
-            <Route path="/kepsek/evaluasi-kinerja" element={<EvaluasiKinerjaPage />} />
-            <Route path="/kepsek/pkl" element={<PKLKepsekPage />} />
           </Routes>
         </main>
       </div>

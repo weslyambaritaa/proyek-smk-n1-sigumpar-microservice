@@ -1,6 +1,5 @@
 import { useState, useCallback } from "react";
 import * as api from "../api/guruApi";
-import toast from "react-hot-toast";
 
 export const useTeacherAttendance = () => {
   const [classes, setClasses] = useState([]);
@@ -24,8 +23,7 @@ export const useTeacherAttendance = () => {
     setLoading(true);
     try {
       const res = await api.getTeacherClasses();
-      const data = Array.isArray(res.data) ? res.data : (res.data?.data || []);
-      setClasses(data);
+      setClasses(res.data);
     } catch (err) {
       setError(err.response?.data?.message || err.message);
     } finally {
@@ -37,9 +35,8 @@ export const useTeacherAttendance = () => {
     setLoading(true);
     try {
       const res = await api.getSubjectsByClass(classId);
-      const data = Array.isArray(res.data) ? res.data : (res.data?.data || []);
-      setSubjects(data);
-      if (data.length === 1) setSelectedSubject(data[0]);
+      setSubjects(res.data);
+      if (res.data.length === 1) setSelectedSubject(res.data[0]);
     } catch (err) {
       setError(err.response?.data?.message || err.message);
     } finally {
@@ -51,8 +48,7 @@ export const useTeacherAttendance = () => {
     setLoading(true);
     try {
       const res = await api.getClassStudents(classId);
-      const data = Array.isArray(res.data) ? res.data : (res.data?.data || []);
-      setStudents(data);
+      setStudents(res.data);
       // reset attendance when students change
       setAttendance({});
     } catch (err) {
@@ -67,9 +63,8 @@ export const useTeacherAttendance = () => {
     setLoading(true);
     try {
       const res = await api.getAttendanceByClass(classId, date, subjectId);
-      const rows = Array.isArray(res.data) ? res.data : (res.data?.data || []);
       const existing = {};
-      rows.forEach((item) => {
+      res.data.forEach((item) => {
         existing[item.id_siswa] = {
           status: item.status,
           keterangan: item.keterangan || "",
@@ -101,13 +96,10 @@ export const useTeacherAttendance = () => {
           ),
         };
         await api.saveBulkAttendance(payload);
-        toast.success("Absensi siswa berhasil disimpan!");
         // Re-fetch to update stats
         await fetchAttendance(classId, date, subjectId);
       } catch (err) {
-        const msg = err.response?.data?.message || err.message || "Gagal menyimpan absensi";
-        setError(msg);
-        toast.error(msg);
+        setError(err.response?.data?.message || err.message);
       } finally {
         setLoading(false);
       }

@@ -1,28 +1,31 @@
 const express = require("express");
+const cors = require("cors");
 const helmet = require("helmet");
 const morgan = require("morgan");
-const path = require("path");
 const { errorHandler } = require("./middleware/errorHandler");
-const assetRoutes = require("./routes/assetRoutes");
 
 const app = express();
 const PORT = process.env.PORT || 3004;
 
-app.use(helmet({ crossOriginResourcePolicy: false }));
+// Middleware global (identik dengan users-service)
+app.use(helmet());
+// app.use(cors({ origin: process.env.CORS_ORIGIN || "*" }));
 app.use(morgan("dev"));
-app.use(express.json({ limit: "10mb" }));
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
 
+// Health check endpoint
 app.get("/health", (req, res) => {
   res.json({
     status: "OK",
-    service: "asset-service",
+    service: "todos-service",
     timestamp: new Date().toISOString(),
   });
 });
 
-app.use("/api/asset", assetRoutes);
+// Mount routes
+app.use("/todos", todoRoutes);
 
+// 404 handler
 app.use((req, res) => {
   res.status(404).json({
     success: false,
@@ -30,8 +33,9 @@ app.use((req, res) => {
   });
 });
 
+// Error handler (selalu di akhir)
 app.use(errorHandler);
 
-app.listen(PORT, "0.0.0.0", () => {
-  console.log(`Asset Service running on port ${PORT}`);
+app.listen(PORT, () => {
+    console.log(`Asset Service running on port ${PORT}`);
 });

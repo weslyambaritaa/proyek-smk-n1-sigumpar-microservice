@@ -136,24 +136,12 @@ const ArsipSuratPage = () => {
                 <td className="px-6 py-4">{arsip.id}</td>
                 <td className="px-6 py-4 font-medium">{arsip.nomor_surat}</td>
                 <td className="px-6 py-4">
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => {
-                        const url = academicApi.getArsipSuratPreviewUrl(arsip.id);
-                        window.open(url, '_blank');
-                      }}
-                      className="text-blue-600 hover:text-blue-800 underline font-medium text-left text-sm"
-                    >
-                      👁 Lihat
-                    </button>
-                    <span className="text-gray-300">|</span>
-                    <button
-                      onClick={() => handleDownload(arsip.file_url, arsip.nomor_surat)}
-                      className="text-green-600 hover:text-green-800 underline font-medium text-left text-sm"
-                    >
-                      ⬇ Unduh
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => handleDownload(arsip.file_url, arsip.nomor_surat)}
+                    className="text-blue-600 hover:text-blue-800 underline font-medium text-left"
+                  >
+                    Download File
+                  </button>
                 </td>
                 <td className="px-6 py-4 text-center relative" ref={openMenuId === arsip.id ? menuRef : null}>
                   <button

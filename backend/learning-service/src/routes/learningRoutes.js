@@ -30,7 +30,6 @@ router.route("/absensi-guru/:id").get(getAbsensiGuruById).put(updateAbsensiGuru)
 
 router.route("/perangkat").get(getAllPerangkat).post(uploadPerangkat);
 router.get("/perangkat/:id/download", downloadPerangkat);
-router.get("/perangkat/:id/view", downloadPerangkat);   // alias untuk preview inline
 router.delete("/perangkat/:id", deletePerangkat);
 
 module.exports = router;
