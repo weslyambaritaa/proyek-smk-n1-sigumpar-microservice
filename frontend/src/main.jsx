@@ -6,8 +6,10 @@ import keycloak from './keycloak' // Import konfigurasi yang baru Anda buat
 
 // Inisialisasi Keycloak
 keycloak.init({ 
-  onLoad: 'login-required', // Memaksa login saat web dibuka
-  checkLoginIframe: false 
+  onLoad: 'login-required',
+  checkLoginIframe: false,
+  pkceMethod: 'S256',
+  flow: 'standard'
 }).then((authenticated) => {
   if (authenticated) {
     
