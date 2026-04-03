@@ -11,6 +11,7 @@ x-service-template: &service-template
     - DB_PASSWORD=password
 
 services:
+  # ── KEYCLOAK DATABASE ────────────────────────────────────────────────────
   keycloak-db:
     image: postgres:15
     container_name: keycloak-db
@@ -24,10 +25,11 @@ services:
       - keycloak_db_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U keycloak"]
-      interval: 10s
+      interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 10
 
+  # ── KEYCLOAK (Auth Provider) ─────────────────────────────────────────────
   keycloak:
     image: quay.io/keycloak/keycloak:22.0.1
     container_name: keycloak
@@ -40,21 +42,23 @@ services:
       KEYCLOAK_ADMIN_PASSWORD: admin
     ports:
       - "8080:8080"
+    command: start-dev
     depends_on:
       keycloak-db:
         condition: service_healthy
     networks:
       - microservices-network
     volumes:
-      - ./keycloak-init/realm-export.json:/opt/keycloak/data/import/realm.json:ro
-    command: start-dev --import-realm
+      - ./keycloak-init:/opt/keycloak/data/import
+    # Diperpanjang: Keycloak butuh 2-3 menit untuk startup penuh
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8080/health/ready || exit 1"]
-      interval: 30s
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/health/ready || exit 1"]
+      interval: 15s
       timeout: 10s
-      retries: 10
-      start_period: 60s
+      retries: 20
+      start_period: 120s
 
+  # ── AUTH SERVICE ─────────────────────────────────────────────────────────
   auth-service:
     <<: *service-template
     build: ./backend/auth-service
@@ -68,16 +72,18 @@ services:
       - DATABASE_URL=postgres://auth_user:password@localhost:5432/auth_db
       - KEYCLOAK_URL=http://keycloak:8080
       - KEYCLOAK_REALM=smk-sigumpar
+    # Tidak lagi tunggu keycloak healthy - auth-service punya retry sendiri
     depends_on:
-      keycloak:
+      keycloak-db:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:3005/health || exit 1"]
+      test: ["CMD-SHELL", "curl -sf http://localhost:3005/health || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 5
       start_period: 30s
 
+  # ── ACADEMIC SERVICE ─────────────────────────────────────────────────────
   academic-service:
     <<: *service-template
     build: ./backend/academic-service
@@ -89,16 +95,18 @@ services:
       - DB_HOST=localhost
       - DB_PASSWORD=password
       - DATABASE_URL=postgres://academic_user:password@localhost:5432/academic_db
+    # Tidak tunggu keycloak - auth dihandle oleh nginx gateway
     depends_on:
-      keycloak:
+      keycloak-db:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:3003/health || exit 1"]
+      test: ["CMD-SHELL", "curl -sf http://localhost:3003/health || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 5
-      start_period: 30s
+      start_period: 40s
 
+  # ── ASSET SERVICE ────────────────────────────────────────────────────────
   asset-service:
     <<: *service-template
     build: ./backend/asset-service
@@ -111,15 +119,16 @@ services:
       - DB_PASSWORD=password
       - DATABASE_URL=postgres://asset_user:password@localhost:5432/asset_db
     depends_on:
-      keycloak:
+      keycloak-db:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:3004/health || exit 1"]
+      test: ["CMD-SHELL", "curl -sf http://localhost:3004/health || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 5
-      start_period: 30s
+      start_period: 40s
 
+  # ── LEARNING SERVICE ─────────────────────────────────────────────────────
   learning-service:
     <<: *service-template
     build: ./backend/learning-service
@@ -132,15 +141,16 @@ services:
       - DB_PASSWORD=password
       - DATABASE_URL=postgres://learning_user:password@localhost:5432/learning_db
     depends_on:
-      keycloak:
+      keycloak-db:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:3006/health || exit 1"]
+      test: ["CMD-SHELL", "curl -sf http://localhost:3006/health || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 5
-      start_period: 30s
+      start_period: 40s
 
+  # ── STUDENT SERVICE ──────────────────────────────────────────────────────
   student-service:
     <<: *service-template
     build: ./backend/student-service
@@ -153,15 +163,16 @@ services:
       - DB_PASSWORD=password
       - DATABASE_URL=postgres://student_user:password@localhost:5432/student_db
     depends_on:
-      keycloak:
+      keycloak-db:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:3008/health || exit 1"]
+      test: ["CMD-SHELL", "curl -sf http://localhost:3008/health || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 5
-      start_period: 30s
+      start_period: 40s
 
+  # ── VOCATIONAL SERVICE ───────────────────────────────────────────────────
   vocational-service:
     <<: *service-template
     build: ./backend/vocational-service
@@ -174,15 +185,16 @@ services:
       - DB_PASSWORD=password
       - DATABASE_URL=postgres://vocational_user:password@localhost:5432/vocational_db
     depends_on:
-      keycloak:
+      keycloak-db:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:3007/health || exit 1"]
+      test: ["CMD-SHELL", "curl -sf http://localhost:3007/health || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 5
-      start_period: 30s
+      start_period: 40s
 
+  # ── API GATEWAY (Nginx) ──────────────────────────────────────────────────
   api-gateway:
     image: nginx:alpine
     container_name: api-gateway
@@ -199,12 +211,17 @@ services:
         condition: service_healthy
       learning-service:
         condition: service_healthy
+      vocational-service:
+        condition: service_healthy
+      asset-service:
+        condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost/health || exit 1"]
+      test: ["CMD-SHELL", "curl -sf http://localhost/health || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
 
+  # ── FRONTEND ─────────────────────────────────────────────────────────────
   frontend:
     build: ./frontend
     container_name: frontend
@@ -220,6 +237,7 @@ services:
     depends_on:
       api-gateway:
         condition: service_healthy
+    restart: unless-stopped
 
 networks:
   microservices-network:
