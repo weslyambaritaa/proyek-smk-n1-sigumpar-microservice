@@ -1,49 +1,86 @@
-import axios from 'axios';
-import keycloak from '../keycloak';
-import toast from 'react-hot-toast';
+import axios from "axios";
+import keycloak from "../keycloak";
+import toast from "react-hot-toast";
+
+// Ambil URL API dari env.
+// Gunakan gateway sebagai satu pintu masuk, mis. http://localhost:8001
+const API_BASE_URL =
+  (import.meta.env.VITE_API_URL || "http://localhost:8001").replace(/\/+$/, "");
 
 const axiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8001',
+  baseURL: API_BASE_URL,
+  timeout: 15000,
+  headers: {
+    "Content-Type": "application/json",
+  },
 });
 
-// Interceptor Request: Cek dan refresh token SEBELUM dikirim
+// Supaya toast tidak spam berulang
+let isRedirectingToLogin = false;
+
+const redirectToLoginOnce = (message = "Sesi Anda habis. Mengarahkan ke halaman login...") => {
+  if (isRedirectingToLogin) return;
+
+  isRedirectingToLogin = true;
+  toast.error(message);
+
+  setTimeout(() => {
+    keycloak.login();
+  }, 1500);
+};
+
+// Interceptor Request
 axiosInstance.interceptors.request.use(
   async (config) => {
-    if (keycloak.token) {
-      try {
+    try {
+      // Pastikan config.headers selalu ada
+      config.headers = config.headers || {};
+
+      // Kalau user sudah login via keycloak, refresh token dulu
+      if (keycloak.authenticated) {
         await keycloak.updateToken(30);
-        config.headers.Authorization = `Bearer ${keycloak.token}`;
-      } catch (error) {
-        toast.error("Sesi Anda habis. Mengarahkan ke halaman login...");
-        setTimeout(() => keycloak.login(), 1500);
+
+        if (keycloak.token) {
+          config.headers.Authorization = `Bearer ${keycloak.token}`;
+        }
       }
+
+      return config;
+    } catch (error) {
+      // Kalau refresh token gagal, batalkan request
+      redirectToLoginOnce();
+      return Promise.reject(error);
     }
-    return config;
   },
   (error) => Promise.reject(error)
 );
 
-// Interceptor Response: Tangani Error dari Backend (Token Expired / Server Mati)
+// Interceptor Response
 axiosInstance.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response) {
-      // Jika Backend menolak karena Token Invalid/Expired (401 atau 403)
-      if (error.response.status === 401 || error.response.status === 403) {
-        toast.error("Sesi Anda telah habis. Silakan login kembali.");
-        // Beri waktu 2 detik agar notifikasi terbaca sebelum redirect
-        setTimeout(() => {
-          keycloak.login();
-        }, 2000); 
-      } 
-      // Jika Backend mati (502 Bad Gateway)
-      else if (error.response.status === 502) {
-        toast.error("Server sedang bermasalah atau tidak dapat dijangkau.");
+      const status = error.response.status;
+
+      if (status === 401 || status === 403) {
+        redirectToLoginOnce("Sesi Anda telah habis. Silakan login kembali.");
+      } else if (status === 500) {
+        toast.error("Server mengalami kesalahan internal.");
+      } else if (status === 502) {
+        toast.error("Gateway tidak bisa menjangkau service backend.");
+      } else if (status === 503) {
+        toast.error("Service backend sedang tidak tersedia.");
+      } else if (status === 504) {
+        toast.error("Server terlalu lama merespons.");
       }
+    } else if (error.request) {
+      // Request terkirim tapi tidak ada response
+      toast.error("Gagal terhubung ke server. Periksa apakah API gateway aktif.");
     } else {
-       // Jika tidak ada respon sama sekali (misal jaringan terputus)
-       toast.error("Gagal terhubung ke server.");
+      // Error saat setup request
+      toast.error("Terjadi kesalahan saat menyiapkan request.");
     }
+
     return Promise.reject(error);
   }
 );
