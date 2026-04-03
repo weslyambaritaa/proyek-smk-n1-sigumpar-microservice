@@ -8,13 +8,15 @@ const extractIdentity = require('../middleware/extractIdentity');
 // ── PRAMUKA: REGU & ANGGOTA ───────────────────────────────────────────────
 router.get('/regu',                pramukaController.getAllRegu);
 router.post('/regu',               pramukaController.createRegu);
+router.delete('/regu/:id',         pramukaController.deleteRegu);
 router.get('/regu/siswa-tersedia', pramukaController.getSiswaTersedia);
 router.post('/regu/assign',        pramukaController.assignSiswaToRegu);
 router.get('/regu/:regu_id/siswa', pramukaController.getSiswaByRegu);
 
-// ── PRAMUKA: ABSENSI ──────────────────────────────────────────────────────
-router.get('/absensi',             pramukaController.getAbsensiPramuka);
-router.post('/absensi',            pramukaController.submitAbsensiPramuka);
+// ── PRAMUKA: ABSENSI (per-kelas dari academic, seperti absensi siswa) ─────
+router.get('/absensi',  pramukaController.getAbsensiPramuka);
+router.post('/absensi', pramukaController.submitAbsensiPramuka);
+router.get('/absensi/rekap', pramukaController.getRekapAbsensiPramuka);
 
 // ── PRAMUKA: SILABUS ──────────────────────────────────────────────────────
 router.get('/silabus',             pramukaController.getAllSilabus);
@@ -26,6 +28,10 @@ router.post('/upload', upload.single('file_laporan'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'Tidak ada file yang diupload' });
   res.json({ file_url: `/uploads/${req.file.filename}` });
 });
+
+// ── VOKASI: PROXY SISWA & KELAS dari Academic Service ────────────────────
+router.get('/siswa',  extractIdentity, pklController.getSiswaForVokasi);
+router.get('/kelas',  extractIdentity, pklController.getKelasForVokasi);
 
 // ── PKL: LOKASI ───────────────────────────────────────────────────────────
 router.get('/pkl/lokasi',        extractIdentity, pklController.getAllLokasiPKL);

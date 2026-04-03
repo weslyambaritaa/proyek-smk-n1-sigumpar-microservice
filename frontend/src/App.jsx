@@ -32,9 +32,8 @@ import KebersihanKelasPage from "./pages/wali-kelas/KebersihanKelasPage";
 import RefleksiPage from "./pages/wali-kelas/RefleksiPage";
 
 // --- Pramuka ---
-import ReguPage from "./pages/pramuka/regu/ReguPage";
-import AnggotaReguPage from "./pages/pramuka/anggota_regu/AnggotaReguPage";
 import AbsensiPramukaPage from "./pages/pramuka/absensi/AbsensiPramukaPage";
+import GuruPage from "./pages/tata-usaha/guru/GuruPage";
 import SilabusKegiatanPage from "./pages/pramuka/SilabusKegiatanPage";
 import LaporanKegiatanPage from "./pages/pramuka/LaporanKegiatanPage";
 
@@ -214,6 +213,9 @@ const App = () => {
                   <NavLink to="/academic/siswa" className={subNavClass}>
                     Data Siswa
                   </NavLink>
+                  <NavLink to="/academic/guru" className={subNavClass}>
+                    Data Guru
+                  </NavLink>
                   <NavLink to="/academic/pengumuman" className={subNavClass}>
                     Pengumuman
                   </NavLink>
@@ -243,12 +245,6 @@ const App = () => {
                   isOpen={openMenus["pramuka"]}
                   onClick={() => toggleMenu("pramuka")}
                 >
-                  <NavLink to="/vocational/regu" className={subNavClass}>
-                    Manajemen Regu
-                  </NavLink>
-                  <NavLink to="/vocational/anggota-regu" className={subNavClass}>
-                    Plotting Anggota
-                  </NavLink>
                   <NavLink to="/vocational/absensi" className={subNavClass}>
                     Absensi Pramuka
                   </NavLink>
@@ -307,6 +303,7 @@ const App = () => {
             {/* Tata Usaha */}
             <Route path="/academic/kelas" element={<KelasPage />} />
             <Route path="/academic/siswa" element={<SiswaPage />} />
+            <Route path="/academic/guru" element={<GuruPage />} />
             <Route path="/academic/pengumuman" element={<PengumumanPage />} />
             <Route path="/academic/arsip-surat" element={<ArsipSuratPage />} />
             <Route path="/academic/mapel" element={<MapelPage />} />
@@ -328,9 +325,7 @@ const App = () => {
             <Route path="/wali/kebersihan-kelas" element={<KebersihanKelasPage />} />
             <Route path="/wali/refleksi" element={<RefleksiPage />} />
 
-            {/* Pramuka */}
-            <Route path="/vocational/regu" element={<ReguPage />} />
-            <Route path="/vocational/anggota-regu" element={<AnggotaReguPage />} />
+            {/* Pramuka — Regu & Anggota dihapus, Absensi diganti per-kelas */}
             <Route path="/vocational/absensi" element={<AbsensiPramukaPage />} />
             <Route path="/pramuka/silabus" element={<SilabusKegiatanPage />} />
             <Route path="/pramuka/laporan" element={<LaporanKegiatanPage />} />

@@ -57,27 +57,31 @@ exports.getSiswaByRegu = async (req, res) => {
 // ── ABSENSI PRAMUKA ───────────────────────────────────────────────────────
 
 exports.submitAbsensiPramuka = async (req, res) => {
-  const { regu_id, tanggal, deskripsi, file_url, data_absensi } = req.body;
-  if (!regu_id || !tanggal || !Array.isArray(data_absensi)) {
-    return res.status(400).json({ error: 'Data tidak lengkap' });
+  // Support kelas_id (baru) ATAU regu_id (lama)
+  const { kelas_id, regu_id, tanggal, deskripsi, file_url, data_absensi } = req.body;
+  const kelasOrRegu = kelas_id || regu_id;
+
+  if (!kelasOrRegu || !tanggal || !Array.isArray(data_absensi)) {
+    return res.status(400).json({ error: 'kelas_id, tanggal, dan data_absensi wajib diisi' });
   }
   const client = await db.connect();
   try {
     await client.query('BEGIN');
-    // Simpan laporan
+    // Simpan laporan (regu_id kolom digunakan untuk kelas_id juga agar backward compat)
     await client.query(
       'INSERT INTO laporan_pramuka (regu_id, tanggal, deskripsi, file_url) VALUES ($1, $2, $3, $4)',
-      [regu_id, tanggal, deskripsi || '', file_url || '']
+      [kelasOrRegu, tanggal, deskripsi || '', file_url || '']
     );
     // Simpan absensi
     for (const item of data_absensi) {
-      const { siswa_id, status } = item;
+      const { siswa_id, nama_lengkap, status } = item;
       if (!siswa_id) continue;
       await client.query(
-        `INSERT INTO absensi_pramuka (regu_id, siswa_id, tanggal, status)
-         VALUES ($1, $2, $3, $4)
-         ON CONFLICT DO NOTHING`,
-        [regu_id, siswa_id, tanggal, status || 'Hadir']
+        `INSERT INTO absensi_pramuka (regu_id, siswa_id, tanggal, status, nama_lengkap, kelas_id)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         ON CONFLICT (regu_id, siswa_id, tanggal) DO UPDATE
+         SET status = EXCLUDED.status, nama_lengkap = EXCLUDED.nama_lengkap`,
+        [kelasOrRegu, siswa_id, tanggal, status || 'Hadir', nama_lengkap || '', kelas_id || kelasOrRegu]
       );
     }
     await client.query('COMMIT');
@@ -92,18 +96,19 @@ exports.submitAbsensiPramuka = async (req, res) => {
 
 // Riwayat absensi pramuka
 exports.getAbsensiPramuka = async (req, res) => {
-  const { regu_id, tanggal } = req.query;
+  const { regu_id, kelas_id, tanggal, tanggal_mulai, tanggal_akhir } = req.query;
+  const kelasFilter = kelas_id || regu_id;
   try {
     let query = `
-      SELECT ap.*, k.nama_regu, ar.nama_lengkap
+      SELECT ap.*, ap.nama_lengkap
       FROM absensi_pramuka ap
-      LEFT JOIN kelas_pramuka k ON ap.regu_id = k.id
-      LEFT JOIN anggota_regu ar ON ar.regu_id = ap.regu_id AND ar.siswa_id = ap.siswa_id
       WHERE 1=1`;
     const params = [];
     let idx = 1;
-    if (regu_id) { query += ` AND ap.regu_id = $${idx++}`; params.push(regu_id); }
+    if (kelasFilter) { query += ` AND ap.regu_id = $${idx++}`; params.push(kelasFilter); }
     if (tanggal) { query += ` AND ap.tanggal = $${idx++}`; params.push(tanggal); }
+    if (tanggal_mulai) { query += ` AND ap.tanggal >= $${idx++}`; params.push(tanggal_mulai); }
+    if (tanggal_akhir) { query += ` AND ap.tanggal <= $${idx++}`; params.push(tanggal_akhir); }
     query += ' ORDER BY ap.tanggal DESC, ap.id ASC';
     const result = await db.query(query, params);
     res.json({ success: true, data: result.rows });
@@ -136,5 +141,39 @@ exports.deleteSilabus = async (req, res) => {
   try {
     await db.query('DELETE FROM silabus_pramuka WHERE id = $1', [req.params.id]);
     res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+};
+
+exports.deleteRegu = async (req, res) => {
+  try {
+    await db.query('DELETE FROM kelas_pramuka WHERE id = $1', [req.params.id]);
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+};
+
+exports.getRekapAbsensiPramuka = async (req, res) => {
+  const { tanggal_mulai, tanggal_akhir, regu_id } = req.query;
+  try {
+    let query = `
+      SELECT
+        ar.siswa_id, ar.nama_lengkap, k.nama_regu,
+        COUNT(CASE WHEN ap.status = 'Hadir' THEN 1 END) AS hadir,
+        COUNT(CASE WHEN ap.status = 'Izin'  THEN 1 END) AS izin,
+        COUNT(CASE WHEN ap.status = 'Sakit' THEN 1 END) AS sakit,
+        COUNT(CASE WHEN ap.status = 'Alpa'  THEN 1 END) AS alpa,
+        COUNT(ap.id) AS total
+      FROM anggota_regu ar
+      JOIN kelas_pramuka k ON ar.regu_id = k.id
+      LEFT JOIN absensi_pramuka ap ON ap.siswa_id = ar.siswa_id AND ap.regu_id = ar.regu_id
+        AND ($2::DATE IS NULL OR ap.tanggal >= $2)
+        AND ($3::DATE IS NULL OR ap.tanggal <= $3)
+      WHERE 1=1
+    `;
+    const params = [null, tanggal_mulai || null, tanggal_akhir || null];
+    let idx = 4;
+    if (regu_id) { query += ` AND ar.regu_id = $${idx++}`; params.push(regu_id); params[0] = regu_id; }
+    query += ' GROUP BY ar.siswa_id, ar.nama_lengkap, k.nama_regu ORDER BY k.nama_regu, ar.nama_lengkap';
+    const result = await db.query(query, params.filter((_, i) => i !== 0 || regu_id));
+    res.json({ success: true, data: result.rows });
   } catch (err) { res.status(500).json({ error: err.message }); }
 };

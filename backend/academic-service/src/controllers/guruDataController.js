@@ -55,3 +55,22 @@ exports.deleteGuru = async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 };
+
+// Search Guru (untuk dropdown di komponen lain)
+exports.searchGuru = async (req, res) => {
+  const { q, nama } = req.query;
+  const keyword = q || nama || '';
+  try {
+    const result = await pool.query(
+      `SELECT id, nip, nama_lengkap, jabatan, mata_pelajaran, email, no_telepon
+       FROM guru
+       WHERE LOWER(nama_lengkap) LIKE $1 OR LOWER(nip) LIKE $1
+       ORDER BY nama_lengkap ASC
+       LIMIT 50`,
+      [`%${keyword.toLowerCase()}%`]
+    );
+    res.json({ success: true, data: result.rows });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};

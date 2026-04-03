@@ -1,4 +1,34 @@
 const db = require('../config/db');
+const axios = require('axios');
+
+// Helper: ambil data siswa dari academic service
+const getSiswaFromAcademic = async (kelas_id, authToken) => {
+  try {
+    const url = `http://academic-service:3003/api/academic/siswa${kelas_id ? `?kelas_id=${kelas_id}` : ''}`;
+    const headers = authToken ? { Authorization: authToken } : {};
+    const resp = await axios.get(url, { headers, timeout: 5000 });
+    const data = resp.data;
+    return Array.isArray(data) ? data : (data?.data || []);
+  } catch (err) {
+    console.error('[getSiswaFromAcademic]', err.message);
+    return [];
+  }
+};
+
+// Helper: ambil daftar kelas dari academic service
+const getKelasFromAcademic = async (authToken) => {
+  try {
+    const resp = await axios.get('http://academic-service:3003/api/academic/kelas', {
+      headers: authToken ? { Authorization: authToken } : {},
+      timeout: 5000,
+    });
+    const data = resp.data;
+    return Array.isArray(data) ? data : (data?.data || []);
+  } catch (err) {
+    console.error('[getKelasFromAcademic]', err.message);
+    return [];
+  }
+};
 
 // ── LOKASI PKL ────────────────────────────────────────────────────────────
 
@@ -13,10 +43,8 @@ exports.getAllLokasiPKL = async (req, res) => {
 };
 
 exports.createLokasiPKL = async (req, res) => {
-  const {
-    siswa_id, nama_siswa, nama_perusahaan, alamat, posisi,
-    deskripsi_pekerjaan, pembimbing_industri, kontak_pembimbing, tanggal
-  } = req.body;
+  const { siswa_id, nama_siswa, nama_perusahaan, alamat, posisi,
+    deskripsi_pekerjaan, pembimbing_industri, kontak_pembimbing, tanggal } = req.body;
 
   let foto_url = null;
   if (req.file) foto_url = `/uploads/${req.file.filename}`;
@@ -31,12 +59,10 @@ exports.createLokasiPKL = async (req, res) => {
        (siswa_id, nama_siswa, nama_perusahaan, alamat, posisi,
         deskripsi_pekerjaan, pembimbing_industri, kontak_pembimbing, tanggal, foto_url)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
-      [
-        siswa_id || null, nama_siswa || null, nama_perusahaan,
-        alamat || null, posisi || null, deskripsi_pekerjaan || null,
-        pembimbing_industri || null, kontak_pembimbing || null,
-        tanggal || new Date().toISOString().slice(0,10), foto_url
-      ]
+      [siswa_id || null, nama_siswa || null, nama_perusahaan,
+       alamat || null, posisi || null, deskripsi_pekerjaan || null,
+       pembimbing_industri || null, kontak_pembimbing || null,
+       tanggal || new Date().toISOString().slice(0,10), foto_url]
     );
     res.status(201).json({ success: true, data: result.rows[0] });
   } catch (err) {
@@ -47,10 +73,8 @@ exports.createLokasiPKL = async (req, res) => {
 
 exports.updateLokasiPKL = async (req, res) => {
   const { id } = req.params;
-  const {
-    nama_siswa, nama_perusahaan, alamat, posisi,
-    deskripsi_pekerjaan, pembimbing_industri, kontak_pembimbing, tanggal
-  } = req.body;
+  const { nama_siswa, nama_perusahaan, alamat, posisi,
+    deskripsi_pekerjaan, pembimbing_industri, kontak_pembimbing, tanggal } = req.body;
   let foto_url = req.body.foto_url || null;
   if (req.file) foto_url = `/uploads/${req.file.filename}`;
 
@@ -136,20 +160,38 @@ exports.deleteProgresPKL = async (req, res) => {
 exports.getNilaiPKL = async (req, res) => {
   try {
     const { kelas_id, siswa_id } = req.query;
-    let query = `
-      SELECT n.*, s.nama_lengkap AS nama_siswa, k.nama_kelas
-      FROM nilai_pkl n
-      LEFT JOIN laporan_lokasi_pkl l ON n.siswa_id = l.siswa_id
-      LEFT JOIN kelas_pramuka k ON n.kelas_id = k.id
-      WHERE 1=1`;
+
+    // Ambil nilai dari DB lokal
+    let query = `SELECT n.* FROM nilai_pkl n WHERE 1=1`;
     const params = [];
     let idx = 1;
     if (kelas_id) { query += ` AND n.kelas_id = $${idx++}`; params.push(kelas_id); }
     if (siswa_id) { query += ` AND n.siswa_id = $${idx++}`; params.push(siswa_id); }
     query += ' ORDER BY n.siswa_id ASC';
-    const result = await db.query(query, params);
-    res.json({ success: true, data: result.rows });
+
+    const nilaiResult = await db.query(query, params);
+    const nilaiRows = nilaiResult.rows;
+
+    // Ambil data siswa dari academic service untuk nama_siswa & kelas
+    let siswaList = [];
+    if (kelas_id) {
+      const token = req.headers['authorization'];
+      siswaList = await getSiswaFromAcademic(kelas_id, token);
+    }
+
+    // Gabungkan data nilai dengan data siswa
+    const merged = nilaiRows.map(n => {
+      const siswa = siswaList.find(s => String(s.id) === String(n.siswa_id));
+      return {
+        ...n,
+        nama_siswa: siswa?.nama_lengkap || n.nama_siswa || '-',
+        nisn: siswa?.nisn || '-',
+      };
+    });
+
+    res.json({ success: true, data: merged });
   } catch (err) {
+    console.error('[getNilaiPKL]', err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -164,19 +206,21 @@ exports.saveNilaiPKLBulk = async (req, res) => {
     await client.query('BEGIN');
     const results = [];
     for (const item of nilai) {
-      const { siswa_id, nilai_praktik, nilai_sikap, nilai_laporan } = item;
+      const { siswa_id, nama_siswa, nilai_praktik, nilai_sikap, nilai_laporan } = item;
       if (!siswa_id) continue;
       const r = await client.query(
-        `INSERT INTO nilai_pkl (siswa_id, kelas_id, nilai_praktik, nilai_sikap, nilai_laporan)
-         VALUES ($1, $2, $3, $4, $5)
+        `INSERT INTO nilai_pkl (siswa_id, kelas_id, nama_siswa, nilai_praktik, nilai_sikap, nilai_laporan)
+         VALUES ($1, $2, $3, $4, $5, $6)
          ON CONFLICT (siswa_id, kelas_id)
          DO UPDATE SET
+           nama_siswa    = EXCLUDED.nama_siswa,
            nilai_praktik = EXCLUDED.nilai_praktik,
            nilai_sikap   = EXCLUDED.nilai_sikap,
            nilai_laporan = EXCLUDED.nilai_laporan,
            updated_at    = NOW()
          RETURNING *`,
-        [siswa_id, kelas_id || null, Number(nilai_praktik) || 0, Number(nilai_sikap) || 0, Number(nilai_laporan) || 0]
+        [siswa_id, kelas_id || null, nama_siswa || null,
+         Number(nilai_praktik) || 0, Number(nilai_sikap) || 0, Number(nilai_laporan) || 0]
       );
       results.push(r.rows[0]);
     }
@@ -184,6 +228,7 @@ exports.saveNilaiPKLBulk = async (req, res) => {
     res.json({ success: true, message: 'Nilai PKL berhasil disimpan', data: results });
   } catch (err) {
     await client.query('ROLLBACK');
+    console.error('[saveNilaiPKLBulk]', err);
     res.status(500).json({ error: err.message });
   } finally {
     client.release();
@@ -194,6 +239,29 @@ exports.deleteNilaiPKL = async (req, res) => {
   try {
     await db.query('DELETE FROM nilai_pkl WHERE id=$1', [req.params.id]);
     res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// ── SISWA (proxy dari academic service untuk vokasi) ──────────────────────
+exports.getSiswaForVokasi = async (req, res) => {
+  try {
+    const token = req.headers['authorization'];
+    const { kelas_id } = req.query;
+    const siswa = await getSiswaFromAcademic(kelas_id, token);
+    res.json({ success: true, data: siswa });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// ── KELAS (proxy dari academic service untuk vokasi) ──────────────────────
+exports.getKelasForVokasi = async (req, res) => {
+  try {
+    const token = req.headers['authorization'];
+    const kelas = await getKelasFromAcademic(token);
+    res.json({ success: true, data: kelas });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

@@ -316,6 +316,22 @@ export default function AbsensiGuruPage() {
                 className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
               />
               <button
+                onClick={() => {
+                  if (rows.length === 0) return;
+                  const hdr = ["No","Nama Guru","Tanggal","Jam Masuk","Status","Keterangan"];
+                  const csv = [hdr.join(","), ...rows.map((r,i) => [
+                    i+1, r.namaGuru, r.tanggal,
+                    r.jamMasuk ? new Date(r.jamMasuk).toLocaleTimeString("id-ID",{hour:"2-digit",minute:"2-digit"})+" WIB" : "-",
+                    r.status, r.keterangan||""
+                  ].map(v=>`"${v}"`).join(","))].join("\n");
+                  const blob = new Blob(["\ufeff"+csv],{type:"text/csv;charset=utf-8;"});
+                  const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+                  a.download = `absensi-guru-${filterTanggal||"semua"}.csv`; a.click();
+                }}
+                disabled={rows.length === 0}
+                className="px-3 py-1.5 border border-green-200 bg-green-50 rounded-lg text-xs font-semibold text-green-600 hover:bg-green-100 transition-all disabled:opacity-40"
+              >📊 Excel</button>
+              <button
                 onClick={loadData}
                 disabled={loading}
                 className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-semibold text-gray-600 hover:bg-gray-50 transition-all"
