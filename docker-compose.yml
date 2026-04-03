@@ -14,7 +14,6 @@ services:
   keycloak-db:
     image: postgres:15
     container_name: keycloak-db
-    restart: unless-stopped
     environment:
       POSTGRES_DB: keycloak
       POSTGRES_USER: keycloak
@@ -24,7 +23,7 @@ services:
     volumes:
       - keycloak_db_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U keycloak -d keycloak"]
+      test: ["CMD-SHELL", "pg_isready -U keycloak"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -32,7 +31,6 @@ services:
   keycloak:
     image: quay.io/keycloak/keycloak:22.0.1
     container_name: keycloak
-    restart: unless-stopped
     environment:
       KC_DB: postgres
       KC_DB_URL: jdbc:postgresql://keycloak-db:5432/keycloak
@@ -40,8 +38,6 @@ services:
       KC_DB_PASSWORD: keycloakpassword
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: admin
-      KC_HEALTH_ENABLED: "true"
-      KC_METRICS_ENABLED: "true"
     ports:
       - "8080:8080"
     depends_on:
@@ -52,9 +48,12 @@ services:
     volumes:
       - ./keycloak-init/realm-export.json:/opt/keycloak/data/import/realm.json:ro
     command: start-dev --import-realm
-    # Healthcheck DIHAPUS agar tidak memblokir seluruh stack
-    # karena sebelumnya container keycloak dinilai unhealthy
-    # walaupun service sempat berhasil start.
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/health/ready || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
 
   auth-service:
     <<: *service-template
@@ -69,10 +68,9 @@ services:
       - DATABASE_URL=postgres://auth_user:password@localhost:5432/auth_db
       - KEYCLOAK_URL=http://keycloak:8080
       - KEYCLOAK_REALM=smk-sigumpar
-      - KEYCLOAK_CLIENT_ID=smk-sigumpar
     depends_on:
       keycloak:
-        condition: service_started
+        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:3005/health || exit 1"]
       interval: 15s
@@ -91,12 +89,9 @@ services:
       - DB_HOST=localhost
       - DB_PASSWORD=password
       - DATABASE_URL=postgres://academic_user:password@localhost:5432/academic_db
-      - KEYCLOAK_URL=http://keycloak:8080
-      - KEYCLOAK_REALM=smk-sigumpar
-      - KEYCLOAK_CLIENT_ID=smk-sigumpar
     depends_on:
       keycloak:
-        condition: service_started
+        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:3003/health || exit 1"]
       interval: 15s
@@ -115,12 +110,9 @@ services:
       - DB_HOST=localhost
       - DB_PASSWORD=password
       - DATABASE_URL=postgres://asset_user:password@localhost:5432/asset_db
-      - KEYCLOAK_URL=http://keycloak:8080
-      - KEYCLOAK_REALM=smk-sigumpar
-      - KEYCLOAK_CLIENT_ID=smk-sigumpar
     depends_on:
       keycloak:
-        condition: service_started
+        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:3004/health || exit 1"]
       interval: 15s
@@ -139,12 +131,9 @@ services:
       - DB_HOST=localhost
       - DB_PASSWORD=password
       - DATABASE_URL=postgres://learning_user:password@localhost:5432/learning_db
-      - KEYCLOAK_URL=http://keycloak:8080
-      - KEYCLOAK_REALM=smk-sigumpar
-      - KEYCLOAK_CLIENT_ID=smk-sigumpar
     depends_on:
       keycloak:
-        condition: service_started
+        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:3006/health || exit 1"]
       interval: 15s
@@ -163,12 +152,9 @@ services:
       - DB_HOST=localhost
       - DB_PASSWORD=password
       - DATABASE_URL=postgres://student_user:password@localhost:5432/student_db
-      - KEYCLOAK_URL=http://keycloak:8080
-      - KEYCLOAK_REALM=smk-sigumpar
-      - KEYCLOAK_CLIENT_ID=smk-sigumpar
     depends_on:
       keycloak:
-        condition: service_started
+        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:3008/health || exit 1"]
       interval: 15s
@@ -187,12 +173,9 @@ services:
       - DB_HOST=localhost
       - DB_PASSWORD=password
       - DATABASE_URL=postgres://vocational_user:password@localhost:5432/vocational_db
-      - KEYCLOAK_URL=http://keycloak:8080
-      - KEYCLOAK_REALM=smk-sigumpar
-      - KEYCLOAK_CLIENT_ID=smk-sigumpar
     depends_on:
       keycloak:
-        condition: service_started
+        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:3007/health || exit 1"]
       interval: 15s
@@ -203,7 +186,6 @@ services:
   api-gateway:
     image: nginx:alpine
     container_name: api-gateway
-    restart: unless-stopped
     ports:
       - "8001:80"
     volumes:
@@ -217,12 +199,6 @@ services:
         condition: service_healthy
       learning-service:
         condition: service_healthy
-      asset-service:
-        condition: service_healthy
-      student-service:
-        condition: service_healthy
-      vocational-service:
-        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost/health || exit 1"]
       interval: 10s
@@ -232,7 +208,6 @@ services:
   frontend:
     build: ./frontend
     container_name: frontend
-    restart: unless-stopped
     ports:
       - "5173:5173"
     environment:

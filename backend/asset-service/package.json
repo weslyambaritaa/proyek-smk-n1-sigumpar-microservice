@@ -1,7 +1,7 @@
 {
-  "name": "todos-service",
+  "name": "asset-service",
   "version": "1.0.0",
-  "description": "",
+  "description": "Asset Service untuk SMK N1 Sigumpar",
   "main": "index.js",
   "scripts": {
     "start": "node src/index.js",
@@ -19,7 +19,8 @@
     "jsonwebtoken": "^9.0.3",
     "jwks-rsa": "^4.0.1",
     "morgan": "^1.10.1",
-    "uuid": "^13.0.0"
+    "pg": "^8.11.3",
+    "uuid": "^9.0.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.14"

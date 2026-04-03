@@ -1,6 +1,57 @@
-CREATE TABLE IF NOT EXISTS informasi_pengajuan (id SERIAL PRIMARY KEY, deskripsi TEXT, status VARCHAR(50));
-CREATE TABLE IF NOT EXISTS peminjaman_barang (id SERIAL PRIMARY KEY, user_id UUID, barang_id INTEGER, tanggal_pinjam DATE);
-CREATE TABLE IF NOT EXISTS pengajuan_alat_barang (id SERIAL PRIMARY KEY, user_id UUID, nama_alat VARCHAR(100), jumlah INTEGER);
-CREATE TABLE IF NOT EXISTS respon_peminjaman (id SERIAL PRIMARY KEY, peminjaman_id INTEGER, status VARCHAR(20));
-CREATE TABLE IF NOT EXISTS respon_pengajuan_bendahara (id SERIAL PRIMARY KEY, pengajuan_id INTEGER, status VARCHAR(20));
-CREATE TABLE IF NOT EXISTS respon_pengajuan_kepsek (id SERIAL PRIMARY KEY, pengajuan_id INTEGER, status VARCHAR(20));
+-- Asset Service Database Schema
+
+CREATE TABLE IF NOT EXISTS peminjaman_barang (
+    id SERIAL PRIMARY KEY,
+    user_id UUID,
+    barang_id INTEGER,
+    tanggal_pinjam DATE NOT NULL DEFAULT CURRENT_DATE,
+    tanggal_kembali DATE,
+    status VARCHAR(30) DEFAULT 'dipinjam',
+    keterangan TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS pengajuan_alat_barang (
+    id SERIAL PRIMARY KEY,
+    user_id UUID,
+    nama_alat VARCHAR(150) NOT NULL,
+    jumlah INTEGER DEFAULT 1,
+    status VARCHAR(30) DEFAULT 'menunggu',
+    keterangan TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS informasi_pengajuan (
+    id SERIAL PRIMARY KEY,
+    deskripsi TEXT,
+    status VARCHAR(50) DEFAULT 'aktif',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS respon_peminjaman (
+    id SERIAL PRIMARY KEY,
+    peminjaman_id INTEGER REFERENCES peminjaman_barang(id) ON DELETE CASCADE,
+    status VARCHAR(20),
+    catatan TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS respon_pengajuan_bendahara (
+    id SERIAL PRIMARY KEY,
+    pengajuan_id INTEGER REFERENCES pengajuan_alat_barang(id) ON DELETE CASCADE,
+    status VARCHAR(20),
+    catatan TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS respon_pengajuan_kepsek (
+    id SERIAL PRIMARY KEY,
+    pengajuan_id INTEGER REFERENCES pengajuan_alat_barang(id) ON DELETE CASCADE,
+    status VARCHAR(20),
+    catatan TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO asset_user;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO asset_user;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO asset_user;

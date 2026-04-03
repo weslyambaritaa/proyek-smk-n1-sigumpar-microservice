@@ -1,29 +1,27 @@
 const express = require("express");
-const verifyToken = require('../middleware/auth'); // Import middleware
 const router = express.Router();
+const extractIdentity = require("../middleware/extractIdentity");
 const {
-  getAllTodos,
-  getTodoById,
-  createTodo,
-  updateTodo,
-  deleteTodo,
+  getAllPeminjaman,
+  createPeminjaman,
+  updatePeminjaman,
+  deletePeminjaman,
+  getAllPengajuan,
+  createPengajuan,
+  updatePengajuan,
+  deletePengajuan,
 } = require("../controllers/assetController");
 
-/**
- * Routes untuk resource /todos
- *
- * GET    /todos       => Ambil semua todos (support filter via query params)
- * POST   /todos       => Buat todo baru
- * GET    /todos/:id   => Ambil todo tertentu
- * PUT    /todos/:id   => Update todo tertentu
- * DELETE /todos/:id   => Hapus todo tertentu
- */
+// ── PEMINJAMAN BARANG ────────────────────────────────────────────────────
+router.get("/peminjaman", extractIdentity, getAllPeminjaman);
+router.post("/peminjaman", extractIdentity, createPeminjaman);
+router.put("/peminjaman/:id", extractIdentity, updatePeminjaman);
+router.delete("/peminjaman/:id", extractIdentity, deletePeminjaman);
 
-router.route("/").get(getAllTodos).post(createTodo);
-router.route("/:id").get(getTodoById).put(updateTodo).delete(deleteTodo);
-
-// Tambahkan verifyToken sebelum memanggil fungsi controller
-router.get('/', verifyToken, controller.getAll);
-router.post('/', verifyToken, controller.create);
+// ── PENGAJUAN ALAT/BARANG ────────────────────────────────────────────────
+router.get("/pengajuan", extractIdentity, getAllPengajuan);
+router.post("/pengajuan", extractIdentity, createPengajuan);
+router.put("/pengajuan/:id", extractIdentity, updatePengajuan);
+router.delete("/pengajuan/:id", extractIdentity, deletePengajuan);
 
 module.exports = router;

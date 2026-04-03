@@ -1,32 +1,31 @@
 const express = require("express");
-const cors = require("cors");
 const helmet = require("helmet");
 const morgan = require("morgan");
-
-const setupKeycloak = require("./middleware/auth");
 const { errorHandler } = require("./middleware/errorHandler");
 
-// PERHATIKAN: Di student-service kita tidak boleh pakai userRoutes!
-// Jika Anda belum membuat studentRoutes, kita buat sementara seperti ini agar tidak error:
-const studentRoutes = express.Router();
-studentRoutes.get("/", (req, res) => res.json({ message: "Ini data students" }));
-
 const app = express();
+const PORT = process.env.PORT || 3008;
 
-app.use(helmet());
-// app.use(cors({ origin: "*" }));
+app.use(helmet({ crossOriginResourcePolicy: false }));
 app.use(morgan("dev"));
 app.use(express.json());
 
-app.get("/health", (req, res) => res.status(200).send("OK"));
+// Health check
+app.get("/health", (req, res) =>
+  res.json({ status: "OK", service: "student-service", timestamp: new Date().toISOString() })
+);
 
-const keycloak = setupKeycloak(app);
+// Placeholder routes - student data dikelola oleh academic-service
+app.use("/api/students", (req, res) => {
+  res.json({ success: true, message: "Student service aktif - data dikelola oleh academic-service" });
+});
 
-// PERHATIKAN: Path-nya adalah /api/students
-app.use("/api/students", keycloak.protect(), studentRoutes);
+app.use((req, res) =>
+  res.status(404).json({ success: false, message: `Route '${req.originalUrl}' tidak ditemukan` })
+);
 
-app.use((req, res) => res.status(404).json({ message: "Not found" }));
 app.use(errorHandler);
 
-const PORT = process.env.PORT || 3008;
-app.listen(PORT, () => console.log(`Student service running on port ${PORT}`));
+app.listen(PORT, "0.0.0.0", () =>
+  console.log(`Student Service running on port ${PORT}`)
+);
