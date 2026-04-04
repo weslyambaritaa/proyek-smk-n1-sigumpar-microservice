@@ -22,11 +22,8 @@ const JadwalPage = () => {
   const fetchJadwal = async () => {
     try {
       const resJadwal = await academicApi.getAllJadwal();
-      let users = [];
-      try {
-        const resUsers = await axiosInstance.get("/api/auth");
-        users = Array.isArray(resUsers.data) ? resUsers.data : (resUsers.data?.data || []);
-      } catch { /* users gagal, data utama tetap tampil */ }
+      const resUsers = await axiosInstance.get("/api/auth");
+      const users = Array.isArray(resUsers.data) ? resUsers.data : resUsers.data.data || [];
       const rawJadwal = Array.isArray(resJadwal.data) ? resJadwal.data : resJadwal.data.data || [];
 
       // Mapping UUID guru dengan data dari Auth Service
