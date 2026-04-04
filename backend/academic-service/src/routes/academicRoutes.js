@@ -109,16 +109,13 @@ router.post('/wali/refleksi', extractIdentity, waliKelasController.createRefleks
 router.get('/wali/rekap-nilai', extractIdentity, waliKelasController.getRekapNilaiWali);
 router.get('/wali/rekap-absensi', extractIdentity, waliKelasController.getRekapAbsensiWali);
 
+
 // ─── KEPALA SEKOLAH ──────────────────────────────────────────────────────────
 router.get('/kepsek/rekap-absensi-siswa', extractIdentity, kepsekController.getRekapAbsensiSiswa);
 router.get('/kepsek/rekap-nilai', extractIdentity, kepsekController.getRekapNilai);
 router.get('/kepsek/statistik', extractIdentity, kepsekController.getStatistikUmum);
 
-module.exports = router;
-
 // ─── WAKIL KEPALA SEKOLAH ────────────────────────────────────────────────────
-const wakilKepsekController = require('../controllers/wakilKepsekController');
-
 // Perangkat Pembelajaran
 router.get('/wakil/perangkat-guru', extractIdentity, wakilKepsekController.getDaftarGuruPerangkat);
 router.get('/wakil/perangkat-guru/:guruId', extractIdentity, wakilKepsekController.getPerangkatByGuru);
@@ -137,3 +134,5 @@ router.get('/wakil/program-kerja', extractIdentity, wakilKepsekController.getAll
 router.post('/wakil/program-kerja', extractIdentity, wakilKepsekController.createProgramKerja);
 router.put('/wakil/program-kerja/:id', extractIdentity, wakilKepsekController.updateProgramKerja);
 router.delete('/wakil/program-kerja/:id', extractIdentity, wakilKepsekController.deleteProgramKerja);
+
+module.exports = router;
