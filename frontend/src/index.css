@@ -5,14 +5,24 @@
 
 /* Animasi Slide dari Kanan */
 @keyframes slideInRight {
-  from {
-    transform: translateX(100%);
-  }
-  to {
-    transform: translateX(0);
-  }
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
 }
 
 .animate-slide-right {
-  animation: slideInRight 0.3s ease-out forwards;
+  animation: slideInRight 0.25s ease-out forwards;
 }
+
+/* Animasi fade in untuk modal */
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.97); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.2s ease-out forwards;
+}
+
+/* Scrollbar tipis untuk sidebar */
+aside::-webkit-scrollbar { width: 4px; }
+aside::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }

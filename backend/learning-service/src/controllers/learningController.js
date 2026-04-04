@@ -14,14 +14,20 @@ const writeTodos = (todos) =>
 const storage = multer.memoryStorage();
 const upload = multer({
   storage,
-  limits: { fileSize: 10 * 1024 * 1024 },
+  limits: { fileSize: 20 * 1024 * 1024 }, // 20MB
   fileFilter: (_req, file, cb) => {
     const allowed = [
       "application/pdf",
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "application/msword",
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "image/gif",
+      "image/webp",
     ];
     if (allowed.includes(file.mimetype)) cb(null, true);
-    else cb(new Error("Hanya file PDF dan DOCX yang diperbolehkan"));
+    else cb(new Error("Hanya file PDF, DOCX/DOC, dan gambar (JPG/PNG) yang diperbolehkan"));
   },
 });
 
@@ -169,6 +175,7 @@ const uploadPerangkat = async (req, res) => {
 
 const downloadPerangkat = async (req, res) => {
   const guruId = req.user?.sub || req.user?.id || req.user?.userId;
+  const isView = req.path.endsWith('/view');
   try {
     const result = await pool.query(
       "SELECT file_name, file_data, file_mime, guru_id FROM perangkat_pembelajaran WHERE id = $1",
@@ -176,11 +183,14 @@ const downloadPerangkat = async (req, res) => {
     );
     if (result.rows.length === 0) return res.status(404).json({ success: false, message: "Dokumen tidak ditemukan" });
     const doc = result.rows[0];
-    if (guruId && String(doc.guru_id) !== String(guruId)) {
-      return res.status(403).json({ success: false, message: "Akses ditolak" });
+    const mime = doc.file_mime || "application/octet-stream";
+    res.set("Content-Type", mime);
+    // Inline untuk preview, attachment untuk download
+    if (isView) {
+      res.set("Content-Disposition", `inline; filename="${doc.file_name}"`);
+    } else {
+      res.set("Content-Disposition", `attachment; filename="${doc.file_name}"`);
     }
-    res.set("Content-Type", doc.file_mime || "application/octet-stream");
-    res.set("Content-Disposition", `attachment; filename="${doc.file_name}"`);
     res.send(doc.file_data);
   } catch (err) {
     console.error("[downloadPerangkat]", err);
