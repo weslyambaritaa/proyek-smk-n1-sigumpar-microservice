@@ -9,54 +9,54 @@ const KelasPage = () => {
   const [kelasData, setKelasData] = useState([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedKelas, setSelectedKelas] = useState(null);
-
-  // State khusus Delete Sheet
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [kelasToDelete, setKelasToDelete] = useState(null);
   const [deleteConfirmation, setDeleteConfirmation] = useState("");
-
-  // State untuk Dropdown Menu
   const [openMenuId, setOpenMenuId] = useState(null);
+  const [loading, setLoading] = useState(false);
   const menuRef = useRef(null);
 
   const fetchKelas = async () => {
-  try {
-    const resKelas = await academicApi.getAllKelas();
-    const rawKelas = Array.isArray(resKelas.data)
-      ? resKelas.data
-      : resKelas.data.data || [];
-
-    let users = [];
-
+    setLoading(true);
     try {
-      const resUsers = await axiosInstance.get("/api/auth");
-      users = Array.isArray(resUsers.data)
-        ? resUsers.data
-        : resUsers.data.data || [];
+      // Ambil data kelas — ini WAJIB berhasil
+      const resKelas = await academicApi.getAllKelas();
+      const rawKelas = Array.isArray(resKelas.data)
+        ? resKelas.data
+        : resKelas.data?.data || [];
+
+      // Ambil data users (opsional — jika gagal, tetap tampilkan kelas)
+      let users = [];
+      try {
+        const resUsers = await axiosInstance.get("/api/auth");
+        users = Array.isArray(resUsers.data)
+          ? resUsers.data
+          : resUsers.data?.data || [];
+      } catch {
+        // Gagal ambil users tidak masalah — kelas tetap tampil, kolom wali jadi "-"
+      }
+
+      const kelasWithGuru = rawKelas.map((kelas) => {
+        const guru = users.find((u) => u.id === kelas.wali_kelas_id);
+        return {
+          ...kelas,
+          nama_wali: guru ? guru.username : "-",
+        };
+      });
+
+      setKelasData(kelasWithGuru);
     } catch (err) {
-      console.warn("Auth service gagal, lanjut tanpa nama wali", err);
+      console.error("Gagal mengambil data kelas:", err);
+      toast.error("Gagal memuat data kelas");
+    } finally {
+      setLoading(false);
     }
-
-    const kelasWithGuru = rawKelas.map((kelas) => {
-      const guru = users.find((u) => u.id === kelas.wali_kelas_id);
-      return {
-        ...kelas,
-        nama_wali: guru ? guru.username : "-",
-      };
-    });
-
-    setKelasData(kelasWithGuru);
-  } catch (err) {
-    console.error("Gagal mengambil data kelas:", err);
-    toast.error("Gagal memuat data kelas");
-  }
-};
+  };
 
   useEffect(() => {
     fetchKelas();
   }, []);
 
-  // Logika menutup menu saat klik di luar
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (menuRef.current && !menuRef.current.contains(event.target)) {
@@ -88,7 +88,6 @@ const KelasPage = () => {
       toast.error("Nama kelas tidak sesuai!");
       return;
     }
-
     const deletePromise = academicApi.deleteKelas(kelasToDelete.id);
     toast.promise(deletePromise, {
       loading: "Menghapus kelas...",
@@ -121,34 +120,48 @@ const KelasPage = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {kelasData.map((k) => (
-              <tr key={k.id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 font-medium">{k.nama_kelas}</td>
-                <td className="px-6 py-4">{k.tingkat}</td>
-                <td className="px-6 py-4">{k.nama_wali}</td>
-                <td className="px-6 py-4 text-center relative" ref={openMenuId === k.id ? menuRef : null}>
-                  <button
-                    onClick={() => setOpenMenuId(openMenuId === k.id ? null : k.id)}
-                    className="text-gray-500 hover:text-gray-800 p-2 rounded-full hover:bg-gray-100 transition-colors"
-                  >
-                    <span className="font-bold text-lg">⋮</span>
-                  </button>
-
-                  {openMenuId === k.id && (
-                    <div className="absolute right-6 mt-1 w-32 bg-white border border-gray-200 rounded-lg shadow-xl z-10 overflow-hidden">
-                      <div className="py-1">
-                        <button onClick={() => handleEdit(k)} className="w-full text-left px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 font-medium flex items-center gap-2">
-                          <span></span> Edit
-                        </button>
-                        <button onClick={() => handleDeleteClick(k)} className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 font-medium flex items-center gap-2 border-t border-gray-100">
-                          <span></span> Hapus
-                        </button>
-                      </div>
-                    </div>
-                  )}
+            {loading ? (
+              <tr>
+                <td colSpan={4} className="px-6 py-10 text-center text-gray-400">
+                  <div className="w-6 h-6 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-2" />
+                  Memuat data kelas...
                 </td>
               </tr>
-            ))}
+            ) : kelasData.length === 0 ? (
+              <tr>
+                <td colSpan={4} className="px-6 py-10 text-center text-gray-400">
+                  Belum ada data kelas. Klik <strong>+ Tambah Kelas</strong> untuk menambahkan.
+                </td>
+              </tr>
+            ) : (
+              kelasData.map((k) => (
+                <tr key={k.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 font-medium">{k.nama_kelas}</td>
+                  <td className="px-6 py-4">{k.tingkat || "-"}</td>
+                  <td className="px-6 py-4">{k.nama_wali}</td>
+                  <td className="px-6 py-4 text-center relative" ref={openMenuId === k.id ? menuRef : null}>
+                    <button
+                      onClick={() => setOpenMenuId(openMenuId === k.id ? null : k.id)}
+                      className="text-gray-500 hover:text-gray-800 p-2 rounded-full hover:bg-gray-100 transition-colors"
+                    >
+                      <span className="font-bold text-lg">⋮</span>
+                    </button>
+                    {openMenuId === k.id && (
+                      <div className="absolute right-6 mt-1 w-32 bg-white border border-gray-200 rounded-lg shadow-xl z-10 overflow-hidden">
+                        <div className="py-1">
+                          <button onClick={() => handleEdit(k)} className="w-full text-left px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 font-medium flex items-center gap-2">
+                            <span></span> Edit
+                          </button>
+                          <button onClick={() => handleDeleteClick(k)} className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 font-medium flex items-center gap-2 border-t border-gray-100">
+                            <span></span> Hapus
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
@@ -160,7 +173,6 @@ const KelasPage = () => {
         initialData={selectedKelas}
       />
 
-      {/* Panel Hapus Samping */}
       {isDeleteDialogOpen && (
         <div className="fixed inset-0 z-50 flex justify-end bg-black/50 backdrop-blur-sm">
           <div className="bg-white w-full max-w-md h-full shadow-2xl flex flex-col animate-slide-right">
