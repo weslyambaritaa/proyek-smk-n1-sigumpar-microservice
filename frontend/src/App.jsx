@@ -11,8 +11,8 @@ import MapelPage from "./pages/tata-usaha/mapel/MapelPage";
 import JadwalPage from "./pages/tata-usaha/jadwal/JadwalPage";
 import PiketPage from "./pages/tata-usaha/piket/PiketPage";
 import UpacaraPage from "./pages/tata-usaha/upacara/UpacaraPage";
-// Import halaman absensi siswa dengan flow baru (card kelas, mata pelajaran, dll)
 import AbsensiSiswa from "./pages/guru-mapel/absensi-siswa/AbsensiSiswa";
+import RekapAbsensiSiswa from "./pages/kepala-sekolah/RekapAbsensiSiswa";
 
 const NavDropdown = ({ title, icon, children, isOpen, onClick }) => {
   return (
@@ -88,6 +88,10 @@ const App = () => {
                 >
                   <NavLink to="/laporan-tahunan" className={subNavClass}>
                     Laporan Tahunan
+                  </NavLink>
+                  {/* MENU REKAP ABSENSI SISWA HANYA UNTUK KEPALA SEKOLAH */}
+                  <NavLink to="/rekap-absensi-siswa" className={subNavClass}>
+                    Rekap Absensi Siswa
                   </NavLink>
                 </NavDropdown>
               )}
@@ -219,6 +223,11 @@ const App = () => {
             <Route path="/academic/piket" element={<PiketPage />} />
             <Route path="/academic/upacara" element={<UpacaraPage />} />
             <Route path="/absensi-siswa" element={<AbsensiSiswa />} />
+            {/* Route untuk Rekap Absensi Siswa (hanya Kepala Sekolah) */}
+            <Route
+              path="/rekap-absensi-siswa"
+              element={<RekapAbsensiSiswa />}
+            />
             <Route
               path="/laporan-tahunan"
               element={<div>Laporan Tahunan</div>}

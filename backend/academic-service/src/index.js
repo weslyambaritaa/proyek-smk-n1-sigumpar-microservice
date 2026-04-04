@@ -7,6 +7,9 @@ const academicRoutes = require("./routes/academicRoutes");
 const { errorHandler } = require("./middleware/errorHandler");
 
 const app = express();
+
+app.use(extractIdentity);
+
 const PORT = process.env.PORT || 3003;
 
 // Middleware global

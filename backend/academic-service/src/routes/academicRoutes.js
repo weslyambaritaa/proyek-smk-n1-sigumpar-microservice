@@ -162,4 +162,45 @@ router.post("/upacara", extractIdentity, upacaraController.createUpacara);
 router.put("/upacara/:id", extractIdentity, upacaraController.updateUpacara);
 router.delete("/upacara/:id", extractIdentity, upacaraController.deleteUpacara);
 
+// ======================
+// GET endpoints - diizinkan untuk tata-usaha DAN kepala-sekolah
+// ======================
+router.get(
+  "/kelas",
+  authorize(["tata-usaha", "kepala-sekolah"]),
+  kelasController.getAllKelas,
+);
+router.get(
+  "/mapel",
+  authorize(["tata-usaha", "kepala-sekolah"]),
+  mapelController.getAllMapel,
+);
+
+// ======================
+// POST, PUT, DELETE - hanya tata-usaha (sesuai kebutuhan)
+// ======================
+router.post("/kelas", authorize(["tata-usaha"]), kelasController.createKelas);
+router.put(
+  "/kelas/:id",
+  authorize(["tata-usaha"]),
+  kelasController.updateKelas,
+);
+router.delete(
+  "/kelas/:id",
+  authorize(["tata-usaha"]),
+  kelasController.deleteKelas,
+);
+
+router.post("/mapel", authorize(["tata-usaha"]), mapelController.createMapel);
+router.put(
+  "/mapel/:id",
+  authorize(["tata-usaha"]),
+  mapelController.updateMapel,
+);
+router.delete(
+  "/mapel/:id",
+  authorize(["tata-usaha"]),
+  mapelController.deleteMapel,
+);
+
 module.exports = router;
