@@ -20,27 +20,37 @@ const KelasPage = () => {
   const menuRef = useRef(null);
 
   const fetchKelas = async () => {
+  try {
+    const resKelas = await academicApi.getAllKelas();
+    const rawKelas = Array.isArray(resKelas.data)
+      ? resKelas.data
+      : resKelas.data.data || [];
+
+    let users = [];
+
     try {
-      const resKelas = await academicApi.getAllKelas();
       const resUsers = await axiosInstance.get("/api/auth");
-      const users = Array.isArray(resUsers.data) ? resUsers.data : resUsers.data.data || [];
-
-      const rawKelas = Array.isArray(resKelas.data) ? resKelas.data : resKelas.data.data || [];
-
-      const kelasWithGuru = rawKelas.map((kelas) => {
-        const guru = users.find((u) => u.id === kelas.wali_kelas_id);
-        return {
-          ...kelas,
-          nama_wali: guru ? guru.username : "-",
-        };
-      });
-
-      setKelasData(kelasWithGuru);
+      users = Array.isArray(resUsers.data)
+        ? resUsers.data
+        : resUsers.data.data || [];
     } catch (err) {
-      console.error("Gagal mengambil data:", err);
-      toast.error("Gagal memuat data kelas");
+      console.warn("Auth service gagal, lanjut tanpa nama wali", err);
     }
-  };
+
+    const kelasWithGuru = rawKelas.map((kelas) => {
+      const guru = users.find((u) => u.id === kelas.wali_kelas_id);
+      return {
+        ...kelas,
+        nama_wali: guru ? guru.username : "-",
+      };
+    });
+
+    setKelasData(kelasWithGuru);
+  } catch (err) {
+    console.error("Gagal mengambil data kelas:", err);
+    toast.error("Gagal memuat data kelas");
+  }
+};
 
   useEffect(() => {
     fetchKelas();
