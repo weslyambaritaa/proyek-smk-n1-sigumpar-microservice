@@ -15,6 +15,7 @@ const { createAbsensiSiswa, getAllAbsensiSiswa, getAbsensiSiswaById, updateAbsen
 const guruController = require('../controllers/guruController');
 const guruDataController = require('../controllers/guruDataController');
 const kepsekController = require('../controllers/kepsekController');
+const wakilKepsekController = require('../controllers/wakilKepsekController');
 const waliKelasController = require('../controllers/waliKelasController');
 
 // ─── KELAS ──────────────────────────────────────────────────────────────────
@@ -114,3 +115,25 @@ router.get('/kepsek/rekap-nilai', extractIdentity, kepsekController.getRekapNila
 router.get('/kepsek/statistik', extractIdentity, kepsekController.getStatistikUmum);
 
 module.exports = router;
+
+// ─── WAKIL KEPALA SEKOLAH ────────────────────────────────────────────────────
+const wakilKepsekController = require('../controllers/wakilKepsekController');
+
+// Perangkat Pembelajaran
+router.get('/wakil/perangkat-guru', extractIdentity, wakilKepsekController.getDaftarGuruPerangkat);
+router.get('/wakil/perangkat-guru/:guruId', extractIdentity, wakilKepsekController.getPerangkatByGuru);
+router.post('/wakil/perangkat', extractIdentity, wakilKepsekController.createPerangkat);
+router.put('/wakil/perangkat/:id', extractIdentity, wakilKepsekController.updatePerangkat);
+router.delete('/wakil/perangkat/:id', extractIdentity, wakilKepsekController.deletePerangkat);
+
+// Supervisi
+router.get('/wakil/supervisi', extractIdentity, wakilKepsekController.getAllSupervisi);
+router.post('/wakil/supervisi', extractIdentity, wakilKepsekController.createSupervisi);
+router.put('/wakil/supervisi/:id', extractIdentity, wakilKepsekController.updateSupervisi);
+router.delete('/wakil/supervisi/:id', extractIdentity, wakilKepsekController.deleteSupervisi);
+
+// Program Kerja
+router.get('/wakil/program-kerja', extractIdentity, wakilKepsekController.getAllProgramKerja);
+router.post('/wakil/program-kerja', extractIdentity, wakilKepsekController.createProgramKerja);
+router.put('/wakil/program-kerja/:id', extractIdentity, wakilKepsekController.updateProgramKerja);
+router.delete('/wakil/program-kerja/:id', extractIdentity, wakilKepsekController.deleteProgramKerja);

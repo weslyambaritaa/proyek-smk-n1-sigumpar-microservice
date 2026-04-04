@@ -89,4 +89,24 @@ export const academicApi = {
   getStatistikUmum: () => axiosInstance.get('/api/academic/kepsek/statistik'),
   getRekapAbsensiSiswa: (params) => axiosInstance.get('/api/academic/kepsek/rekap-absensi-siswa', { params }),
   getRekapNilai: (params) => axiosInstance.get('/api/academic/kepsek/rekap-nilai', { params }),
+  // ── WAKIL KEPALA SEKOLAH ───────────────────────────────────────────────
+  // Perangkat Pembelajaran
+  getDaftarGuruPerangkat: () => axiosInstance.get('/api/academic/wakil/perangkat-guru'),
+  getPerangkatByGuru: (guruId) => axiosInstance.get(`/api/academic/wakil/perangkat-guru/${guruId}`),
+  createPerangkat: (data) => axiosInstance.post('/api/academic/wakil/perangkat', data),
+  updatePerangkat: (id, data) => axiosInstance.put(`/api/academic/wakil/perangkat/${id}`, data),
+  deletePerangkat: (id) => axiosInstance.delete(`/api/academic/wakil/perangkat/${id}`),
+  // Supervisi
+  getAllSupervisi: () => axiosInstance.get('/api/academic/wakil/supervisi'),
+  createSupervisi: (data) => axiosInstance.post('/api/academic/wakil/supervisi', data),
+  updateSupervisi: (id, data) => axiosInstance.put(`/api/academic/wakil/supervisi/${id}`, data),
+  deleteSupervisi: (id) => axiosInstance.delete(`/api/academic/wakil/supervisi/${id}`),
+  // Program Kerja
+  getAllProgramKerja: () => axiosInstance.get('/api/academic/wakil/program-kerja'),
+  createProgramKerja: (data) => axiosInstance.post('/api/academic/wakil/program-kerja', data),
+  updateProgramKerja: (id, data) => axiosInstance.put(`/api/academic/wakil/program-kerja/${id}`, data),
+  deleteProgramKerja: (id) => axiosInstance.delete(`/api/academic/wakil/program-kerja/${id}`),
+
 };
+
+// Tambahan untuk Wakil Kepala Sekolah (append sebelum penutup export)

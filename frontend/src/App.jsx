@@ -44,6 +44,12 @@ import NilaiPKLPage from "./pages/vokasi/NilaiPKLPage";
 
 // --- Kepala Sekolah ---
 import RekapAbsensiGuruPage from "./pages/kepala-sekolah/RekapAbsensiGuruPage";
+
+// --- Wakil Kepala Sekolah ---
+import PengecekanPerangkatPage from "./pages/wakil-kepala-sekolah/perangkat-pembelajaran/PengecekanPerangkatPage";
+import DetailPerangkatGuruPage from "./pages/wakil-kepala-sekolah/perangkat-pembelajaran/DetailPerangkatGuruPage";
+import SupervisiPage from "./pages/wakil-kepala-sekolah/supervisi/SupervisiPage";
+import ProgramKerjaPage from "./pages/wakil-kepala-sekolah/program-kerja/ProgramKerjaPage";
 import RekapAbsensiSiswaPage from "./pages/kepala-sekolah/RekapAbsensiSiswaPage";
 import PemeriksaanPerangkatPage from "./pages/kepala-sekolah/PemeriksaanPerangkatPage";
 import EvaluasiKinerjaPage from "./pages/kepala-sekolah/EvaluasiKinerjaPage";
@@ -143,6 +149,26 @@ const App = () => {
                   </NavLink>
                   <NavLink to="/kepsek/pkl" className={subNavClass}>
                     PKL
+                  </NavLink>
+                </NavDropdown>
+              )}
+
+              {/* Dropdown Wakil Kepala Sekolah */}
+              {hasRole("wakil-kepala-sekolah") && (
+                <NavDropdown
+                  title="Wakil Kepala Sekolah"
+                  icon="🏛️"
+                  isOpen={openMenus["wakil"]}
+                  onClick={() => toggleMenu("wakil")}
+                >
+                  <NavLink to="/wakil/perangkat" className={subNavClass}>
+                    Pengecekan Perangkat
+                  </NavLink>
+                  <NavLink to="/wakil/supervisi" className={subNavClass}>
+                    Supervisi Guru
+                  </NavLink>
+                  <NavLink to="/wakil/program-kerja" className={subNavClass}>
+                    Program Kerja
                   </NavLink>
                 </NavDropdown>
               )}
@@ -334,6 +360,12 @@ const App = () => {
             <Route path="/vokasi/lokasi-pkl" element={<LokasiPKLPage />} />
             <Route path="/vokasi/progres-pkl" element={<ProgresPKLPage />} />
             <Route path="/vokasi/nilai-pkl" element={<NilaiPKLPage />} />
+
+            {/* Wakil Kepala Sekolah */}
+            <Route path="/wakil/perangkat" element={<PengecekanPerangkatPage />} />
+            <Route path="/wakil/perangkat/:guruId" element={<DetailPerangkatGuruPage />} />
+            <Route path="/wakil/supervisi" element={<SupervisiPage />} />
+            <Route path="/wakil/program-kerja" element={<ProgramKerjaPage />} />
 
             {/* Kepala Sekolah */}
             <Route path="/kepsek/absensi-guru" element={<RekapAbsensiGuruPage />} />
