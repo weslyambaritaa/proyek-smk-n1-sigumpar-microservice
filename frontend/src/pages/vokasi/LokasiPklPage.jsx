@@ -5,11 +5,26 @@ import axiosInstance from "../../api/axiosInstance";
 import keycloak from "../../keycloak";
 import ImagePreviewModal from "../../components/common/ImagePreviewModal";
 
+// ✅ Sama persis dengan ParentingPage — sederhana & konsisten
 function getFullFotoUrl(foto_url) {
   if (!foto_url) return null;
   if (foto_url.startsWith("http")) return foto_url;
   const base = axiosInstance.defaults.baseURL || "";
   return base ? `${base}${foto_url}` : foto_url;
+}
+
+// ✅ Format tanggal agar tidak tampil "2026-04-05T00:00:00.000Z"
+function formatTanggal(tanggal) {
+  if (!tanggal) return "—";
+  try {
+    return new Date(tanggal).toLocaleDateString("id-ID", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  } catch {
+    return tanggal;
+  }
 }
 
 export default function LokasiPKLPage() {
@@ -28,7 +43,7 @@ export default function LokasiPKLPage() {
   const [kontak, setKontak] = useState("");
   const [tanggal, setTanggal] = useState(new Date().toISOString().slice(0, 10));
   const [foto, setFoto] = useState(null);
-  const [fotoPreview, setFotoPreview] = useState(null);
+  const [fotoPreview, setFotoPreview] = useState(null); // ✅ simpan raw foto_url dari DB saat edit
 
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -68,24 +83,25 @@ export default function LokasiPKLPage() {
   };
 
   const handleFotoChange = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+    const f = e.target.files[0];
+    if (!f) return;
 
-    if (!file.type.startsWith("image/")) {
+    if (!f.type.startsWith("image/")) {
       toast.error("Hanya file gambar yang diizinkan");
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
+    if (f.size > 5 * 1024 * 1024) {
       toast.error("Ukuran foto maksimal 5MB");
       return;
     }
 
-    setFoto(file);
+    setFoto(f);
 
+    // ✅ fotoPreview untuk file baru = data URL (base64)
     const reader = new FileReader();
     reader.onloadend = () => setFotoPreview(reader.result);
-    reader.readAsDataURL(file);
+    reader.readAsDataURL(f);
   };
 
   const handleRemoveFoto = () => {
@@ -94,6 +110,7 @@ export default function LokasiPKLPage() {
     if (fileRef.current) fileRef.current.value = "";
   };
 
+  // ✅ Sama persis dengan ParentingPage — selalu terima raw URL, resolve di sini
   const handlePreviewFoto = (url, nama) => {
     const full = getFullFotoUrl(url);
     if (!full) {
@@ -179,8 +196,9 @@ export default function LokasiPKLPage() {
     setDeskripsi(row.deskripsi_pekerjaan || "");
     setPembimbing(row.pembimbing_industri || "");
     setKontak(row.kontak_pembimbing || "");
-    setTanggal(row.tanggal || new Date().toISOString().slice(0, 10));
+    setTanggal(row.tanggal ? row.tanggal.slice(0, 10) : new Date().toISOString().slice(0, 10));
     setFoto(null);
+    // ✅ Simpan raw foto_url dari DB (bukan resolved), biarkan getFullFotoUrl handle saat render
     setFotoPreview(row.foto_url || null);
     if (fileRef.current) fileRef.current.value = "";
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -197,6 +215,14 @@ export default function LokasiPKLPage() {
       toast.error("Gagal menghapus data");
     }
   };
+
+  // ✅ Resolve URL foto untuk ditampilkan di <img src>
+  // Bedakan: data URL (foto baru dipilih) vs raw URL dari DB (foto lama)
+  const resolvedFotoPreviewSrc = fotoPreview
+    ? fotoPreview.startsWith("data:")
+      ? fotoPreview                    // blob baru — langsung pakai
+      : getFullFotoUrl(fotoPreview)    // raw URL dari DB — resolve dulu
+    : null;
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -393,32 +419,33 @@ export default function LokasiPKLPage() {
                 </button>
               </div>
 
+              {/* ✅ Area upload foto — konsep sama dengan ParentingPage */}
               <div className="w-full md:w-56 flex flex-col gap-3">
                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest">
                   Foto Lokasi PKL
                 </label>
 
                 <div
-                  onClick={() => !fotoPreview && fileRef.current?.click()}
+                  onClick={() => !resolvedFotoPreviewSrc && fileRef.current?.click()}
                   className={`flex-1 min-h-48 border-2 rounded-xl overflow-hidden transition-all ${
-                    fotoPreview
+                    resolvedFotoPreviewSrc
                       ? "border-blue-300 cursor-default"
                       : "border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:border-blue-400 hover:bg-blue-50"
                   }`}
                 >
-                  {fotoPreview ? (
+                  {resolvedFotoPreviewSrc ? (
                     <img
-                      src={
-                        fotoPreview.startsWith("data:")
-                          ? fotoPreview
-                          : getFullFotoUrl(fotoPreview)
-                      }
+                      src={resolvedFotoPreviewSrc}
                       alt="Preview Foto PKL"
                       className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                      // ✅ Kirim fotoPreview (raw URL) ke handlePreviewFoto, bukan resolvedSrc
                       onClick={() =>
                         handlePreviewFoto(fotoPreview, "Preview Foto Lokasi PKL")
                       }
                       title="Klik untuk preview fullscreen"
+                      onError={(e) => {
+                        e.currentTarget.style.display = "none";
+                      }}
                     />
                   ) : (
                     <>
@@ -438,7 +465,7 @@ export default function LokasiPKLPage() {
                   onChange={handleFotoChange}
                 />
 
-                {fotoPreview && (
+                {resolvedFotoPreviewSrc && (
                   <div className="flex gap-2">
                     <button
                       type="button"
@@ -469,6 +496,7 @@ export default function LokasiPKLPage() {
           </div>
         </form>
 
+        {/* Tabel Histori */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
           <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
             <div>
@@ -529,6 +557,7 @@ export default function LokasiPKLPage() {
                         </div>
                       </td>
 
+                      {/* ✅ Foto thumbnail — sama persis dengan ParentingPage */}
                       <td className="px-4 py-3">
                         {row.foto_url ? (
                           <img
@@ -608,9 +637,10 @@ export default function LokasiPKLPage() {
                         )}
                       </td>
 
+                      {/* ✅ Tanggal diformat agar tidak tampil ISO string panjang */}
                       <td className="px-4 py-3">
                         <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-lg font-medium">
-                          {row.tanggal || "—"}
+                          {formatTanggal(row.tanggal)}
                         </span>
                       </td>
 
