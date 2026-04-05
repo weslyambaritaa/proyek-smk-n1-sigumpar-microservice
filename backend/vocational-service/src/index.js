@@ -14,6 +14,17 @@ app.use(express.json({ limit: "20mb" }));
 app.use(express.urlencoded({ extended: true, limit: "20mb" }));
 
 // ── Static: sajikan file upload foto PKL ─────────────────────────────────
+//
+// ✅ FIX: Dua path static diperlukan:
+//
+// 1. "/uploads" — untuk request yang datang VIA NGINX:
+//    nginx mem-proxy /api/vocational/uploads/foo.jpg → :3007/uploads/foo.jpg
+//    sehingga Express menerima path /uploads/foo.jpg (prefix sudah di-strip nginx)
+//
+// 2. "/api/vocational/uploads" — untuk request LANGSUNG ke service (dev/debug):
+//    jika frontend/browser hit :3007 langsung tanpa nginx
+//
+app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 app.use("/api/vocational/uploads", express.static(path.join(__dirname, "../uploads")));
 
 app.get("/health", (req, res) => {
