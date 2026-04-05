@@ -15,7 +15,6 @@ const { createAbsensiSiswa, getAllAbsensiSiswa, getAbsensiSiswaById, updateAbsen
 const guruController = require('../controllers/guruController');
 const guruDataController = require('../controllers/guruDataController');
 const kepsekController = require('../controllers/kepsekController');
-const wakilKepsekController = require('../controllers/wakilKepsekController');
 const waliKelasController = require('../controllers/waliKelasController');
 
 // ─── KELAS ──────────────────────────────────────────────────────────────────
@@ -109,30 +108,9 @@ router.post('/wali/refleksi', extractIdentity, waliKelasController.createRefleks
 router.get('/wali/rekap-nilai', extractIdentity, waliKelasController.getRekapNilaiWali);
 router.get('/wali/rekap-absensi', extractIdentity, waliKelasController.getRekapAbsensiWali);
 
-
 // ─── KEPALA SEKOLAH ──────────────────────────────────────────────────────────
 router.get('/kepsek/rekap-absensi-siswa', extractIdentity, kepsekController.getRekapAbsensiSiswa);
 router.get('/kepsek/rekap-nilai', extractIdentity, kepsekController.getRekapNilai);
 router.get('/kepsek/statistik', extractIdentity, kepsekController.getStatistikUmum);
-
-// ─── WAKIL KEPALA SEKOLAH ────────────────────────────────────────────────────
-// Perangkat Pembelajaran
-router.get('/wakil/perangkat-guru', extractIdentity, wakilKepsekController.getDaftarGuruPerangkat);
-router.get('/wakil/perangkat-guru/:guruId', extractIdentity, wakilKepsekController.getPerangkatByGuru);
-router.post('/wakil/perangkat', extractIdentity, wakilKepsekController.createPerangkat);
-router.put('/wakil/perangkat/:id', extractIdentity, wakilKepsekController.updatePerangkat);
-router.delete('/wakil/perangkat/:id', extractIdentity, wakilKepsekController.deletePerangkat);
-
-// Supervisi
-router.get('/wakil/supervisi', extractIdentity, wakilKepsekController.getAllSupervisi);
-router.post('/wakil/supervisi', extractIdentity, wakilKepsekController.createSupervisi);
-router.put('/wakil/supervisi/:id', extractIdentity, wakilKepsekController.updateSupervisi);
-router.delete('/wakil/supervisi/:id', extractIdentity, wakilKepsekController.deleteSupervisi);
-
-// Program Kerja
-router.get('/wakil/program-kerja', extractIdentity, wakilKepsekController.getAllProgramKerja);
-router.post('/wakil/program-kerja', extractIdentity, wakilKepsekController.createProgramKerja);
-router.put('/wakil/program-kerja/:id', extractIdentity, wakilKepsekController.updateProgramKerja);
-router.delete('/wakil/program-kerja/:id', extractIdentity, wakilKepsekController.deleteProgramKerja);
 
 module.exports = router;

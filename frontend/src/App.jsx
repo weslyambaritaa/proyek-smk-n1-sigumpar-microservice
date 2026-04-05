@@ -44,16 +44,13 @@ import NilaiPKLPage from "./pages/vokasi/NilaiPKLPage";
 
 // --- Kepala Sekolah ---
 import RekapAbsensiGuruPage from "./pages/kepala-sekolah/RekapAbsensiGuruPage";
-
-// --- Wakil Kepala Sekolah ---
-import PengecekanPerangkatPage from "./pages/wakil-kepala-sekolah/perangkat-pembelajaran/PengecekanPerangkatPage";
-import DetailPerangkatGuruPage from "./pages/wakil-kepala-sekolah/perangkat-pembelajaran/DetailPerangkatGuruPage";
-import SupervisiPage from "./pages/wakil-kepala-sekolah/supervisi/SupervisiPage";
-import ProgramKerjaPage from "./pages/wakil-kepala-sekolah/program-kerja/ProgramKerjaPage";
 import RekapAbsensiSiswaPage from "./pages/kepala-sekolah/RekapAbsensiSiswaPage";
 import PemeriksaanPerangkatPage from "./pages/kepala-sekolah/PemeriksaanPerangkatPage";
 import EvaluasiKinerjaPage from "./pages/kepala-sekolah/EvaluasiKinerjaPage";
 import PKLKepsekPage from "./pages/kepala-sekolah/PKLKepsekPage";
+
+// --- Waka Sekolah ---
+import KurikulumPage from "./pages/waka-sekolah/KurikulumPage";
 
 /**
  * Komponen reusable untuk grup menu per role (Dropdown)
@@ -153,22 +150,16 @@ const App = () => {
                 </NavDropdown>
               )}
 
-              {/* Dropdown Wakil Kepala Sekolah */}
-              {hasRole("wakil-kepala-sekolah") && (
+              {/* Dropdown Waka Sekolah */}
+              {hasRole("waka-sekolah") && (
                 <NavDropdown
-                  title="Wakil Kepala Sekolah"
-                  icon="🏛️"
-                  isOpen={openMenus["wakil"]}
-                  onClick={() => toggleMenu("wakil")}
+                  title="Waka Sekolah"
+                  icon="👨‍🏫"
+                  isOpen={openMenus["waka"]}
+                  onClick={() => toggleMenu("waka")}
                 >
-                  <NavLink to="/wakil/perangkat" className={subNavClass}>
-                    Pengecekan Perangkat
-                  </NavLink>
-                  <NavLink to="/wakil/supervisi" className={subNavClass}>
-                    Supervisi Guru
-                  </NavLink>
-                  <NavLink to="/wakil/program-kerja" className={subNavClass}>
-                    Program Kerja
+                  <NavLink to="/waka/kurikulum" className={subNavClass}>
+                    Kurikulum
                   </NavLink>
                 </NavDropdown>
               )}
@@ -361,18 +352,15 @@ const App = () => {
             <Route path="/vokasi/progres-pkl" element={<ProgresPKLPage />} />
             <Route path="/vokasi/nilai-pkl" element={<NilaiPKLPage />} />
 
-            {/* Wakil Kepala Sekolah */}
-            <Route path="/wakil/perangkat" element={<PengecekanPerangkatPage />} />
-            <Route path="/wakil/perangkat/:guruId" element={<DetailPerangkatGuruPage />} />
-            <Route path="/wakil/supervisi" element={<SupervisiPage />} />
-            <Route path="/wakil/program-kerja" element={<ProgramKerjaPage />} />
-
             {/* Kepala Sekolah */}
             <Route path="/kepsek/absensi-guru" element={<RekapAbsensiGuruPage />} />
             <Route path="/kepsek/absensi-siswa" element={<RekapAbsensiSiswaPage />} />
             <Route path="/kepsek/perangkat-ajar" element={<PemeriksaanPerangkatPage />} />
             <Route path="/kepsek/evaluasi-kinerja" element={<EvaluasiKinerjaPage />} />
             <Route path="/kepsek/pkl" element={<PKLKepsekPage />} />
+
+            {/* Waka Sekolah */}
+            <Route path="/waka/kurikulum" element={<KurikulumPage />} />
           </Routes>
         </main>
       </div>

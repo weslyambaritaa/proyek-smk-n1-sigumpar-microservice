@@ -24,79 +24,6 @@ services:
     volumes:
       - keycloak_db_data:/var/lib/postgresql/data
 
-  # ── SERVICE DATABASES ────────────────────────────────────────────────────
-  auth-db:
-    image: postgres:15
-    container_name: auth-db
-    environment:
-      POSTGRES_DB: auth_db
-      POSTGRES_USER: auth_user
-      POSTGRES_PASSWORD: password
-    networks:
-      - microservices-network
-    volumes:
-      - auth_db_data:/var/lib/postgresql/data
-
-  academic-db:
-    image: postgres:15
-    container_name: academic-db
-    environment:
-      POSTGRES_DB: academic_db
-      POSTGRES_USER: academic_user
-      POSTGRES_PASSWORD: password
-    networks:
-      - microservices-network
-    volumes:
-      - academic_db_data:/var/lib/postgresql/data
-
-  asset-db:
-    image: postgres:15
-    container_name: asset-db
-    environment:
-      POSTGRES_DB: asset_db
-      POSTGRES_USER: asset_user
-      POSTGRES_PASSWORD: password
-    networks:
-      - microservices-network
-    volumes:
-      - asset_db_data:/var/lib/postgresql/data
-
-  learning-db:
-    image: postgres:15
-    container_name: learning-db
-    environment:
-      POSTGRES_DB: learning_db
-      POSTGRES_USER: learning_user
-      POSTGRES_PASSWORD: password
-    networks:
-      - microservices-network
-    volumes:
-      - learning_db_data:/var/lib/postgresql/data
-
-  student-db:
-    image: postgres:15
-    container_name: student-db
-    environment:
-      POSTGRES_DB: student_db
-      POSTGRES_USER: student_user
-      POSTGRES_PASSWORD: password
-    networks:
-      - microservices-network
-    volumes:
-      - student_db_data:/var/lib/postgresql/data
-
-  vocational-db:
-    image: postgres:15
-    container_name: vocational-db
-    environment:
-      POSTGRES_DB: vocational_db
-      POSTGRES_USER: vocational_user
-      POSTGRES_PASSWORD: password
-    networks:
-      - microservices-network
-    volumes:
-      - vocational_db_data:/var/lib/postgresql/data
-
   # ── KEYCLOAK ─────────────────────────────────────────────────────────────
   keycloak:
     image: quay.io/keycloak/keycloak:22.0.1
@@ -127,12 +54,8 @@ services:
       - PORT=3005
       - DB_NAME=auth_db
       - DB_USER=auth_user
-      - DB_HOST=auth-db
-      - DB_PASSWORD=password
-      - DATABASE_URL=postgres://auth_user:password@auth-db:5432/auth_db
-    depends_on:
-      - keycloak
-      - auth-db
+      - DATABASE_URL=postgres://auth_user:password@localhost:5432/auth_db
+    depends_on: [keycloak]
 
   # ── ACADEMIC SERVICE ─────────────────────────────────────────────────────
   academic-service:
@@ -143,12 +66,10 @@ services:
       - PORT=3003
       - DB_NAME=academic_db
       - DB_USER=academic_user
-      - DB_HOST=academic-db
+      - DB_HOST=localhost
       - DB_PASSWORD=password
-      - DATABASE_URL=postgres://academic_user:password@academic-db:5432/academic_db
-    depends_on:
-      - keycloak
-      - academic-db
+      - DATABASE_URL=postgres://academic_user:password@localhost:5432/academic_db
+    depends_on: [keycloak]
 
   # ── ASSET SERVICE ────────────────────────────────────────────────────────
   asset-service:
@@ -159,12 +80,10 @@ services:
       - PORT=3004
       - DB_NAME=asset_db
       - DB_USER=asset_user
-      - DB_HOST=asset-db
+      - DB_HOST=localhost
       - DB_PASSWORD=password
-      - DATABASE_URL=postgres://asset_user:password@asset-db:5432/asset_db
-    depends_on:
-      - keycloak
-      - asset-db
+      - DATABASE_URL=postgres://asset_user:password@localhost:5432/asset_db
+    depends_on: [keycloak]
 
   # ── LEARNING SERVICE ─────────────────────────────────────────────────────
   learning-service:
@@ -175,12 +94,10 @@ services:
       - PORT=3006
       - DB_NAME=learning_db
       - DB_USER=learning_user
-      - DB_HOST=learning-db
+      - DB_HOST=localhost
       - DB_PASSWORD=password
-      - DATABASE_URL=postgres://learning_user:password@learning-db:5432/learning_db
-    depends_on:
-      - keycloak
-      - learning-db
+      - DATABASE_URL=postgres://learning_user:password@localhost:5432/learning_db
+    depends_on: [keycloak]
 
   # ── STUDENT SERVICE ──────────────────────────────────────────────────────
   student-service:
@@ -191,12 +108,10 @@ services:
       - PORT=3008
       - DB_NAME=student_db
       - DB_USER=student_user
-      - DB_HOST=student-db
+      - DB_HOST=localhost
       - DB_PASSWORD=password
-      - DATABASE_URL=postgres://student_user:password@student-db:5432/student_db
-    depends_on:
-      - keycloak
-      - student-db
+      - DATABASE_URL=postgres://student_user:password@localhost:5432/student_db
+    depends_on: [keycloak]
 
   # ── VOCATIONAL SERVICE ───────────────────────────────────────────────────
   vocational-service:
@@ -207,12 +122,10 @@ services:
       - PORT=3007
       - DB_NAME=vocational_db
       - DB_USER=vocational_user
-      - DB_HOST=vocational-db
+      - DB_HOST=localhost
       - DB_PASSWORD=password
-      - DATABASE_URL=postgres://vocational_user:password@vocational-db:5432/vocational_db
-    depends_on:
-      - keycloak
-      - vocational-db
+      - DATABASE_URL=postgres://vocational_user:password@localhost:5432/vocational_db
+    depends_on: [keycloak]
 
   # ── API GATEWAY (Nginx) ──────────────────────────────────────────────────
   api-gateway:
@@ -224,13 +137,6 @@ services:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
     networks:
       - microservices-network
-    depends_on:
-      - auth-service
-      - academic-service
-      - asset-service
-      - learning-service
-      - student-service
-      - vocational-service
 
   # ── FRONTEND ─────────────────────────────────────────────────────────────
   frontend:
@@ -252,9 +158,3 @@ networks:
 
 volumes:
   keycloak_db_data:
-  auth_db_data:
-  academic_db_data:
-  asset_db_data:
-  learning_db_data:
-  student_db_data:
-  vocational_db_data:

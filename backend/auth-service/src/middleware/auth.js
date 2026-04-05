@@ -1,11 +1,18 @@
 const jwt = require('jsonwebtoken');
 const jwksClient = require('jwks-rsa');
 
-// 1. TAMBAHKAN IMPORT CONTROLLER DI SINI
 const authController = require('../controllers/authController');
 
+// Support dua kemungkinan URL Keycloak (internal docker dan external)
+const KEYCLOAK_INTERNAL = 'http://keycloak:8080';
+const KEYCLOAK_EXTERNAL = 'http://localhost:8080';
+const REALM = 'smk-sigumpar';
+
 const client = jwksClient({
-  jwksUri: `http://keycloak:8080/realms/smk-sigumpar/protocol/openid-connect/certs`
+  jwksUri: `${KEYCLOAK_INTERNAL}/realms/${REALM}/protocol/openid-connect/certs`,
+  cache: true,
+  rateLimit: true,
+  jwksRequestsPerMinute: 10,
 });
 
 function getKey(header, callback) {
@@ -24,27 +31,35 @@ const verifyToken = (req, res, next) => {
     return res.status(401).json({ message: 'Token tidak ditemukan' });
   }
 
-  jwt.verify(token, getKey, {
-    issuer: `http://localhost:8080/realms/smk-sigumpar`,
-    algorithms: ['RS256']
-  }, (err, decoded) => {
-    if (err) {
-      console.error("JWT Verification Error:", err.message);
+  // Coba verifikasi dengan issuer internal dulu, lalu external
+  const issuers = [
+    `${KEYCLOAK_INTERNAL}/realms/${REALM}`,
+    `${KEYCLOAK_EXTERNAL}/realms/${REALM}`,
+  ];
+
+  const tryVerify = (issuerList, index = 0) => {
+    if (index >= issuerList.length) {
       return res.status(403).json({ message: 'Token tidak valid' });
     }
-    
-    req.user = decoded;
+    jwt.verify(token, getKey, {
+      issuer: issuerList[index],
+      algorithms: ['RS256'],
+    }, (err, decoded) => {
+      if (err) {
+        // Coba issuer berikutnya
+        return tryVerify(issuerList, index + 1);
+      }
+      req.user = decoded;
+      if (authController.syncUserFromToken) {
+        authController.syncUserFromToken(decoded).catch(e => {
+          console.error('Gagal sinkronisasi user:', e.message);
+        });
+      }
+      next();
+    });
+  };
 
-    // 2. TAMBAHKAN LOGIK SINKRONISASI DI SINI
-    // Jalankan secara background agar tidak menghambat request
-    if (authController.syncUserFromToken) {
-      authController.syncUserFromToken(decoded).catch(err => {
-        console.error("Gagal sinkronisasi user ke database:", err.message);
-      });
-    }
-
-    next();
-  });
+  tryVerify(issuers);
 };
 
 module.exports = verifyToken;

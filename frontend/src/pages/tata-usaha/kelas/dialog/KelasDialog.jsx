@@ -49,9 +49,14 @@ const KelasDialog = ({ isOpen, onClose, onSuccess, initialData }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    // Pastikan wali_kelas_id null bukan string kosong (PostgreSQL UUID tidak terima "")
+    const payload = {
+      ...formData,
+      wali_kelas_id: formData.wali_kelas_id || null,
+    };
     const savePromise = initialData?.id
-      ? academicApi.updateKelas(initialData.id, formData)
-      : academicApi.createKelas(formData);
+      ? academicApi.updateKelas(initialData.id, payload)
+      : academicApi.createKelas(payload);
 
     toast
       .promise(savePromise, {
