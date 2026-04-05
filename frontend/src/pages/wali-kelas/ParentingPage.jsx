@@ -6,22 +6,24 @@ import keycloak from "../../keycloak";
 import ImagePreviewModal from "../../components/common/ImagePreviewModal";
 
 export default function ParentingPage() {
-  const waliId = keycloak.tokenParsed?.sub;
+  const waliId   = keycloak.tokenParsed?.sub;
   const namaWali = keycloak.tokenParsed?.name || "Wali Kelas";
 
-  const [kelasList, setKelasList] = useState([]);
-  const [selectedKelas, setSelectedKelas] = useState("");
-  const [tanggal, setTanggal] = useState(new Date().toISOString().slice(0, 10));
-  const [kehadiranOrtu, setKehadiranOrtu] = useState("");
-  const [agenda, setAgenda] = useState("");
-  const [ringkasan, setRingkasan] = useState("");
-  const [file, setFile] = useState(null);
-  const [saving, setSaving] = useState(false);
-  const [histori, setHistori] = useState([]);
+  const [kelasList,      setKelasList]      = useState([]);
+  const [selectedKelas,  setSelectedKelas]  = useState("");
+  const [tanggal,        setTanggal]        = useState(new Date().toISOString().slice(0, 10));
+  const [kehadiranOrtu,  setKehadiranOrtu]  = useState("");
+  const [agenda,         setAgenda]         = useState("");
+  const [ringkasan,      setRingkasan]      = useState("");
+  const [file,           setFile]           = useState(null);
+  const [fotoPreview,    setFotoPreview]    = useState(null);
+  const [saving,         setSaving]         = useState(false);
+  const [histori,        setHistori]        = useState([]);
   const [loadingHistori, setLoadingHistori] = useState(false);
-  // FIX #2: state untuk image preview modal
-  const [previewSrc, setPreviewSrc] = useState(null);
-  const fileRef = useRef();
+  const [previewSrc,     setPreviewSrc]     = useState(null);
+  const [previewName,    setPreviewName]    = useState("");
+
+  const fileInputRef = useRef();
 
   const namaKelas = kelasList.find((k) => String(k.id) === String(selectedKelas))?.nama_kelas || "";
 
@@ -43,31 +45,44 @@ export default function ParentingPage() {
 
   useEffect(() => { loadHistori(); }, [selectedKelas]);
 
+  const handleFotoChange = (e) => {
+    const f = e.target.files[0];
+    if (!f) return;
+    setFile(f);
+    const reader = new FileReader();
+    reader.onloadend = () => setFotoPreview(reader.result);
+    reader.readAsDataURL(f);
+  };
+
+  const handleRemoveFoto = () => {
+    setFile(null);
+    setFotoPreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
   const handleSimpan = async (e) => {
     e.preventDefault();
     if (!selectedKelas) { toast.error("Pilih kelas terlebih dahulu"); return; }
-    if (!agenda.trim()) { toast.error("Agenda utama wajib diisi"); return; }
+    if (!agenda.trim())  { toast.error("Agenda utama wajib diisi");   return; }
 
     setSaving(true);
     try {
       const fd = new FormData();
-      fd.append("kelas_id", selectedKelas);
-      fd.append("wali_id", waliId || "");
-      fd.append("tanggal", tanggal);
+      fd.append("kelas_id",       selectedKelas);
+      fd.append("wali_id",        waliId || "");
+      fd.append("tanggal",        tanggal);
       fd.append("kehadiran_ortu", kehadiranOrtu || 0);
-      fd.append("agenda", agenda);
-      fd.append("ringkasan", ringkasan);
+      fd.append("agenda",         agenda);
+      fd.append("ringkasan",      ringkasan);
       if (file) fd.append("foto", file);
 
       await axiosInstance.post("/api/academic/wali/parenting", fd, {
         headers: { "Content-Type": "multipart/form-data" },
       });
       toast.success("Laporan parenting berhasil disimpan!");
-      setAgenda("");
-      setRingkasan("");
-      setKehadiranOrtu("");
-      setFile(null);
-      if (fileRef.current) fileRef.current.value = "";
+      setAgenda(""); setRingkasan(""); setKehadiranOrtu("");
+      setFile(null); setFotoPreview(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
       loadHistori();
     } catch (err) {
       toast.error(err.response?.data?.error || "Gagal menyimpan laporan");
@@ -76,16 +91,27 @@ export default function ParentingPage() {
     }
   };
 
+  const bukaFoto = (e, url, nama) => {
+    e.preventDefault();
+    if (/\.(jpg|jpeg|png|gif|webp)(\?.*)?$/i.test(url)) {
+      setPreviewSrc(url);
+      setPreviewName(nama || "Lampiran Parenting");
+    } else {
+      window.open(url, "_blank");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-100">
-      {/* FIX #2: Image Preview Modal */}
+
       {previewSrc && (
         <ImagePreviewModal
           src={previewSrc}
-          fileName="Lampiran Parenting"
-          onClose={() => setPreviewSrc(null)}
+          fileName={previewName}
+          onClose={() => { setPreviewSrc(null); setPreviewName(""); }}
         />
       )}
+
       <div className="bg-white border-b px-8 py-5">
         <h1 className="text-2xl font-bold text-gray-800 tracking-tight">PARENTING KELAS MASSAL</h1>
         {selectedKelas && (
@@ -96,7 +122,7 @@ export default function ParentingPage() {
       </div>
 
       <div className="px-8 py-6 max-w-5xl mx-auto space-y-6">
-        {/* Pilih Kelas */}
+
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5">
           <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Pilih Kelas</label>
           <select
@@ -109,62 +135,108 @@ export default function ParentingPage() {
           </select>
         </div>
 
-        {/* Form Input */}
         <form onSubmit={handleSimpan} className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
           <div className="flex items-center gap-3 px-6 py-4 bg-blue-50 border-b border-blue-100">
             <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white text-lg">👨‍👩‍👧</div>
             <h2 className="font-bold text-gray-800 uppercase tracking-wide text-sm">Catat Pertemuan & Upload Dokumentasi</h2>
           </div>
 
-          <div className="p-6 space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Tanggal Pertemuan</label>
-                <input type="date" value={tanggal} onChange={(e) => setTanggal(e.target.value)}
-                  className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          <div className="p-6">
+            <div className="flex flex-col md:flex-row gap-6">
+
+              <div className="flex-1 space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Tanggal Pertemuan</label>
+                    <input type="date" value={tanggal} onChange={(e) => setTanggal(e.target.value)}
+                      className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Kehadiran Orang Tua</label>
+                    <input type="number" min="0" value={kehadiranOrtu} onChange={(e) => setKehadiranOrtu(e.target.value)}
+                      placeholder="Jml Hadir"
+                      className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Agenda Utama</label>
+                    <input type="text" value={agenda} onChange={(e) => setAgenda(e.target.value)}
+                      placeholder="Judul rapat..."
+                      className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Hasil Keputusan / Catatan Penting</label>
+                  <textarea
+                    value={ringkasan} onChange={(e) => setRingkasan(e.target.value)}
+                    placeholder="Ringkasan hasil pertemuan..."
+                    rows={5}
+                    className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                  />
+                </div>
+
+                <button type="submit" disabled={saving}
+                  className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-bold text-sm rounded-xl shadow-sm transition-all active:scale-95 uppercase tracking-wider">
+                  {saving ? "Menyimpan..." : "Simpan Laporan & Lampiran"}
+                </button>
               </div>
-              <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Kehadiran Orang Tua</label>
-                <input type="number" min="0" value={kehadiranOrtu} onChange={(e) => setKehadiranOrtu(e.target.value)}
-                  placeholder="Jml Hadir"
-                  className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Agenda Utama</label>
-                <input type="text" value={agenda} onChange={(e) => setAgenda(e.target.value)}
-                  placeholder="Judul rapat..."
-                  className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Upload Foto/Dokumen</label>
-                <input type="file" ref={fileRef} onChange={(e) => setFile(e.target.files[0] || null)}
+
+              <div className="w-full md:w-56 flex flex-col gap-3">
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest">
+                  Foto / Dokumen
+                </label>
+
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex-1 min-h-48 border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-all overflow-hidden"
+                >
+                  {fotoPreview ? (
+                    <img src={fotoPreview} alt="Preview foto" className="w-full h-full object-cover" />
+                  ) : (
+                    <>
+                      <div className="text-4xl text-gray-300 mb-2">📷</div>
+                      <p className="text-xs text-gray-400 text-center px-3">Klik untuk upload foto / dokumen</p>
+                    </>
+                  )}
+                </div>
+
+                <input
+                  ref={fileInputRef}
+                  type="file"
                   accept="image/*,.pdf"
-                  className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700" />
+                  className="hidden"
+                  onChange={handleFotoChange}
+                />
+
+                {fotoPreview && (
+                  <button
+                    type="button"
+                    onClick={handleRemoveFoto}
+                    className="text-xs text-red-400 hover:text-red-600 text-center transition-colors"
+                  >
+                    ✕ Hapus foto
+                  </button>
+                )}
+
+                <p className="text-xs text-gray-400 text-center leading-relaxed">
+                  JPG, PNG, PDF<br />Maks 10MB
+                </p>
               </div>
-            </div>
 
-            <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Hasil Keputusan / Catatan Penting</label>
-              <textarea value={ringkasan} onChange={(e) => setRingkasan(e.target.value)}
-                placeholder="Ringkasan hasil pertemuan..."
-                rows={4}
-                className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none" />
             </div>
-
-            <button type="submit" disabled={saving}
-              className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-bold text-sm rounded-xl shadow-sm transition-all active:scale-95 uppercase tracking-wider">
-              {saving ? "Menyimpan..." : "Simpan Laporan & Lampiran"}
-            </button>
           </div>
         </form>
 
-        {/* Histori Pertemuan */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-100">
             <h2 className="font-bold text-gray-800 text-sm uppercase tracking-wide">Histori Pertemuan Kelas</h2>
           </div>
+
           {loadingHistori ? (
-            <div className="py-12 text-center text-gray-400">Memuat data...</div>
+            <div className="py-12 text-center text-gray-400">
+              <div className="inline-block w-6 h-6 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mb-2" />
+              <p>Memuat data...</p>
+            </div>
           ) : histori.length === 0 ? (
             <div className="py-12 text-center text-gray-400">
               <p className="text-3xl mb-2">📋</p>
@@ -194,19 +266,21 @@ export default function ParentingPage() {
                         {h.kehadiran_ortu || 0} ORANGTUA
                       </span>
                     </td>
-                    <td className="px-5 py-3 text-gray-600 text-xs max-w-xs">{h.ringkasan || "-"}</td>
+                    <td className="px-5 py-3 text-gray-600 text-xs max-w-xs">{h.ringkasan || "—"}</td>
                     <td className="px-5 py-3">
                       {h.foto_url ? (
                         <a
                           href={h.foto_url}
                           target="_blank"
                           rel="noreferrer"
-                          onClick={(e) => { if (/\.(jpg|jpeg|png|gif|webp)(\?.*)?$/i.test(h.foto_url)) { e.preventDefault(); setPreviewSrc(h.foto_url); setPreviewName("Lampiran"); } }}
-                          className="text-blue-600 hover:text-blue-800 font-semibold text-xs uppercase"
+                          onClick={(e) => bukaFoto(e, h.foto_url, `Lampiran — ${h.agenda}`)}
+                          className="inline-flex items-center gap-1 px-2 py-1 bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs font-semibold rounded-lg transition-colors border border-blue-200"
                         >
                           {/\.(jpg|jpeg|png|gif|webp)(\?.*)?$/i.test(h.foto_url) ? "🖼️ Lihat Foto" : "📄 Lihat File"}
                         </a>
-                      ) : <span className="text-gray-300 text-xs">—</span>}
+                      ) : (
+                        <span className="text-gray-300 text-xs">—</span>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -214,6 +288,7 @@ export default function ParentingPage() {
             </table>
           )}
         </div>
+
       </div>
     </div>
   );

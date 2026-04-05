@@ -16,6 +16,7 @@ const guruController = require('../controllers/guruController');
 const guruDataController = require('../controllers/guruDataController');
 const kepsekController = require('../controllers/kepsekController');
 const waliKelasController = require('../controllers/waliKelasController');
+const wakilMonitoringController = require('../controllers/wakilKepsekMonitoringController');
 
 // ─── KELAS ──────────────────────────────────────────────────────────────────
 router.get('/kelas', extractIdentity, kelasController.getAllKelas);
@@ -112,10 +113,6 @@ router.get('/wali/rekap-absensi', extractIdentity, waliKelasController.getRekapA
 router.get('/kepsek/rekap-absensi-siswa', extractIdentity, kepsekController.getRekapAbsensiSiswa);
 router.get('/kepsek/rekap-nilai', extractIdentity, kepsekController.getRekapNilai);
 router.get('/kepsek/statistik', extractIdentity, kepsekController.getStatistikUmum);
-
-// ─── WAKIL KEPALA SEKOLAH ──────────────────────────────────────
-
-const wakilMonitoringController = require('../controllers/wakilKepsekMonitoringController');
 
 // ─── WAKIL KEPALA SEKOLAH — MONITORING ───────────────────────────────────────
 

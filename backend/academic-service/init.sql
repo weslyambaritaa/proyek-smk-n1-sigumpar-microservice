@@ -130,3 +130,49 @@ CREATE TABLE IF NOT EXISTS guru (
 
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO academic_user;
 GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO academic_user;
+
+-- ─── TABEL WAKIL KEPALA SEKOLAH ──────────────────────────────────────────────
+-- Dibuat otomatis agar service tidak crash jika migration belum dijalankan manual
+
+CREATE TABLE IF NOT EXISTS wakil_program_kerja (
+    id               SERIAL PRIMARY KEY,
+    nama_program     VARCHAR(200) NOT NULL,
+    bidang           VARCHAR(100) NOT NULL DEFAULT 'Kurikulum',
+    tanggal_mulai    DATE NOT NULL,
+    tanggal_selesai  DATE,
+    penanggung_jawab VARCHAR(150),
+    status           VARCHAR(30) NOT NULL DEFAULT 'belum_mulai'
+                     CHECK (status IN ('belum_mulai', 'sedang_berjalan', 'selesai', 'ditunda')),
+    deskripsi        TEXT,
+    created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS wakil_supervisi (
+    id               SERIAL PRIMARY KEY,
+    guru_id          INTEGER NOT NULL REFERENCES guru(id) ON DELETE CASCADE,
+    tanggal          DATE NOT NULL,
+    kelas            VARCHAR(50),
+    mata_pelajaran   VARCHAR(100),
+    aspek_penilaian  TEXT,
+    nilai            NUMERIC(5,2) CHECK (nilai >= 0 AND nilai <= 100),
+    catatan          TEXT,
+    rekomendasi      TEXT,
+    created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS wakil_perangkat_pembelajaran (
+    id               SERIAL PRIMARY KEY,
+    guru_id          INTEGER NOT NULL REFERENCES guru(id) ON DELETE CASCADE,
+    nama_perangkat   VARCHAR(200) NOT NULL,
+    jenis            VARCHAR(50) NOT NULL DEFAULT 'RPP',
+    status           VARCHAR(30) NOT NULL DEFAULT 'belum_lengkap'
+                     CHECK (status IN ('lengkap', 'belum_lengkap')),
+    catatan          TEXT,
+    created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO academic_user;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO academic_user;

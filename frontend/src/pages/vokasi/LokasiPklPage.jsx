@@ -20,6 +20,7 @@ export default function LokasiPKLPage() {
   // ── State Form ─────────────────────────────────────────────────────────
   const [kelasList,       setKelasList]       = useState([]);
   const [selectedKelas,   setSelectedKelas]   = useState("");
+  const [namaSiswaInput,  setNamaSiswaInput]  = useState("");   // input manual nama siswa
   const [namaPerusahaan,  setNamaPerusahaan]  = useState("");
   const [alamat,          setAlamat]          = useState("");
   const [posisi,          setPosisi]          = useState("");
@@ -98,7 +99,7 @@ export default function LokasiPKLPage() {
     try {
       const fd = new FormData();
       fd.append("siswa_id",    userId);
-      fd.append("nama_siswa",  namaSiswa);
+      fd.append("nama_siswa",  namaSiswaInput.trim() || namaSiswa);
       fd.append("nama_perusahaan", namaPerusahaan);
       fd.append("alamat",      alamat);
       fd.append("posisi",      posisi);
@@ -131,7 +132,7 @@ export default function LokasiPKLPage() {
   };
 
   const resetForm = () => {
-    setNamaPerusahaan(""); setAlamat(""); setPosisi("");
+    setNamaSiswaInput(""); setNamaPerusahaan(""); setAlamat(""); setPosisi("");
     setDeskripsi(""); setPembimbing(""); setKontak("");
     setTanggal(new Date().toISOString().slice(0, 10));
     setFoto(null); setFotoPreview(null); setEditId(null);
@@ -140,6 +141,7 @@ export default function LokasiPKLPage() {
 
   const handleEdit = (row) => {
     setEditId(row.id);
+    setNamaSiswaInput(row.nama_siswa || "");
     setNamaPerusahaan(row.nama_perusahaan || "");
     setAlamat(row.alamat || "");
     setPosisi(row.posisi || "");
@@ -198,6 +200,20 @@ export default function LokasiPKLPage() {
           </div>
 
           <div className="p-6 space-y-4">
+            {/* Row 0: Nama Siswa */}
+            <div>
+              <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">
+                Nama Siswa <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text" value={namaSiswaInput}
+                onChange={e => setNamaSiswaInput(e.target.value)}
+                placeholder="Ketik nama siswa yang PKL..."
+                required
+                className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
             {/* Row 1 */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -373,6 +389,11 @@ export default function LokasiPKLPage() {
                   {/* Info */}
                   <div className="flex-1 min-w-0">
                     <p className="font-bold text-gray-800 text-sm">{row.nama_perusahaan}</p>
+                    {row.nama_siswa && (
+                      <p className="text-xs text-gray-600 font-semibold mt-0.5">
+                        👤 {row.nama_siswa}
+                      </p>
+                    )}
                     {row.posisi && (
                       <span className="inline-block text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-semibold mt-0.5">
                         {row.posisi}

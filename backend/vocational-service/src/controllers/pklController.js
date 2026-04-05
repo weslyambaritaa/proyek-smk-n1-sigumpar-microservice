@@ -53,13 +53,16 @@ exports.createLokasiPKL = async (req, res) => {
     return res.status(400).json({ error: 'nama_perusahaan wajib diisi' });
   }
 
+  // siswa_id dari Keycloak adalah UUID (string), simpan apa adanya sebagai TEXT
+  const siswaIdText = siswa_id ? String(siswa_id) : null;
+
   try {
     const result = await db.query(
       `INSERT INTO laporan_lokasi_pkl
        (siswa_id, nama_siswa, nama_perusahaan, alamat, posisi,
         deskripsi_pekerjaan, pembimbing_industri, kontak_pembimbing, tanggal, foto_url)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
-      [siswa_id || null, nama_siswa || null, nama_perusahaan,
+      [siswaIdText, nama_siswa || null, nama_perusahaan,
        alamat || null, posisi || null, deskripsi_pekerjaan || null,
        pembimbing_industri || null, kontak_pembimbing || null,
        tanggal || new Date().toISOString().slice(0,10), foto_url]

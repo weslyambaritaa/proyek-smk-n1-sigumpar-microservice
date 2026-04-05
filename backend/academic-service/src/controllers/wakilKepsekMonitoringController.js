@@ -1,5 +1,4 @@
 const pool = require('../config/db');
-const axios = require('axios');
 
 // ─── MONITORING JADWAL ────────────────────────────────────────────────────────
 
@@ -138,29 +137,39 @@ exports.getParentingMonitoring = async (req, res) => {
  */
 exports.getLaporanRingkas = async (req, res) => {
   try {
-    const [jadwalRes, kelasRes, guruRes, perangkatRes, parentingRes] = await Promise.all([
+    // Query-query utama yang pasti ada tabelnya
+    const [jadwalRes, kelasRes, guruRes, parentingRes] = await Promise.all([
       pool.query('SELECT COUNT(*) AS total, COUNT(DISTINCT guru_id) AS guru, COUNT(DISTINCT kelas_id) AS kelas FROM jadwal_mengajar'),
       pool.query('SELECT COUNT(*) AS total FROM kelas'),
-      pool.query("SELECT COUNT(*) AS total FROM guru WHERE jabatan NOT IN ('Kepala Sekolah','Wakil Kepala Sekolah') OR jabatan IS NULL"),
-      pool.query("SELECT COUNT(*) AS total, COUNT(*) FILTER (WHERE status='lengkap') AS lengkap FROM wakil_perangkat_pembelajaran"),
+      pool.query("SELECT COUNT(*) AS total FROM guru"),
       pool.query('SELECT COUNT(*) AS total FROM parenting_log'),
     ]);
+
+    // Query ke tabel wakil yang mungkin belum ada — fallback ke 0 jika error
+    let perangkatTotal = 0;
+    let perangkatLengkap = 0;
+    try {
+      const perangkatRes = await pool.query(
+        "SELECT COUNT(*) AS total, COUNT(*) FILTER (WHERE status='lengkap') AS lengkap FROM wakil_perangkat_pembelajaran"
+      );
+      perangkatTotal  = Number(perangkatRes.rows[0].total);
+      perangkatLengkap = Number(perangkatRes.rows[0].lengkap);
+    } catch {
+      // Tabel belum ada (migration belum dijalankan) — kembalikan 0
+    }
 
     res.json({
       success: true,
       data: {
         jadwal: {
-          total_jam:  Number(jadwalRes.rows[0].total),
-          total_guru: Number(jadwalRes.rows[0].guru),
-          total_kelas:Number(jadwalRes.rows[0].kelas),
+          total_jam:   Number(jadwalRes.rows[0].total),
+          total_guru:  Number(jadwalRes.rows[0].guru),
+          total_kelas: Number(jadwalRes.rows[0].kelas),
         },
-        kelas:    { total: Number(kelasRes.rows[0].total) },
-        guru:     { total: Number(guruRes.rows[0].total) },
-        perangkat:{
-          total:   Number(perangkatRes.rows[0].total),
-          lengkap: Number(perangkatRes.rows[0].lengkap),
-        },
-        parenting:{ total: Number(parentingRes.rows[0].total) },
+        kelas:     { total: Number(kelasRes.rows[0].total) },
+        guru:      { total: Number(guruRes.rows[0].total) },
+        perangkat: { total: perangkatTotal, lengkap: perangkatLengkap },
+        parenting: { total: Number(parentingRes.rows[0].total) },
       },
     });
   } catch (err) {
