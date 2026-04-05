@@ -10,7 +10,7 @@ const PORT = process.env.PORT || 3008;
 
 // Middleware global
 app.use(helmet());
-app.use(cors());
+//app.use(cors());
 app.use(morgan("dev"));
 app.use(express.json());
 

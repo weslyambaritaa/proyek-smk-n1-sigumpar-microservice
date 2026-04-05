@@ -1,7 +1,8 @@
-const academicClient = require("../utils/academicClient");
-const pool = require("../config/db"); // database student-service
+const { callAcademicService } = require("../utils/academicClient");
+const pool = require("../config/db");
 const { createError } = require("../middleware/errorHandler");
 
+// Tambahkan fungsi isValidDate (jika belum ada)
 const isValidDate = (dateString) => {
   const regex = /^\d{4}-\d{2}-\d{2}$/;
   if (!regex.test(dateString)) return false;
@@ -11,7 +12,7 @@ const isValidDate = (dateString) => {
 
 exports.getRekapAbsensi = async (req, res, next) => {
   const { tanggal_awal, tanggal_akhir, id_kelas, id_mapel } = req.query;
-  const token = req.headers.authorization;
+  const token = req.headers.authorization?.split(" ")[1]; // ambil token
 
   if (!tanggal_awal || !tanggal_akhir) {
     return next(
@@ -23,17 +24,16 @@ exports.getRekapAbsensi = async (req, res, next) => {
   }
 
   try {
-    // 1. Ambil data siswa dari academic-service
-    const siswaRes = await academicClient.get("/siswa", {
-      headers: { Authorization: token },
-    });
-    let siswaList = siswaRes.data.data || [];
+    // Panggil endpoint siswa (perbaiki path)
+    const siswaData = await callAcademicService("/api/academic/siswa", token);
+    let siswaList = siswaData.data || [];
 
-    // 2. Ambil data absensi
-    const absensiRes = await academicClient.get("/absensi-siswa", {
-      headers: { Authorization: token },
-    });
-    let absensiList = absensiRes.data.data || [];
+    // Panggil endpoint absensi
+    const absensiData = await callAcademicService(
+      "/api/academic/absensi-siswa",
+      token,
+    );
+    let absensiList = absensiData.data || [];
 
     // Filter absensi berdasarkan rentang tanggal
     absensiList = absensiList.filter(
@@ -45,8 +45,7 @@ exports.getRekapAbsensi = async (req, res, next) => {
       siswaList = siswaList.filter((s) => s.id_kelas == id_kelas);
     }
 
-    // Jika ada id_mapel, kita perlu filter absensi berdasarkan mata pelajaran
-    // Asumsi: data absensi memiliki field mata_pelajaran_id
+    // Filter absensi berdasarkan id_mapel (jika ada)
     if (id_mapel) {
       absensiList = absensiList.filter((a) => a.mata_pelajaran_id == id_mapel);
     }
@@ -56,8 +55,8 @@ exports.getRekapAbsensi = async (req, res, next) => {
     for (const siswa of siswaList) {
       rekapMap.set(siswa.id_siswa, {
         id_siswa: siswa.id_siswa,
-        nama_siswa: siswa.namaSiswa || siswa.namasiswa,
-        nis: siswa.NIS || siswa.nis,
+        nama_siswa: siswa.namasiswa,
+        nis: siswa.nis,
         id_kelas: siswa.id_kelas,
         nama_kelas: siswa.nama_kelas || "-",
         hadir: 0,
@@ -79,8 +78,7 @@ exports.getRekapAbsensi = async (req, res, next) => {
       }
     }
 
-    // Simpan ke database student-service (opsional untuk caching)
-    // Tabel rekap_absensi_siswa perlu dibuat di student-service
+    // Simpan ke database student-service (opsional)
     const client = await pool.connect();
     try {
       await client.query("BEGIN");

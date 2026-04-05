@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useRekapAbsensiSiswa } from "../../hooks/useRekapAbsensiSiswa";
 import Button from "../../components/ui/Button";
-import * as XLSX from "xlsx"; // npm install xlsx
+import * as XLSX from "xlsx";
 
 const RekapAbsensiSiswa = () => {
   const { data, loading, error, periode, fetchRekap } = useRekapAbsensiSiswa();
@@ -25,6 +25,7 @@ const RekapAbsensiSiswa = () => {
           (window.keycloak && window.keycloak.token);
         if (!token) return;
 
+        // Ambil data kelas
         const kelasRes = await fetch(
           "http://localhost:8001/api/academic/kelas",
           {
@@ -32,8 +33,12 @@ const RekapAbsensiSiswa = () => {
           },
         );
         const kelasData = await kelasRes.json();
-        setListKelas(kelasData.data || []);
+        // Perbaikan: API mengembalikan array langsung, bukan {data: [...]}
+        setListKelas(
+          Array.isArray(kelasData) ? kelasData : kelasData.data || [],
+        );
 
+        // Ambil data mapel
         const mapelRes = await fetch(
           "http://localhost:8001/api/academic/mapel",
           {
@@ -41,7 +46,9 @@ const RekapAbsensiSiswa = () => {
           },
         );
         const mapelData = await mapelRes.json();
-        setListMapel(mapelData.data || []);
+        setListMapel(
+          Array.isArray(mapelData) ? mapelData : mapelData.data || [],
+        );
       } catch (err) {
         console.error("Gagal mengambil opsi filter:", err);
       }
