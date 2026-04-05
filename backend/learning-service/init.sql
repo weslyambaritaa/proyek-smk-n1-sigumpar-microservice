@@ -15,6 +15,20 @@ CREATE TABLE IF NOT EXISTS perangkat_pembelajaran (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
+--Tabel evaluasi guru
+CREATE TABLE IF NOT EXISTS evaluasi_guru (
+    id SERIAL PRIMARY KEY,
+    guru_id UUID NOT NULL,
+    periode_penilaian VARCHAR(50) NOT NULL,
+    nilai_numerik DECIMAL(5,2),
+    nilai_huruf VARCHAR(2),
+    komentar TEXT,
+    dinilai_oleh UUID NOT NULL,
+    dinilai_pada TIMESTAMP DEFAULT NOW(),
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
 -- Tabel Nilai Siswa
 CREATE TABLE IF NOT EXISTS nilai_siswa (
     id SERIAL PRIMARY KEY,
