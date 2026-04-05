@@ -4,6 +4,7 @@ const verifyToken = require("../middleware/auth");
 const extractIdentity = require("../middleware/extractIdentity");
 const ctrl = require("../controllers/learningController");
 const rekapCtrl = require("../controllers/rekapPerangkatController");
+const evaluasiGuruCtrl = require("../controllers/evaluasiGuruController");
 
 // ---- Perangkat Pembelajaran (Guru) ----
 router.get("/perangkat", verifyToken, ctrl.getAllPerangkat);
@@ -31,6 +32,18 @@ router.put(
   "/rekap-perangkat/:id/reject",
   extractIdentity,
   rekapCtrl.rejectPerangkat,
+);
+
+// ---- Evaluasi Guru (Kepala Sekolah) ----
+router.get(
+  "/evaluasi/guru",
+  extractIdentity,
+  evaluasiGuruCtrl.getDaftarGuruEvaluasi,
+);
+router.post(
+  "/evaluasi/guru/:guruId",
+  extractIdentity,
+  evaluasiGuruCtrl.simpanEvaluasi,
 );
 
 module.exports = router;

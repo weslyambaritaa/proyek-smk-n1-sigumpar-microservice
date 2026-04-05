@@ -13,6 +13,7 @@ import keycloak, { hasRole } from "./keycloak";
 import { Toaster } from "react-hot-toast";
 import Dashboard from "./pages/Dashboard";
 import PerangkatKepalaSekolah from "./pages/kepala-sekolah/RekapPerangkatKepalaSekolah";
+import EvaluasiGuru from "./pages/kepala-sekolah/EvaluasiGuru"; // <-- import halaman evaluasi
 
 const NavDropdown = ({ title, icon, children, isOpen, onClick }) => (
   <div className="mb-1">
@@ -122,9 +123,12 @@ const App = () => {
                 <NavLink to="/laporan-tahunan" className={subNavClass}>
                   Laporan Tahunan
                 </NavLink>
-                {/* Menu baru untuk Rekap Perangkat */}
                 <NavLink to="/rekap-perangkat" className={subNavClass}>
                   Rekap Perangkat
+                </NavLink>
+                {/* Menu Evaluasi Guru */}
+                <NavLink to="/evaluasi-guru" className={subNavClass}>
+                  Evaluasi Guru
                 </NavLink>
               </NavDropdown>
             )}
@@ -242,6 +246,9 @@ const App = () => {
               path="/rekap-perangkat"
               element={<PerangkatKepalaSekolah />}
             />
+
+            {/* Route untuk Evaluasi Guru (Kepala Sekolah) */}
+            <Route path="/evaluasi-guru" element={<EvaluasiGuru />} />
 
             {/* ── Redirect dari route lama ── */}
             <Route
