@@ -1,21 +1,24 @@
 const express = require("express");
-const cors = require("cors");
 const helmet = require("helmet");
 const morgan = require("morgan");
-const vocationalRoutes = require("./routes/vocationalRoutes");
+const path = require("path");
 const { errorHandler } = require("./middleware/errorHandler");
+const vocationalRoutes = require("./routes/vocationalRoutes");
 
 const app = express();
 const PORT = process.env.PORT || 3007;
 
-// ── Middleware Global ──────────────────────────────────────
-app.use(helmet());
-app.use(cors({ origin: process.env.CORS_ORIGIN || "*" }));
+app.use(helmet({ crossOriginResourcePolicy: false }));
 app.use(morgan("dev"));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: "20mb" }));
+app.use(express.urlencoded({ extended: true, limit: "20mb" }));
 
-// ── Health Check ───────────────────────────────────────────
+// ── Static: sajikan file upload foto PKL ─────────────────────────────────
+app.use(
+  "/api/vocational/uploads",
+  express.static(path.join(__dirname, "../uploads")),
+);
+
 app.get("/health", (req, res) => {
   res.json({
     status: "OK",
@@ -24,20 +27,19 @@ app.get("/health", (req, res) => {
   });
 });
 
-// ── Mount Routes ───────────────────────────────────────────
 app.use("/api/vocational", vocationalRoutes);
 
-// ── 404 Handler ────────────────────────────────────────────
 app.use((req, res) => {
-  res.status(404).json({
-    success: false,
-    message: `Route '${req.originalUrl}' tidak ditemukan`,
-  });
+  res
+    .status(404)
+    .json({
+      success: false,
+      message: `Route '${req.originalUrl}' tidak ditemukan di Vocational Service`,
+    });
 });
 
-// ── Error Handler (selalu di akhir) ───────────────────────
 app.use(errorHandler);
 
 app.listen(PORT, "0.0.0.0", () => {
-  console.log(`✅ Vocational Service berjalan di http://0.0.0.0:${PORT}`);
+  console.log(`Vocational Service berjalan di port ${PORT}`);
 });

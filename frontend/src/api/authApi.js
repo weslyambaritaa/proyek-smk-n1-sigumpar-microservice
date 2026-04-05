@@ -1,13 +1,13 @@
 // frontend/src/api/authApi.js
-import axiosInstance from './axiosInstance';
+import axiosInstance from "./axiosInstance";
 
 export const fetchUsers = async () => {
-  const response = await axiosInstance.get('/auth');
+  const response = await axiosInstance.get("/auth");
   return response.data;
 };
 
 export const createUser = async (userData) => {
-  const response = await axiosInstance.post('/auth', userData);
+  const response = await axiosInstance.post("/auth", userData);
   return response.data;
 };
 

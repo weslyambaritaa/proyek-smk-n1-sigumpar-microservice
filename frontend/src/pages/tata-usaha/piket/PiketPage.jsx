@@ -20,8 +20,11 @@ const PiketPage = () => {
   const fetchPiket = async () => {
     try {
       const resPiket = await academicApi.getAllPiket();
-      const resUsers = await axiosInstance.get("/api/auth");
-      const users = Array.isArray(resUsers.data) ? resUsers.data : resUsers.data.data || [];
+      let users = [];
+      try {
+        const resUsers = await axiosInstance.get("/api/auth");
+        users = Array.isArray(resUsers.data) ? resUsers.data : (resUsers.data?.data || []);
+      } catch { /* users gagal, data utama tetap tampil */ }
       const rawPiket = Array.isArray(resPiket.data) ? resPiket.data : resPiket.data.data || [];
 
       const piketWithGuru = rawPiket.map((p) => {

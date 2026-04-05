@@ -1,82 +1,80 @@
 const express = require("express");
 const router = express.Router();
+const pramukaController = require("../controllers/pramukaController");
 const pklController = require("../controllers/pklController");
-const proyekController = require("../controllers/proyekController");
-const nilaiController = require("../controllers/nilaiController");
 const extractIdentity = require("../middleware/extractIdentity");
+const upload = require("../middleware/upload");
 
-// ============================================================
-// STATISTIK DASHBOARD
-// ============================================================
-router.get("/statistik", extractIdentity, pklController.getStatistik);
+// ── PRAMUKA: REGU & ANGGOTA ───────────────────────────────────────────────
+router.get("/regu", pramukaController.getAllRegu);
+router.post("/regu", pramukaController.createRegu);
+router.delete("/regu/:id", pramukaController.deleteRegu);
+router.get("/regu/siswa-tersedia", pramukaController.getSiswaTersedia);
+router.post("/regu/assign", pramukaController.assignSiswaToRegu);
+router.get("/regu/:regu_id/siswa", pramukaController.getSiswaByRegu);
 
-// ============================================================
-// PROGRAM KEAHLIAN
-// ============================================================
+// ── PRAMUKA: ABSENSI ──────────────────────────────────────────────────────
+router.get("/absensi", pramukaController.getAbsensiPramuka);
+router.post("/absensi", pramukaController.submitAbsensiPramuka);
+router.get("/absensi/rekap", pramukaController.getRekapAbsensiPramuka);
+
+// ── PRAMUKA: SILABUS ──────────────────────────────────────────────────────
+router.get("/silabus", pramukaController.getAllSilabus);
+router.post("/silabus", pramukaController.createSilabus);
+router.get("/silabus/:id/view", pramukaController.downloadSilabus); // preview inline
+router.get("/silabus/:id/download", pramukaController.downloadSilabus); // force download
+router.delete("/silabus/:id", pramukaController.deleteSilabus);
+
+// ── LAPORAN KEGIATAN PRAMUKA ──────────────────────────────────────────────
+router.get("/laporan-kegiatan", pramukaController.getAllLaporanKegiatan);
+router.post("/laporan-kegiatan", pramukaController.createLaporanKegiatan);
 router.get(
-  "/program-keahlian",
-  extractIdentity,
-  pklController.getAllProgramKeahlian,
+  "/laporan-kegiatan/:id/view",
+  pramukaController.downloadLaporanKegiatan,
 );
-
-// ============================================================
-// PKL SUBMISSIONS — CRUD Lengkap
-// ============================================================
-router.get("/pkl", extractIdentity, pklController.getAllPKL);
-router.get("/pkl/:id", extractIdentity, pklController.getPKLById);
-router.post("/pkl", extractIdentity, pklController.createPKL);
-router.put("/pkl/:id", extractIdentity, pklController.updatePKL);
-router.delete("/pkl/:id", extractIdentity, pklController.deletePKL);
-
-// ============================================================
-// VALIDASI / APPROVE PKL
-// ============================================================
-router.post("/approve", extractIdentity, pklController.approvePKL);
-
-// ============================================================
-// MONITORING PKL
-// ============================================================
-router.get("/monitoring", extractIdentity, pklController.getAllMonitoring);
-router.post("/monitoring", extractIdentity, pklController.addMonitoring);
-
-// ============================================================
-// INPUT NILAI PKL
-// ============================================================
-router.post("/input-nilai", extractIdentity, pklController.inputNilai);
-
-// ============================================================
-// PROYEK VOKASI — CRUD Lengkap
-// ============================================================
-router.get("/proyek", extractIdentity, proyekController.getAllProyek);
-router.get("/proyek/:id", extractIdentity, proyekController.getProyekById);
-router.post("/proyek", extractIdentity, proyekController.createProyek);
-router.put("/proyek/:id", extractIdentity, proyekController.updateProyek);
-router.delete("/proyek/:id", extractIdentity, proyekController.deleteProyek);
-
-// Anggota proyek
 router.get(
-  "/proyek/:id/anggota",
-  extractIdentity,
-  proyekController.getAnggotaProyek,
+  "/laporan-kegiatan/:id/download",
+  pramukaController.downloadLaporanKegiatan,
 );
+router.delete("/laporan-kegiatan/:id", pramukaController.deleteLaporanKegiatan);
+
+// ── VOKASI: PROXY SISWA & KELAS dari Academic Service ────────────────────
+router.get("/siswa", extractIdentity, pklController.getSiswaForVokasi);
+router.get("/kelas", extractIdentity, pklController.getKelasForVokasi);
+
+// ── PKL: LOKASI ───────────────────────────────────────────────────────────
+router.get("/pkl/lokasi", extractIdentity, pklController.getAllLokasiPKL);
 router.post(
-  "/proyek/:id/anggota",
+  "/pkl/lokasi",
   extractIdentity,
-  proyekController.addAnggotaProyek,
+  upload.single("foto"),
+  pklController.createLokasiPKL,
+);
+router.put(
+  "/pkl/lokasi/:id",
+  extractIdentity,
+  upload.single("foto"),
+  pklController.updateLokasiPKL,
 );
 router.delete(
-  "/proyek/anggota/:anggotaId",
+  "/pkl/lokasi/:id",
   extractIdentity,
-  proyekController.deleteAnggotaProyek,
+  pklController.deleteLokasiPKL,
 );
 
-// ============================================================
-// NILAI KOMPETENSI KEJURUAN — CRUD Lengkap
-// ============================================================
-router.get("/nilai", extractIdentity, nilaiController.getAllNilai);
-router.get("/nilai/:id", extractIdentity, nilaiController.getNilaiById);
-router.post("/nilai", extractIdentity, nilaiController.createNilai);
-router.put("/nilai/:id", extractIdentity, nilaiController.updateNilai);
-router.delete("/nilai/:id", extractIdentity, nilaiController.deleteNilai);
+// ── PKL: PROGRES ──────────────────────────────────────────────────────────
+router.get("/pkl/progres", extractIdentity, pklController.getAllProgresPKL);
+router.post("/pkl/progres", extractIdentity, pklController.createProgresPKL);
+router.put("/pkl/progres/:id", extractIdentity, pklController.updateProgresPKL);
+router.delete(
+  "/pkl/progres/:id",
+  extractIdentity,
+  pklController.deleteProgresPKL,
+);
+
+// ── PKL: NILAI ────────────────────────────────────────────────────────────
+router.get("/pkl/nilai", extractIdentity, pklController.getNilaiPKL);
+router.post("/pkl/nilai", extractIdentity, pklController.saveNilaiPKLBulk);
+router.delete("/pkl/nilai/:id", extractIdentity, pklController.deleteNilaiPKL);
 
 module.exports = router;
