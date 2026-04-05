@@ -3,95 +3,24 @@ import toast from "react-hot-toast";
 import { academicApi } from "../../api/academicApi";
 import axiosInstance from "../../api/axiosInstance";
 import keycloak from "../../keycloak";
-
-// ── Helper: deteksi tipe file dari URL ─────────────────────────────────────
-const isImage = (url) => url && /\.(jpg|jpeg|png|gif|webp)$/i.test(url);
-const isPDF   = (url) => url && /\.pdf$/i.test(url);
-
-// ── Komponen: Modal Preview Lampiran ───────────────────────────────────────
-function LampiranModal({ url, onClose }) {
-  if (!url) return null;
-  const img = isImage(url);
-  const pdf = isPDF(url);
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
-      onClick={onClose}
-    >
-      <div
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between px-6 py-3 border-b border-gray-100">
-          <p className="font-semibold text-gray-700 text-sm">Lampiran Dokumen</p>
-          <div className="flex gap-2">
-            <a
-              href={url}
-              download
-              className="px-4 py-1.5 bg-green-50 text-green-600 hover:bg-green-100 rounded-lg text-xs font-semibold transition-colors"
-            >
-              ⬇ Unduh
-            </a>
-            <button
-              onClick={onClose}
-              className="px-4 py-1.5 bg-gray-100 text-gray-600 hover:bg-gray-200 rounded-lg text-xs font-semibold"
-            >
-              ✕ Tutup
-            </button>
-          </div>
-        </div>
-        <div className="flex-1 bg-gray-50 overflow-auto flex items-center justify-center min-h-[300px]">
-          {img && (
-            <img
-              src={url}
-              alt="Lampiran"
-              className="max-w-full max-h-[75vh] object-contain rounded-lg shadow"
-            />
-          )}
-          {pdf && (
-            <iframe
-              src={url}
-              className="w-full h-[70vh] border-0"
-              title="Lampiran PDF"
-            />
-          )}
-          {!img && !pdf && (
-            <div className="text-center py-12">
-              <p className="text-5xl mb-4">📄</p>
-              <p className="text-gray-600 font-medium text-sm mb-4">
-                Format ini tidak dapat ditampilkan langsung
-              </p>
-              <a
-                href={url}
-                download
-                className="px-6 py-2 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors"
-              >
-                ⬇ Unduh File
-              </a>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
+import ImagePreviewModal from "../../components/common/ImagePreviewModal";
 
 export default function ParentingPage() {
-  const waliId   = keycloak.tokenParsed?.sub;
+  const waliId = keycloak.tokenParsed?.sub;
   const namaWali = keycloak.tokenParsed?.name || "Wali Kelas";
 
-  const [kelasList,      setKelasList]      = useState([]);
-  const [selectedKelas,  setSelectedKelas]  = useState("");
-  const [tanggal,        setTanggal]        = useState(new Date().toISOString().slice(0, 10));
-  const [kehadiranOrtu,  setKehadiranOrtu]  = useState("");
-  const [agenda,         setAgenda]         = useState("");
-  const [ringkasan,      setRingkasan]      = useState("");
-  const [file,           setFile]           = useState(null);
-  const [filePreview,    setFilePreview]    = useState(null);
-  const [saving,         setSaving]         = useState(false);
-  const [histori,        setHistori]        = useState([]);
+  const [kelasList, setKelasList] = useState([]);
+  const [selectedKelas, setSelectedKelas] = useState("");
+  const [tanggal, setTanggal] = useState(new Date().toISOString().slice(0, 10));
+  const [kehadiranOrtu, setKehadiranOrtu] = useState("");
+  const [agenda, setAgenda] = useState("");
+  const [ringkasan, setRingkasan] = useState("");
+  const [file, setFile] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [histori, setHistori] = useState([]);
   const [loadingHistori, setLoadingHistori] = useState(false);
-  const [previewUrl,     setPreviewUrl]     = useState(null);
+  // FIX #2: state untuk image preview modal
+  const [previewSrc, setPreviewSrc] = useState(null);
   const fileRef = useRef();
 
   const namaKelas = kelasList.find((k) => String(k.id) === String(selectedKelas))?.nama_kelas || "";
@@ -113,19 +42,6 @@ export default function ParentingPage() {
   };
 
   useEffect(() => { loadHistori(); }, [selectedKelas]);
-
-  // Preview lokal sebelum upload
-  const handleFileChange = (e) => {
-    const f = e.target.files[0] || null;
-    setFile(f);
-    if (f && f.type.startsWith("image/")) {
-      const reader = new FileReader();
-      reader.onloadend = () => setFilePreview(reader.result);
-      reader.readAsDataURL(f);
-    } else {
-      setFilePreview(f ? `📄 ${f.name}` : null);
-    }
-  };
 
   const handleSimpan = async (e) => {
     e.preventDefault();
@@ -151,9 +67,8 @@ export default function ParentingPage() {
       setRingkasan("");
       setKehadiranOrtu("");
       setFile(null);
-      setFilePreview(null);
       if (fileRef.current) fileRef.current.value = "";
-      loadHistori(); // ← refresh otomatis setelah simpan
+      loadHistori();
     } catch (err) {
       toast.error(err.response?.data?.error || "Gagal menyimpan laporan");
     } finally {
@@ -163,9 +78,14 @@ export default function ParentingPage() {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      {/* Modal Preview */}
-      <LampiranModal url={previewUrl} onClose={() => setPreviewUrl(null)} />
-
+      {/* FIX #2: Image Preview Modal */}
+      {previewSrc && (
+        <ImagePreviewModal
+          src={previewSrc}
+          fileName="Lampiran Parenting"
+          onClose={() => setPreviewSrc(null)}
+        />
+      )}
       <div className="bg-white border-b px-8 py-5">
         <h1 className="text-2xl font-bold text-gray-800 tracking-tight">PARENTING KELAS MASSAL</h1>
         {selectedKelas && (
@@ -217,19 +137,9 @@ export default function ParentingPage() {
               </div>
               <div>
                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Upload Foto/Dokumen</label>
-                <input type="file" ref={fileRef} onChange={handleFileChange}
+                <input type="file" ref={fileRef} onChange={(e) => setFile(e.target.files[0] || null)}
                   accept="image/*,.pdf"
                   className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700" />
-                {/* Preview sebelum upload */}
-                {filePreview && (
-                  <div className="mt-2">
-                    {file?.type?.startsWith("image/") ? (
-                      <img src={filePreview} alt="Preview" className="w-20 h-20 object-cover rounded-lg border border-gray-200 shadow-sm" />
-                    ) : (
-                      <p className="text-xs text-gray-500 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-200">{filePreview}</p>
-                    )}
-                  </div>
-                )}
               </div>
             </div>
 
@@ -250,25 +160,15 @@ export default function ParentingPage() {
 
         {/* Histori Pertemuan */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <div className="px-6 py-4 border-b border-gray-100">
             <h2 className="font-bold text-gray-800 text-sm uppercase tracking-wide">Histori Pertemuan Kelas</h2>
-            <button
-              onClick={loadHistori}
-              disabled={loadingHistori || !selectedKelas}
-              className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-40 transition-all"
-            >
-              {loadingHistori ? "..." : "↻ Refresh"}
-            </button>
           </div>
           {loadingHistori ? (
-            <div className="py-12 text-center text-gray-400">
-              <div className="inline-block w-6 h-6 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mb-2" />
-              <p>Memuat data...</p>
-            </div>
+            <div className="py-12 text-center text-gray-400">Memuat data...</div>
           ) : histori.length === 0 ? (
             <div className="py-12 text-center text-gray-400">
               <p className="text-3xl mb-2">📋</p>
-              <p>{selectedKelas ? "Belum ada riwayat pertemuan" : "Pilih kelas untuk melihat histori"}</p>
+              <p>Belum ada riwayat pertemuan</p>
             </div>
           ) : (
             <table className="w-full text-sm">
@@ -278,7 +178,7 @@ export default function ParentingPage() {
                   <th className="px-5 py-3 text-left">Tanggal & Agenda</th>
                   <th className="px-5 py-3 text-left">Kehadiran</th>
                   <th className="px-5 py-3 text-left">Ringkasan Hasil</th>
-                  <th className="px-5 py-3 text-center">Lampiran</th>
+                  <th className="px-5 py-3 text-left">Lampiran</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
@@ -294,29 +194,19 @@ export default function ParentingPage() {
                         {h.kehadiran_ortu || 0} ORANGTUA
                       </span>
                     </td>
-                    <td className="px-5 py-3 text-gray-600 text-xs max-w-xs">{h.ringkasan || "—"}</td>
-                    <td className="px-5 py-4">
+                    <td className="px-5 py-3 text-gray-600 text-xs max-w-xs">{h.ringkasan || "-"}</td>
+                    <td className="px-5 py-3">
                       {h.foto_url ? (
-                        <div className="flex items-center justify-center gap-1.5">
-                          {/* Tombol LIHAT — buka modal preview */}
-                          <button
-                            onClick={() => setPreviewUrl(h.foto_url)}
-                            className="flex items-center gap-1 px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg text-xs font-semibold transition-colors"
-                          >
-                            👁 Lihat
-                          </button>
-                          {/* Tombol UNDUH */}
-                          <a
-                            href={h.foto_url}
-                            download
-                            className="flex items-center gap-1 px-3 py-1.5 bg-green-50 text-green-600 hover:bg-green-100 rounded-lg text-xs font-semibold transition-colors"
-                          >
-                            ⬇ Unduh
-                          </a>
-                        </div>
-                      ) : (
-                        <span className="text-gray-300 text-xs text-center block">—</span>
-                      )}
+                        <a
+                          href={h.foto_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          onClick={(e) => { if (/\.(jpg|jpeg|png|gif|webp)(\?.*)?$/i.test(h.foto_url)) { e.preventDefault(); setPreviewSrc(h.foto_url); setPreviewName("Lampiran"); } }}
+                          className="text-blue-600 hover:text-blue-800 font-semibold text-xs uppercase"
+                        >
+                          {/\.(jpg|jpeg|png|gif|webp)(\?.*)?$/i.test(h.foto_url) ? "🖼️ Lihat Foto" : "📄 Lihat File"}
+                        </a>
+                      ) : <span className="text-gray-300 text-xs">—</span>}
                     </td>
                   </tr>
                 ))}

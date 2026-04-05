@@ -1,7 +1,5 @@
 import api from "./axiosInstance";
 
-const BASE = api.defaults.baseURL || 'http://localhost:8001';
-
 // ── Absensi Guru ─────────────────────────────────────────────────────────
 export const getAbsensiGuru = (params) =>
   api.get("/api/learning/absensi-guru", { params });
@@ -27,12 +25,15 @@ export const learningApi = {
       headers: { "Content-Type": "multipart/form-data" },
     }),
 
-  // Download file (paksa download)
+  // FIX #3: Download file — sertakan MIME type asli agar format tidak berubah
   downloadPerangkat: (id, fileName) =>
     api
       .get(`/api/learning/perangkat/${id}/download`, { responseType: "blob" })
       .then((res) => {
-        const url = window.URL.createObjectURL(new Blob([res.data]));
+        // Gunakan Content-Type dari server untuk menjaga format asli file
+        const mimeType = res.headers["content-type"] || "application/octet-stream";
+        const blob = new Blob([res.data], { type: mimeType });
+        const url = window.URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.href = url;
         link.setAttribute("download", fileName);
@@ -52,7 +53,6 @@ export const learningApi = {
       const blob = new Blob([res.data], { type: mimeType });
       const url = window.URL.createObjectURL(blob);
       window.open(url, "_blank");
-      // Bersihkan URL setelah jeda
       setTimeout(() => window.URL.revokeObjectURL(url), 10000);
     } catch (err) {
       throw err;
