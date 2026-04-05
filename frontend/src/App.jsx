@@ -1,4 +1,10 @@
-import { BrowserRouter, Routes, Route, NavLink, Navigate } from "react-router-dom";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  NavLink,
+  Navigate,
+} from "react-router-dom";
 import { useState } from "react";
 import KelasPage from "./pages/tata-usaha/kelas/KelasPage";
 import PerangkatPage from "./pages/guru-mapel/perangkat/PerangkatPage";
@@ -6,6 +12,7 @@ import NilaiPage from "./pages/guru-mapel/nilai/NilaiPage";
 import keycloak, { hasRole } from "./keycloak";
 import { Toaster } from "react-hot-toast";
 import Dashboard from "./pages/Dashboard";
+import PerangkatKepalaSekolah from "./pages/kepala-sekolah/RekapPerangkatKepalaSekolah";
 
 const NavDropdown = ({ title, icon, children, isOpen, onClick }) => (
   <div className="mb-1">
@@ -17,7 +24,9 @@ const NavDropdown = ({ title, icon, children, isOpen, onClick }) => (
         <span>{icon}</span>
         <span>{title}</span>
       </div>
-      <span className={`text-xs transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}>
+      <span
+        className={`text-xs transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
+      >
         ▼
       </span>
     </button>
@@ -48,10 +57,11 @@ const App = () => {
             maxWidth: "600px",
             fontWeight: "500",
             textAlign: "center",
-            boxShadow: "0 20px 25px -5px rgba(0,0,0,.1),0 10px 10px -5px rgba(0,0,0,.04)",
+            boxShadow:
+              "0 20px 25px -5px rgba(0,0,0,.1),0 10px 10px -5px rgba(0,0,0,.04)",
           },
           success: { duration: 3000 },
-          error:   { duration: 4000 },
+          error: { duration: 4000 },
         }}
       />
 
@@ -70,16 +80,29 @@ const App = () => {
 
           {/* Info user */}
           <div className="px-4 py-3 border-b border-gray-100 bg-blue-50">
-            <p className="text-xs text-blue-400 font-semibold uppercase">Pengguna Aktif</p>
+            <p className="text-xs text-blue-400 font-semibold uppercase">
+              Pengguna Aktif
+            </p>
             <p className="text-sm font-bold text-blue-800 truncate">
-              {keycloak.tokenParsed?.name || keycloak.tokenParsed?.preferred_username}
+              {keycloak.tokenParsed?.name ||
+                keycloak.tokenParsed?.preferred_username}
             </p>
             <p className="text-xs text-blue-500 capitalize">
               {(keycloak.tokenParsed?.realm_access?.roles || [])
                 .find((r) =>
-                  ["kepala-sekolah","waka-sekolah","guru-mapel","wali-kelas","tata-usaha","pramuka","vokasi"].includes(r)
+                  [
+                    "kepala-sekolah",
+                    "waka-sekolah",
+                    "guru-mapel",
+                    "wali-kelas",
+                    "tata-usaha",
+                    "pramuka",
+                    "vokasi",
+                  ].includes(r),
                 )
-                ?.split("-").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ") || "Pengguna"}
+                ?.split("-")
+                .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+                .join(" ") || "Pengguna"}
             </p>
           </div>
 
@@ -90,24 +113,47 @@ const App = () => {
             </NavLink>
 
             {hasRole("kepala-sekolah") && (
-              <NavDropdown title="Kepala Sekolah" icon="👨‍💼"
-                isOpen={openMenus["kepsek"]} onClick={() => toggleMenu("kepsek")}>
-                <NavLink to="/laporan-tahunan" className={subNavClass}>Laporan Tahunan</NavLink>
+              <NavDropdown
+                title="Kepala Sekolah"
+                icon="👨‍💼"
+                isOpen={openMenus["kepsek"]}
+                onClick={() => toggleMenu("kepsek")}
+              >
+                <NavLink to="/laporan-tahunan" className={subNavClass}>
+                  Laporan Tahunan
+                </NavLink>
+                {/* Menu baru untuk Rekap Perangkat */}
+                <NavLink to="/rekap-perangkat" className={subNavClass}>
+                  Rekap Perangkat
+                </NavLink>
               </NavDropdown>
             )}
 
             {hasRole("waka-sekolah") && (
-              <NavDropdown title="Waka Sekolah" icon="👨‍🏫"
-                isOpen={openMenus["waka"]} onClick={() => toggleMenu("waka")}>
-                <NavLink to="/kurikulum" className={subNavClass}>Kurikulum</NavLink>
+              <NavDropdown
+                title="Waka Sekolah"
+                icon="👨‍🏫"
+                isOpen={openMenus["waka"]}
+                onClick={() => toggleMenu("waka")}
+              >
+                <NavLink to="/kurikulum" className={subNavClass}>
+                  Kurikulum
+                </NavLink>
               </NavDropdown>
             )}
 
             {/* ── GURU MAPEL ── */}
             {hasRole("guru-mapel") && (
-              <NavDropdown title="Guru Mapel" icon="📝"
-                isOpen={openMenus["guru"]} onClick={() => toggleMenu("guru")}>
-                <NavLink to="/guru/perangkat-pembelajaran" className={subNavClass}>
+              <NavDropdown
+                title="Guru Mapel"
+                icon="📝"
+                isOpen={openMenus["guru"]}
+                onClick={() => toggleMenu("guru")}
+              >
+                <NavLink
+                  to="/guru/perangkat-pembelajaran"
+                  className={subNavClass}
+                >
                   Perangkat Pembelajaran
                 </NavLink>
                 <NavLink to="/guru/input-nilai" className={subNavClass}>
@@ -117,30 +163,54 @@ const App = () => {
             )}
 
             {hasRole("wali-kelas") && (
-              <NavDropdown title="Wali Kelas" icon="🏫"
-                isOpen={openMenus["walas"]} onClick={() => toggleMenu("walas")}>
-                <NavLink to="/presensi-kelas" className={subNavClass}>Presensi Kelas</NavLink>
+              <NavDropdown
+                title="Wali Kelas"
+                icon="🏫"
+                isOpen={openMenus["walas"]}
+                onClick={() => toggleMenu("walas")}
+              >
+                <NavLink to="/presensi-kelas" className={subNavClass}>
+                  Presensi Kelas
+                </NavLink>
               </NavDropdown>
             )}
 
             {hasRole("tata-usaha") && (
-              <NavDropdown title="Tata Usaha" icon="📂"
-                isOpen={openMenus["tu"]} onClick={() => toggleMenu("tu")}>
-                <NavLink to="/academic/kelas" className={subNavClass}>Data Kelas</NavLink>
+              <NavDropdown
+                title="Tata Usaha"
+                icon="📂"
+                isOpen={openMenus["tu"]}
+                onClick={() => toggleMenu("tu")}
+              >
+                <NavLink to="/academic/kelas" className={subNavClass}>
+                  Data Kelas
+                </NavLink>
               </NavDropdown>
             )}
 
             {hasRole("pramuka") && (
-              <NavDropdown title="Pramuka" icon="⛺"
-                isOpen={openMenus["pramuka"]} onClick={() => toggleMenu("pramuka")}>
-                <NavLink to="/nilai-pramuka" className={subNavClass}>Nilai Pramuka</NavLink>
+              <NavDropdown
+                title="Pramuka"
+                icon="⛺"
+                isOpen={openMenus["pramuka"]}
+                onClick={() => toggleMenu("pramuka")}
+              >
+                <NavLink to="/nilai-pramuka" className={subNavClass}>
+                  Nilai Pramuka
+                </NavLink>
               </NavDropdown>
             )}
 
             {hasRole("vokasi") && (
-              <NavDropdown title="Vokasi" icon="🛠️"
-                isOpen={openMenus["vokasi"]} onClick={() => toggleMenu("vokasi")}>
-                <NavLink to="/proyek-vokasi" className={subNavClass}>Proyek Siswa</NavLink>
+              <NavDropdown
+                title="Vokasi"
+                icon="🛠️"
+                isOpen={openMenus["vokasi"]}
+                onClick={() => toggleMenu("vokasi")}
+              >
+                <NavLink to="/proyek-vokasi" className={subNavClass}>
+                  Proyek Siswa
+                </NavLink>
               </NavDropdown>
             )}
           </nav>
@@ -159,14 +229,29 @@ const App = () => {
         {/* ── KONTEN ── */}
         <main className="flex-1 overflow-y-auto">
           <Routes>
-            <Route path="/"                          element={<Dashboard />} />
-            <Route path="/academic/kelas"            element={<KelasPage />} />
-            <Route path="/guru/perangkat-pembelajaran" element={<PerangkatPage />} />
-            <Route path="/guru/input-nilai"          element={<NilaiPage />} />
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/academic/kelas" element={<KelasPage />} />
+            <Route
+              path="/guru/perangkat-pembelajaran"
+              element={<PerangkatPage />}
+            />
+            <Route path="/guru/input-nilai" element={<NilaiPage />} />
+
+            {/* Route untuk Rekap Perangkat (Kepala Sekolah) */}
+            <Route
+              path="/rekap-perangkat"
+              element={<PerangkatKepalaSekolah />}
+            />
 
             {/* ── Redirect dari route lama ── */}
-            <Route path="/input-nilai"               element={<Navigate to="/guru/input-nilai" replace />} />
-            <Route path="/perangkat-pembelajaran"    element={<Navigate to="/guru/perangkat-pembelajaran" replace />} />
+            <Route
+              path="/input-nilai"
+              element={<Navigate to="/guru/input-nilai" replace />}
+            />
+            <Route
+              path="/perangkat-pembelajaran"
+              element={<Navigate to="/guru/perangkat-pembelajaran" replace />}
+            />
           </Routes>
         </main>
       </div>

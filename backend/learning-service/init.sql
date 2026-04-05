@@ -7,6 +7,10 @@ CREATE TABLE IF NOT EXISTS perangkat_pembelajaran (
     file_name VARCHAR(255),
     file_data BYTEA,
     file_mime VARCHAR(100),
+    status VARCHAR(20) DEFAULT 'pending',
+    feedback TEXT,
+    approved_at TIMESTAMP,
+    approved_by UUID,
     tanggal_upload TIMESTAMP DEFAULT NOW(),
     created_at TIMESTAMP DEFAULT NOW()
 );
