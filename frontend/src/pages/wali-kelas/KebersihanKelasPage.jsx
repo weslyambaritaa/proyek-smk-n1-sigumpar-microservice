@@ -13,6 +13,15 @@ const NILAI_COLOR = {
   "Kotor": "bg-red-500 text-white",
 };
 
+// Helper: bangun URL lengkap untuk foto dari academic-service
+// foto_url dari DB: "/api/academic/uploads/xxx.jpg"
+function getFullFotoUrl(foto_url) {
+  if (!foto_url) return null;
+  if (foto_url.startsWith("http")) return foto_url;
+  const base = axiosInstance.defaults.baseURL || "";
+  return base ? `${base}${foto_url}` : foto_url;
+}
+
 export default function KebersihanKelasPage() {
   const [kelasList, setKelasList] = useState([]);
   const [selectedKelas, setSelectedKelas] = useState("");
@@ -20,11 +29,12 @@ export default function KebersihanKelasPage() {
   const [penilaian, setPenilaian] = useState({});
   const [catatan, setCatatan] = useState("");
   const [file, setFile] = useState(null);
+  const [fotoPreview, setFotoPreview] = useState(null);
   const [saving, setSaving] = useState(false);
   const [histori, setHistori] = useState([]);
   const [loadingHistori, setLoadingHistori] = useState(false);
-  // FIX #2: state untuk image preview modal
   const [previewSrc, setPreviewSrc] = useState(null);
+  const [previewName, setPreviewName] = useState("");
   const fileRef = useRef();
 
   useEffect(() => {
@@ -45,6 +55,29 @@ export default function KebersihanKelasPage() {
 
   useEffect(() => { loadHistori(); }, [selectedKelas]);
 
+  const handleFotoChange = (e) => {
+    const f = e.target.files[0];
+    if (!f) return;
+    setFile(f);
+    const reader = new FileReader();
+    reader.onloadend = () => setFotoPreview(reader.result);
+    reader.readAsDataURL(f);
+  };
+
+  const handleRemoveFoto = () => {
+    setFile(null);
+    setFotoPreview(null);
+    if (fileRef.current) fileRef.current.value = "";
+  };
+
+  // getFullFotoUrl dipanggil agar URL selalu benar baik dev maupun prod
+  const handlePreviewFoto = (url, nama) => {
+    const full = getFullFotoUrl(url);
+    if (!full) return;
+    setPreviewSrc(full);
+    setPreviewName(nama || "Foto Kebersihan Kelas");
+  };
+
   const handleSimpan = async () => {
     if (!selectedKelas) { toast.error("Pilih kelas terlebih dahulu"); return; }
     setSaving(true);
@@ -55,14 +88,11 @@ export default function KebersihanKelasPage() {
       fd.append("penilaian", JSON.stringify(penilaian));
       fd.append("catatan", catatan);
       if (file) fd.append("foto", file);
-
       await axiosInstance.post("/api/academic/wali/kebersihan", fd, {
         headers: { "Content-Type": "multipart/form-data" },
       });
       toast.success("Penilaian kebersihan berhasil disimpan!");
-      setPenilaian({});
-      setCatatan("");
-      setFile(null);
+      setPenilaian({}); setCatatan(""); setFile(null); setFotoPreview(null);
       if (fileRef.current) fileRef.current.value = "";
       loadHistori();
     } catch (err) {
@@ -74,23 +104,21 @@ export default function KebersihanKelasPage() {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      {/* FIX #2: Image Preview Modal */}
       {previewSrc && (
         <ImagePreviewModal
           src={previewSrc}
-          fileName="Foto Kebersihan"
-          onClose={() => setPreviewSrc(null)}
+          fileName={previewName}
+          onClose={() => { setPreviewSrc(null); setPreviewName(""); }}
         />
       )}
+
       <div className="bg-white border-b px-8 py-5">
         <h1 className="text-2xl font-bold text-gray-800 tracking-tight">KEBERSIHAN KELAS</h1>
         <p className="text-sm text-gray-500 mt-0.5">Penilaian kebersihan dan kerapian kelas</p>
       </div>
 
       <div className="px-8 py-6 max-w-3xl mx-auto space-y-5">
-        {/* Form Penilaian */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5">
-          {/* Kelas & Tanggal */}
           <div className="grid grid-cols-2 gap-4 mb-5">
             <div>
               <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Kelas</label>
@@ -107,7 +135,6 @@ export default function KebersihanKelasPage() {
             </div>
           </div>
 
-          {/* Penilaian Per Aspek */}
           <h3 className="font-bold text-gray-700 mb-3 text-sm">Penilaian Per Aspek</h3>
           <div className="space-y-3 mb-5">
             {ASPEK.map((a) => (
@@ -128,7 +155,6 @@ export default function KebersihanKelasPage() {
             ))}
           </div>
 
-          {/* Catatan & Foto */}
           <div className="space-y-4">
             <div>
               <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Catatan Umum</label>
@@ -136,13 +162,37 @@ export default function KebersihanKelasPage() {
                 placeholder="Catatan tambahan mengenai kebersihan kelas..."
                 className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none" />
             </div>
+
+            {/* Upload foto — drag area dengan thumbnail */}
             <div>
               <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">
                 Foto Dokumentasi <span className="text-gray-400 font-normal normal-case">(opsional)</span>
               </label>
-              <input type="file" ref={fileRef} accept="image/*"
-                onChange={(e) => setFile(e.target.files[0] || null)}
-                className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700" />
+              {fotoPreview ? (
+                <div className="flex items-start gap-3">
+                  <img src={fotoPreview} alt="Preview foto kebersihan"
+                    onClick={() => handlePreviewFoto(fotoPreview, "Preview Foto Kebersihan")}
+                    className="w-24 h-20 object-cover rounded-xl border-2 border-blue-200 shadow cursor-pointer hover:opacity-80 hover:shadow-md transition-all"
+                    title="Klik untuk preview fullscreen" />
+                  <div className="flex flex-col gap-2 mt-1">
+                    <button type="button" onClick={() => handlePreviewFoto(fotoPreview, "Preview Foto Kebersihan")}
+                      className="text-xs text-blue-500 hover:text-blue-700 font-semibold px-3 py-1 border border-blue-200 rounded-lg transition-colors">
+                      🔍 Preview
+                    </button>
+                    <button type="button" onClick={handleRemoveFoto}
+                      className="text-xs text-red-400 hover:text-red-600 font-semibold px-3 py-1 border border-red-200 rounded-lg transition-colors">
+                      ✕ Hapus Foto
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-all bg-gray-50">
+                  <span className="text-2xl mb-1">📷</span>
+                  <span className="text-sm text-gray-500 font-medium">Klik untuk upload foto dokumentasi</span>
+                  <span className="text-xs text-gray-400 mt-0.5">JPG, PNG — maks 10MB</span>
+                  <input type="file" ref={fileRef} accept="image/*" onChange={handleFotoChange} className="hidden" />
+                </label>
+              )}
             </div>
           </div>
 
@@ -170,14 +220,25 @@ export default function KebersihanKelasPage() {
                   const pen = typeof h.penilaian === "string" ? JSON.parse(h.penilaian) : (h.penilaian || {});
                   return (
                     <div key={h.id} className="px-6 py-4">
-                      <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-start justify-between mb-2">
                         <p className="text-xs font-semibold text-blue-600">{h.tanggal}</p>
-                        {h.foto_url && (
-                          // FIX #2: foto langsung preview di modal, tidak download
-                          <button
-                            onClick={() => setPreviewSrc(h.foto_url)}
-                            className="text-xs text-blue-600 hover:underline font-semibold"
-                          >📷 Lihat Foto</button>
+                        {/* Foto thumbnail — gunakan getFullFotoUrl agar URL selalu benar */}
+                        {h.foto_url ? (
+                          <img
+                            src={getFullFotoUrl(h.foto_url)}
+                            alt="Foto Kebersihan"
+                            onClick={() => handlePreviewFoto(h.foto_url, `Foto Kebersihan — ${h.tanggal}`)}
+                            className="w-12 h-12 object-cover rounded-lg border border-gray-200 cursor-pointer hover:opacity-80 hover:shadow-md transition-all"
+                            title="Klik untuk lihat foto"
+                            onError={(e) => {
+                              e.target.style.display = "none";
+                              e.target.parentNode.innerHTML += '<div class="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center text-gray-300 text-lg">📷</div>';
+                            }}
+                          />
+                        ) : (
+                          <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center text-gray-300 text-lg" title="Tidak ada foto">
+                            📷
+                          </div>
                         )}
                       </div>
                       <div className="flex flex-wrap gap-1.5 mb-2">

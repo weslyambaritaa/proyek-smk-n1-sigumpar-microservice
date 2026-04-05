@@ -2,15 +2,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import { learningApi } from '../../../api/learningApi';
 import toast from 'react-hot-toast';
 
-const JENIS_DOKUMEN = ['RPP', 'Silabus', 'Modul', 'Prota', 'Promes', 'Lainnya'];
+// Hanya 3 jenis dokumen: RPP, Silabus, Modul
+const JENIS_DOKUMEN = ['RPP', 'Silabus', 'Modul'];
 
 const badgeColor = {
   RPP:     'bg-blue-100 text-blue-700',
   Silabus: 'bg-green-100 text-green-700',
   Modul:   'bg-purple-100 text-purple-700',
-  Prota:   'bg-yellow-100 text-yellow-700',
-  Promes:  'bg-orange-100 text-orange-700',
-  Lainnya: 'bg-gray-100 text-gray-600',
 };
 
 const isImageMime = (mime) => mime && mime.startsWith('image/');
@@ -177,6 +175,7 @@ const PerangkatPage = () => {
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Jenis Dokumen</label>
+              {/* Hanya RPP, Silabus, Modul */}
               <select value={jenisDokumen} onChange={(e) => setJenisDokumen(e.target.value)}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-400">
                 {JENIS_DOKUMEN.map((j) => <option key={j} value={j}>{j}</option>)}
@@ -204,6 +203,7 @@ const PerangkatPage = () => {
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <h2 className="text-lg font-semibold text-gray-700">📁 Daftar Dokumen Terupload</h2>
           <div className="flex items-center gap-3">
+            {/* Filter hanya RPP, Silabus, Modul */}
             <select value={filterJenis} onChange={(e) => setFilterJenis(e.target.value)}
               className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-400">
               <option value="">Semua Jenis</option>
@@ -239,7 +239,7 @@ const PerangkatPage = () => {
                 <tr key={doc.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-6 py-4 font-semibold text-gray-800">{doc.nama_dokumen}</td>
                   <td className="px-6 py-4">
-                    <span className={`px-2 py-0.5 rounded text-xs font-bold ${badgeColor[doc.jenis_dokumen] || badgeColor['Lainnya']}`}>
+                    <span className={`px-2 py-0.5 rounded text-xs font-bold ${badgeColor[doc.jenis_dokumen] || 'bg-gray-100 text-gray-600'}`}>
                       {doc.jenis_dokumen}
                     </span>
                   </td>
@@ -247,17 +247,14 @@ const PerangkatPage = () => {
                   <td className="px-6 py-4 text-gray-400 text-xs truncate max-w-[150px]">{doc.file_name}</td>
                   <td className="px-6 py-4">
                     <div className="flex items-center justify-center gap-2">
-                      {/* Tombol LIHAT */}
                       <button onClick={() => setPreviewDoc(doc)} title="Lihat Dokumen"
                         className="flex items-center gap-1 px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg text-xs font-semibold transition-colors">
                         👁 Lihat
                       </button>
-                      {/* Tombol DOWNLOAD */}
                       <button onClick={() => learningApi.downloadPerangkat(doc.id, doc.file_name)} title="Download"
                         className="flex items-center gap-1 px-3 py-1.5 bg-green-50 text-green-600 hover:bg-green-100 rounded-lg text-xs font-semibold transition-colors">
                         ⬇ Unduh
                       </button>
-                      {/* Tombol HAPUS */}
                       <button onClick={() => handleDelete(doc)} title="Hapus"
                         className="flex items-center gap-1 px-3 py-1.5 bg-red-50 text-red-500 hover:bg-red-100 rounded-lg text-xs font-semibold transition-colors">
                         🗑 Hapus

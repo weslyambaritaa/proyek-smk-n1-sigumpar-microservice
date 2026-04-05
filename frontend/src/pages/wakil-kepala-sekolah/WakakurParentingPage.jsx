@@ -4,12 +4,15 @@ import axiosInstance from "../../api/axiosInstance";
 import { academicApi } from "../../api/academicApi";
 import ImagePreviewModal from "../../components/common/ImagePreviewModal";
 
-const BASE_URL = import.meta.env.VITE_ACADEMIC_URL || "";
-
+// Helper: bangun URL lengkap untuk foto dari academic-service
+// foto_url dari DB: "/api/academic/uploads/xxx.jpg"
+// Di dev: Vite proxy /api → gateway, path relatif sudah cukup
+// Di prod: gabungkan baseURL axiosInstance
 function getFullFotoUrl(foto_url) {
   if (!foto_url) return null;
   if (foto_url.startsWith("http")) return foto_url;
-  return `${BASE_URL}${foto_url}`;
+  const base = axiosInstance.defaults.baseURL || "";
+  return base ? `${base}${foto_url}` : foto_url;
 }
 
 export default function WakakurParentingPage() {
@@ -54,13 +57,21 @@ export default function WakakurParentingPage() {
   );
 
   const stats = useMemo(() => ({
-    total:   rows.length,
+    total:      rows.length,
     denganFoto: rows.filter(r => r.foto_url).length,
     totalOrtu:  rows.reduce((a, r) => a + (Number(r.kehadiran_ortu) || 0), 0),
   }), [rows]);
 
   const namaKelas = (id) =>
     kelasList.find(k => String(k.id) === String(id))?.nama_kelas || `Kelas #${id}`;
+
+  // getFullFotoUrl dipanggil agar URL selalu benar baik dev maupun prod
+  const handlePreviewFoto = (foto_url, nama) => {
+    const full = getFullFotoUrl(foto_url);
+    if (!full) return;
+    setPreviewSrc(full);
+    setPreviewName(nama || "Dokumentasi Parenting");
+  };
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -128,7 +139,7 @@ export default function WakakurParentingPage() {
           </div>
         </div>
 
-        {/* Laporan Parenting */}
+        {/* Tabel Laporan Parenting */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
           <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
             <h2 className="font-bold text-gray-800">
@@ -148,69 +159,76 @@ export default function WakakurParentingPage() {
               <p>Belum ada laporan parenting</p>
             </div>
           ) : (
-            <div className="divide-y divide-gray-50">
-              {filtered.map((row, i) => (
-                <div key={row.id || i} className="px-6 py-4 hover:bg-gray-50/70 flex gap-4 items-start">
-                  {/* Nomor */}
-                  <div className="w-7 h-7 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">
-                    {i + 1}
-                  </div>
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 text-xs font-bold text-gray-500 uppercase tracking-wider">
+                <tr>
+                  <th className="px-5 py-3 text-left w-8">No</th>
+                  {/* Kolom Foto — thumbnail klik seperti AbsensiGuru */}
+                  <th className="px-5 py-3 text-left w-20">Foto</th>
+                  <th className="px-5 py-3 text-left">Kelas & Tanggal</th>
+                  <th className="px-5 py-3 text-left">Agenda</th>
+                  <th className="px-5 py-3 text-left">Kehadiran</th>
+                  <th className="px-5 py-3 text-left">Ringkasan</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {filtered.map((row, i) => (
+                  <tr key={row.id || i} className="hover:bg-gray-50/70 transition-colors">
+                    <td className="px-5 py-3">
+                      <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-bold">
+                        {i + 1}
+                      </div>
+                    </td>
 
-                  {/* Foto dokumentasi — klik untuk preview fullscreen */}
-                  <div className="flex-shrink-0">
-                    {row.foto_url ? (
-                      <div>
+                    {/* Foto thumbnail — gunakan getFullFotoUrl agar URL selalu benar */}
+                    <td className="px-5 py-3">
+                      {row.foto_url ? (
                         <img
                           src={getFullFotoUrl(row.foto_url)}
                           alt="Dokumentasi Parenting"
-                          className="w-24 h-18 object-cover rounded-xl border-2 border-blue-100 shadow cursor-pointer hover:opacity-80 hover:scale-105 transition-all"
-                          style={{ height: "72px" }}
-                          onClick={() => {
-                            setPreviewSrc(getFullFotoUrl(row.foto_url));
-                            setPreviewName(`Parenting — ${namaKelas(row.kelas_id)} · ${row.tanggal}`);
+                          onClick={() => handlePreviewFoto(row.foto_url, `Parenting — ${namaKelas(row.kelas_id)} · ${row.tanggal}`)}
+                          className="w-12 h-12 object-cover rounded-lg border border-gray-200 cursor-pointer hover:opacity-80 hover:shadow-md transition-all"
+                          title="Klik untuk lihat foto"
+                          onError={(e) => {
+                            e.target.style.display = "none";
+                            e.target.parentNode.innerHTML = '<div class="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center text-gray-300 text-lg" title="Foto tidak ditemukan">📷</div>';
                           }}
-                          title="Klik untuk preview foto"
                         />
-                        <button
-                          className="w-full mt-1 text-[10px] text-blue-500 hover:text-blue-700 font-semibold text-center"
-                          onClick={() => {
-                            setPreviewSrc(getFullFotoUrl(row.foto_url));
-                            setPreviewName(`Parenting — ${namaKelas(row.kelas_id)} · ${row.tanggal}`);
-                          }}
-                        >
-                          🔍 Preview
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="w-24 h-18 bg-gray-100 rounded-xl border border-gray-200 flex items-center justify-center text-gray-300 text-2xl" style={{ height: "72px" }}>
-                        📷
-                      </div>
-                    )}
-                  </div>
+                      ) : (
+                        <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center text-gray-300 text-lg" title="Tidak ada foto">
+                          📷
+                        </div>
+                      )}
+                    </td>
 
-                  {/* Info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xs font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
+                    <td className="px-5 py-3">
+                      <span className="text-xs font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded block w-fit mb-1">
                         {namaKelas(row.kelas_id)}
                       </span>
-                      <span className="text-xs text-gray-400">{row.tanggal || "-"}</span>
+                      <span className="text-xs text-gray-400">{row.tanggal || "—"}</span>
+                    </td>
+
+                    <td className="px-5 py-3">
+                      {row.agenda && (
+                        <p className="text-sm font-semibold text-gray-800">📌 {row.agenda}</p>
+                      )}
+                    </td>
+
+                    <td className="px-5 py-3">
                       {row.kehadiran_ortu > 0 && (
-                        <span className="text-xs text-green-600 font-semibold">
-                          👥 {row.kehadiran_ortu} orang tua hadir
+                        <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-full whitespace-nowrap">
+                          👥 {row.kehadiran_ortu} orang tua
                         </span>
                       )}
-                    </div>
-                    {row.agenda && (
-                      <p className="text-sm font-semibold text-gray-800 mb-0.5">📌 {row.agenda}</p>
-                    )}
-                    {row.ringkasan && (
-                      <p className="text-xs text-gray-500 line-clamp-2">{row.ringkasan}</p>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
+                    </td>
+
+                    <td className="px-5 py-3">
+                      <p className="text-xs text-gray-500 line-clamp-2 max-w-xs">{row.ringkasan || "—"}</p>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           )}
         </div>
       </div>
