@@ -1,18 +1,20 @@
 import { useState, useEffect, useCallback } from "react";
 import toast from "react-hot-toast";
 import { academicApi } from "../../api/academicApi";
+import axiosInstance from "../../api/axiosInstance";
 
 const TAHUN_OPTS = ["2023/2024", "2024/2025", "2025/2026"];
 
 export default function RekapNilaiPage() {
-  const [kelasList,     setKelasList]     = useState([]);
-  const [mapelList,     setMapelList]     = useState([]);
-  const [selectedKelas, setSelectedKelas] = useState("");
-  const [selectedMapel, setSelectedMapel] = useState("");
-  const [tahun,         setTahun]         = useState("2024/2025");
-  const [data,          setData]          = useState([]);
-  const [loading,       setLoading]       = useState(false);
-  const [sudahCari,     setSudahCari]     = useState(false);
+  const [kelasList,      setKelasList]      = useState([]);
+  const [mapelList,      setMapelList]      = useState([]);
+  const [selectedKelas,  setSelectedKelas]  = useState("");
+  const [selectedMapel,  setSelectedMapel]  = useState("");
+  const [tahun,          setTahun]          = useState("2024/2025");
+  const [data,           setData]           = useState([]);
+  const [loading,        setLoading]        = useState(false);
+  const [sudahCari,      setSudahCari]      = useState(false);
+  const [mengkonfirmasi, setMengkonfirmasi] = useState(false);
 
   useEffect(() => {
     Promise.all([academicApi.getAllKelas(), academicApi.getAllMapel()])
@@ -30,14 +32,13 @@ export default function RekapNilaiPage() {
     if (!selectedKelas) { toast.error("Pilih kelas terlebih dahulu"); return; }
     setLoading(true); setSudahCari(true);
     try {
-      // Menggunakan endpoint wali kelas yang sudah terintegrasi dengan nilai guru mapel
       const res = await academicApi.getRekapNilaiWali({
-        kelas_id: selectedKelas,
-        mapel_id: selectedMapel || undefined,
+        kelas_id:  selectedKelas,
+        mapel_id:  selectedMapel || undefined,
         tahun_ajar: tahun,
       });
       setData(Array.isArray(res.data?.data) ? res.data.data : []);
-    } catch (err) {
+    } catch {
       toast.error("Gagal memuat data nilai");
     } finally {
       setLoading(false);
@@ -47,10 +48,35 @@ export default function RekapNilaiPage() {
   const handleExport = async () => {
     if (!selectedKelas) { toast.error("Pilih kelas terlebih dahulu"); return; }
     try {
-      await academicApi.exportNilaiExcel({ kelas_id: selectedKelas, mapel_id: selectedMapel || undefined, tahun_ajar: tahun });
+      await academicApi.exportNilaiExcel({
+        kelas_id:  selectedKelas,
+        mapel_id:  selectedMapel || undefined,
+        tahun_ajar: tahun,
+      });
       toast.success("File berhasil diunduh!");
     } catch {
       toast.error("Gagal mengunduh file. Silakan coba lagi.");
+    }
+  };
+
+  const handleKonfirmasi = async () => {
+    if (!selectedKelas) { toast.error("Pilih kelas terlebih dahulu"); return; }
+    if (!window.confirm(
+      "Konfirmasi rekap nilai ini ke Kepala Sekolah?\n\nSetelah dikonfirmasi, Kepala Sekolah dapat melihat nilai final siswa kelas ini."
+    )) return;
+
+    setMengkonfirmasi(true);
+    try {
+      await axiosInstance.post("/api/academic/kepsek/rekap-nilai-final/konfirmasi", {
+        kelas_id:  selectedKelas,
+        mapel_id:  selectedMapel || null,
+        tahun_ajar: tahun,
+      });
+      toast.success("✅ Rekap nilai berhasil dikonfirmasi ke Kepala Sekolah!");
+    } catch {
+      toast.error("Gagal mengkonfirmasi rekap nilai. Silakan coba lagi.");
+    } finally {
+      setMengkonfirmasi(false);
     }
   };
 
@@ -106,10 +132,21 @@ export default function RekapNilaiPage() {
                 {loading ? "..." : "🔍 Cari"}
               </button>
               {sudahCari && data.length > 0 && (
-                <button onClick={handleExport}
-                  className="px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white font-bold text-sm rounded-xl transition-all" title="Export ke Excel">
-                  📊
-                </button>
+                <>
+                  <button onClick={handleExport}
+                    className="px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white font-bold text-sm rounded-xl transition-all"
+                    title="Export ke Excel">
+                    📊
+                  </button>
+                  <button
+                    onClick={handleKonfirmasi}
+                    disabled={mengkonfirmasi}
+                    className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white font-bold text-sm rounded-xl transition-all whitespace-nowrap"
+                    title="Konfirmasi rekap nilai ke Kepala Sekolah"
+                  >
+                    {mengkonfirmasi ? "..." : "✅ Konfirmasi"}
+                  </button>
+                </>
               )}
             </div>
           </div>
@@ -119,9 +156,9 @@ export default function RekapNilaiPage() {
         {sudahCari && data.length > 0 && (
           <div className="grid grid-cols-3 gap-4">
             {[
-              { label: "Total Siswa", val: new Set(data.map(d => d.siswa_id)).size, cls: "bg-white border text-gray-800" },
-              { label: "Tuntas (≥75)", val: data.filter(d => Number(d.nilai_akhir) >= 75).length, cls: "bg-green-50 border border-green-200 text-green-700" },
-              { label: "Belum Tuntas", val: data.filter(d => Number(d.nilai_akhir) < 75 && d.nilai_akhir !== null).length, cls: "bg-red-50 border border-red-200 text-red-700" },
+              { label: "Total Siswa",  val: new Set(data.map(d => d.siswa_id)).size,                                        cls: "bg-white border text-gray-800" },
+              { label: "Tuntas (≥75)", val: data.filter(d => Number(d.nilai_akhir) >= 75).length,                           cls: "bg-green-50 border border-green-200 text-green-700" },
+              { label: "Belum Tuntas", val: data.filter(d => Number(d.nilai_akhir) < 75 && d.nilai_akhir !== null).length,  cls: "bg-red-50 border border-red-200 text-red-700" },
             ].map(({ label, val, cls }) => (
               <div key={label} className={`rounded-2xl p-4 text-center ${cls}`}>
                 <p className="text-xs font-semibold opacity-70 mb-1">{label}</p>
@@ -186,9 +223,9 @@ export default function RekapNilaiPage() {
                         </td>
                         <td className="px-4 py-3 text-center">
                           <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
-                            Number(d.nilai_akhir) >= 75 ? 'bg-green-100 text-green-700' :
-                            Number(d.nilai_akhir) >= 60 ? 'bg-yellow-100 text-yellow-700' :
-                            'bg-red-100 text-red-700'
+                            Number(d.nilai_akhir) >= 75 ? "bg-green-100 text-green-700" :
+                            Number(d.nilai_akhir) >= 60 ? "bg-yellow-100 text-yellow-700" :
+                            "bg-red-100 text-red-700"
                           }`}>{gradeLabel(d.nilai_akhir)}</span>
                         </td>
                       </tr>

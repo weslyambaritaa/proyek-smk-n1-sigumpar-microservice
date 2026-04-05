@@ -111,15 +111,20 @@ router.get('/wali/rekap-absensi', extractIdentity, waliKelasController.getRekapA
 
 // ─── KEPALA SEKOLAH ──────────────────────────────────────────────────────────
 router.get('/kepsek/rekap-absensi-siswa', extractIdentity, kepsekController.getRekapAbsensiSiswa);
-router.get('/kepsek/rekap-nilai', extractIdentity, kepsekController.getRekapNilai);
-router.get('/kepsek/statistik', extractIdentity, kepsekController.getStatistikUmum);
+router.get('/kepsek/rekap-nilai',         extractIdentity, kepsekController.getRekapNilai);
+router.get('/kepsek/statistik',           extractIdentity, kepsekController.getStatistikUmum);
+// Rekap Nilai Final — status konfirmasi dari Wali Kelas
+// PENTING: route spesifik harus didaftarkan SEBELUM route dengan parameter (:siswa_id)
+router.get('/kepsek/rekap-nilai-final',                        extractIdentity, kepsekController.getRekapNilaiFinal);
+router.get('/kepsek/rekap-nilai-final/detail-siswa/:siswa_id', extractIdentity, kepsekController.getDetailNilaiSiswa);
+router.post('/kepsek/rekap-nilai-final/konfirmasi',            extractIdentity, kepsekController.konfirmasiRekapNilai);
 
 // ─── WAKIL KEPALA SEKOLAH — MONITORING ───────────────────────────────────────
 
 // Monitoring Jadwal (read-only, sudah ada deteksi bentrok server-side)
-router.get('/wakil/jadwal',          extractIdentity, wakilMonitoringController.getJadwalMonitoring);
-router.get('/wakil/jadwal/rekap-hari', extractIdentity, wakilMonitoringController.getRekapJadwalPerHari);
+router.get('/wakil/jadwal',               extractIdentity, wakilMonitoringController.getJadwalMonitoring);
+router.get('/wakil/jadwal/rekap-hari',    extractIdentity, wakilMonitoringController.getRekapJadwalPerHari);
 router.get('/wakil/parenting-monitoring', extractIdentity, wakilMonitoringController.getParentingMonitoring);
-router.get('/wakil/laporan-ringkas', extractIdentity, wakilMonitoringController.getLaporanRingkas);
+router.get('/wakil/laporan-ringkas',      extractIdentity, wakilMonitoringController.getLaporanRingkas);
 
 module.exports = router;
