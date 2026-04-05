@@ -2,7 +2,6 @@ const express = require('express');
 const router  = express.Router();
 const pramukaController = require('../controllers/pramukaController');
 const pklController     = require('../controllers/pklController');
-const upload = require('../middleware/upload');
 const extractIdentity = require('../middleware/extractIdentity');
 
 // ── PRAMUKA: REGU & ANGGOTA ───────────────────────────────────────────────
@@ -13,26 +12,24 @@ router.get('/regu/siswa-tersedia', pramukaController.getSiswaTersedia);
 router.post('/regu/assign',        pramukaController.assignSiswaToRegu);
 router.get('/regu/:regu_id/siswa', pramukaController.getSiswaByRegu);
 
-// ── PRAMUKA: ABSENSI (per-kelas dari academic, seperti absensi siswa) ─────
-router.get('/absensi',  pramukaController.getAbsensiPramuka);
-router.post('/absensi', pramukaController.submitAbsensiPramuka);
+// ── PRAMUKA: ABSENSI ──────────────────────────────────────────────────────
+router.get('/absensi',       pramukaController.getAbsensiPramuka);
+router.post('/absensi',      pramukaController.submitAbsensiPramuka);
 router.get('/absensi/rekap', pramukaController.getRekapAbsensiPramuka);
 
 // ── PRAMUKA: SILABUS ──────────────────────────────────────────────────────
-router.get('/silabus',             pramukaController.getAllSilabus);
-router.post('/silabus',            upload.single('file'), pramukaController.createSilabus);
-router.delete('/silabus/:id',      pramukaController.deleteSilabus);
-
-// ── PRAMUKA: UPLOAD FILE ──────────────────────────────────────────────────
-router.post('/upload', upload.single('file_laporan'), (req, res) => {
-  if (!req.file) return res.status(400).json({ error: 'Tidak ada file yang diupload' });
-  res.json({ file_url: `/api/vocational/uploads/${req.file.filename}`, file_nama: req.file.originalname });
-});
+router.get('/silabus',                pramukaController.getAllSilabus);
+router.post('/silabus',               pramukaController.createSilabus);
+router.get('/silabus/:id/view',       pramukaController.downloadSilabus);   // preview inline
+router.get('/silabus/:id/download',   pramukaController.downloadSilabus);   // force download
+router.delete('/silabus/:id',         pramukaController.deleteSilabus);
 
 // ── LAPORAN KEGIATAN PRAMUKA ──────────────────────────────────────────────
-router.get('/laporan-kegiatan',       pramukaController.getAllLaporanKegiatan);
-router.post('/laporan-kegiatan',      upload.single('file_laporan'), pramukaController.createLaporanKegiatan);
-router.delete('/laporan-kegiatan/:id', pramukaController.deleteLaporanKegiatan);
+router.get('/laporan-kegiatan',              pramukaController.getAllLaporanKegiatan);
+router.post('/laporan-kegiatan',             pramukaController.createLaporanKegiatan);
+router.get('/laporan-kegiatan/:id/view',     pramukaController.downloadLaporanKegiatan);
+router.get('/laporan-kegiatan/:id/download', pramukaController.downloadLaporanKegiatan);
+router.delete('/laporan-kegiatan/:id',       pramukaController.deleteLaporanKegiatan);
 
 // ── VOKASI: PROXY SISWA & KELAS dari Academic Service ────────────────────
 router.get('/siswa',  extractIdentity, pklController.getSiswaForVokasi);
@@ -40,8 +37,8 @@ router.get('/kelas',  extractIdentity, pklController.getKelasForVokasi);
 
 // ── PKL: LOKASI ───────────────────────────────────────────────────────────
 router.get('/pkl/lokasi',        extractIdentity, pklController.getAllLokasiPKL);
-router.post('/pkl/lokasi',       extractIdentity, upload.single('foto'), pklController.createLokasiPKL);
-router.put('/pkl/lokasi/:id',    extractIdentity, upload.single('foto'), pklController.updateLokasiPKL);
+router.post('/pkl/lokasi',       extractIdentity, pklController.createLokasiPKL);
+router.put('/pkl/lokasi/:id',    extractIdentity, pklController.updateLokasiPKL);
 router.delete('/pkl/lokasi/:id', extractIdentity, pklController.deleteLokasiPKL);
 
 // ── PKL: PROGRES ──────────────────────────────────────────────────────────

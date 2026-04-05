@@ -1,4 +1,26 @@
 const db = require('../config/db');
+const multer = require('multer');
+
+// ── Upload middleware (memory storage — file disimpan di DB, bukan disk) ──
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 20 * 1024 * 1024 }, // 20 MB
+  fileFilter: (_req, file, cb) => {
+    const allowed = [
+      'application/pdf',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/msword',
+      'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp',
+    ];
+    if (allowed.includes(file.mimetype)) cb(null, true);
+    else cb(new Error('Hanya file PDF, DOCX/DOC, dan gambar yang diperbolehkan'));
+  },
+});
+
+const runMulter = (field) => (req, res) =>
+  new Promise((resolve, reject) => {
+    upload.single(field)(req, res, (err) => (err ? reject(err) : resolve()));
+  });
 
 // ── REGU ──────────────────────────────────────────────────────────────────
 
@@ -18,18 +40,17 @@ exports.createRegu = async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 };
 
+exports.deleteRegu = async (req, res) => {
+  try {
+    await db.query('DELETE FROM kelas_pramuka WHERE id = $1', [req.params.id]);
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+};
+
 // ── ANGGOTA REGU ──────────────────────────────────────────────────────────
 
-exports.getSiswaTersedia = async (req, res) => {
-  try {
-    // Ambil dari academic service atau return data dari siswa yang belum di-assign
-    const result = await db.query(`
-      SELECT s.id, s.siswa_id, s.nama_lengkap
-      FROM (VALUES (1,'Siswa Pramuka')) AS s(id, siswa_id, nama_lengkap)
-      WHERE 1=0
-    `); // Placeholder - frontend handles this
-    res.json([]);
-  } catch (err) { res.status(500).json({ error: err.message }); }
+exports.getSiswaTersedia = async (_req, res) => {
+  res.json([]);
 };
 
 exports.assignSiswaToRegu = async (req, res) => {
@@ -44,11 +65,10 @@ exports.assignSiswaToRegu = async (req, res) => {
 };
 
 exports.getSiswaByRegu = async (req, res) => {
-  const { regu_id } = req.params;
   try {
     const result = await db.query(
       'SELECT * FROM anggota_regu WHERE regu_id = $1 ORDER BY nama_lengkap ASC',
-      [regu_id]
+      [req.params.regu_id]
     );
     res.json(result.rows);
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -57,22 +77,18 @@ exports.getSiswaByRegu = async (req, res) => {
 // ── ABSENSI PRAMUKA ───────────────────────────────────────────────────────
 
 exports.submitAbsensiPramuka = async (req, res) => {
-  // Support kelas_id (baru) ATAU regu_id (lama)
   const { kelas_id, regu_id, tanggal, deskripsi, file_url, data_absensi } = req.body;
   const kelasOrRegu = kelas_id || regu_id;
-
   if (!kelasOrRegu || !tanggal || !Array.isArray(data_absensi)) {
     return res.status(400).json({ error: 'kelas_id, tanggal, dan data_absensi wajib diisi' });
   }
   const client = await db.connect();
   try {
     await client.query('BEGIN');
-    // Simpan laporan (regu_id kolom digunakan untuk kelas_id juga agar backward compat)
     await client.query(
       'INSERT INTO laporan_pramuka (regu_id, tanggal, deskripsi, file_url) VALUES ($1, $2, $3, $4)',
       [kelasOrRegu, tanggal, deskripsi || '', file_url || '']
     );
-    // Simpan absensi
     for (const item of data_absensi) {
       const { siswa_id, nama_lengkap, status } = item;
       if (!siswa_id) continue;
@@ -94,60 +110,20 @@ exports.submitAbsensiPramuka = async (req, res) => {
   }
 };
 
-// Riwayat absensi pramuka
 exports.getAbsensiPramuka = async (req, res) => {
   const { regu_id, kelas_id, tanggal, tanggal_mulai, tanggal_akhir } = req.query;
   const kelasFilter = kelas_id || regu_id;
   try {
-    let query = `
-      SELECT ap.*, ap.nama_lengkap
-      FROM absensi_pramuka ap
-      WHERE 1=1`;
+    let query = `SELECT ap.*, ap.nama_lengkap FROM absensi_pramuka ap WHERE 1=1`;
     const params = [];
     let idx = 1;
-    if (kelasFilter) { query += ` AND ap.regu_id = $${idx++}`; params.push(kelasFilter); }
-    if (tanggal) { query += ` AND ap.tanggal = $${idx++}`; params.push(tanggal); }
-    if (tanggal_mulai) { query += ` AND ap.tanggal >= $${idx++}`; params.push(tanggal_mulai); }
-    if (tanggal_akhir) { query += ` AND ap.tanggal <= $${idx++}`; params.push(tanggal_akhir); }
+    if (kelasFilter)    { query += ` AND ap.regu_id = $${idx++}`;    params.push(kelasFilter); }
+    if (tanggal)        { query += ` AND ap.tanggal = $${idx++}`;    params.push(tanggal); }
+    if (tanggal_mulai)  { query += ` AND ap.tanggal >= $${idx++}`;   params.push(tanggal_mulai); }
+    if (tanggal_akhir)  { query += ` AND ap.tanggal <= $${idx++}`;   params.push(tanggal_akhir); }
     query += ' ORDER BY ap.tanggal DESC, ap.id ASC';
     const result = await db.query(query, params);
     res.json({ success: true, data: result.rows });
-  } catch (err) { res.status(500).json({ error: err.message }); }
-};
-
-// ── SILABUS PRAMUKA ───────────────────────────────────────────────────────
-
-exports.getAllSilabus = async (req, res) => {
-  try {
-    const result = await db.query('SELECT * FROM silabus_pramuka ORDER BY tanggal DESC, id DESC');
-    res.json({ success: true, data: result.rows });
-  } catch (err) { res.status(500).json({ error: err.message }); }
-};
-
-exports.createSilabus = async (req, res) => {
-  const { tingkat_kelas, judul_kegiatan, tanggal } = req.body;
-  let file_url = null;
-  if (req.file) file_url = `/api/vocational/uploads/${req.file.filename}`;
-  try {
-    const result = await db.query(
-      'INSERT INTO silabus_pramuka (tingkat_kelas, judul_kegiatan, tanggal, file_url) VALUES ($1, $2, $3, $4) RETURNING *',
-      [tingkat_kelas || null, judul_kegiatan, tanggal || new Date().toISOString().slice(0,10), file_url]
-    );
-    res.status(201).json({ success: true, data: result.rows[0] });
-  } catch (err) { res.status(500).json({ error: err.message }); }
-};
-
-exports.deleteSilabus = async (req, res) => {
-  try {
-    await db.query('DELETE FROM silabus_pramuka WHERE id = $1', [req.params.id]);
-    res.json({ success: true });
-  } catch (err) { res.status(500).json({ error: err.message }); }
-};
-
-exports.deleteRegu = async (req, res) => {
-  try {
-    await db.query('DELETE FROM kelas_pramuka WHERE id = $1', [req.params.id]);
-    res.json({ success: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
 };
 
@@ -167,8 +143,7 @@ exports.getRekapAbsensiPramuka = async (req, res) => {
       LEFT JOIN absensi_pramuka ap ON ap.siswa_id = ar.siswa_id AND ap.regu_id = ar.regu_id
         AND ($2::DATE IS NULL OR ap.tanggal >= $2)
         AND ($3::DATE IS NULL OR ap.tanggal <= $3)
-      WHERE 1=1
-    `;
+      WHERE 1=1`;
     const params = [null, tanggal_mulai || null, tanggal_akhir || null];
     let idx = 4;
     if (regu_id) { query += ` AND ar.regu_id = $${idx++}`; params.push(regu_id); params[0] = regu_id; }
@@ -178,30 +153,126 @@ exports.getRekapAbsensiPramuka = async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 };
 
-// ── LAPORAN KEGIATAN PRAMUKA ──────────────────────────────────────────────
+// ── SILABUS PRAMUKA (disimpan biner di DB, identik dengan perangkat_pembelajaran) ──
+
+exports.getAllSilabus = async (req, res) => {
+  try {
+    const result = await db.query(
+      `SELECT id, tingkat_kelas, judul_kegiatan, tanggal, file_nama, file_mime,
+              to_char(created_at, 'YYYY-MM-DD') AS created_at
+       FROM silabus_pramuka ORDER BY tanggal DESC, id DESC`
+    );
+    res.json({ success: true, data: result.rows });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+};
+
+exports.createSilabus = async (req, res) => {
+  try {
+    await runMulter('file')(req, res);
+  } catch (err) {
+    return res.status(400).json({ success: false, error: err.message });
+  }
+  const { tingkat_kelas, judul_kegiatan, tanggal } = req.body;
+  if (!judul_kegiatan) return res.status(400).json({ success: false, error: 'judul_kegiatan wajib diisi' });
+
+  const fileData = req.file ? req.file.buffer   : null;
+  const fileMime = req.file ? req.file.mimetype : null;
+  const fileNama = req.file ? req.file.originalname : null;
+
+  try {
+    const result = await db.query(
+      `INSERT INTO silabus_pramuka (tingkat_kelas, judul_kegiatan, tanggal, file_data, file_mime, file_nama)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING id, tingkat_kelas, judul_kegiatan, tanggal, file_nama, file_mime,
+                 to_char(created_at, 'YYYY-MM-DD') AS created_at`,
+      [tingkat_kelas || null, judul_kegiatan, tanggal || new Date().toISOString().slice(0, 10),
+       fileData, fileMime, fileNama]
+    );
+    res.status(201).json({ success: true, data: result.rows[0] });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+};
+
+exports.downloadSilabus = async (req, res) => {
+  const isView = req.path.endsWith('/view');
+  try {
+    const result = await db.query(
+      'SELECT file_nama, file_data, file_mime FROM silabus_pramuka WHERE id = $1',
+      [req.params.id]
+    );
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Silabus tidak ditemukan' });
+    const doc = result.rows[0];
+    if (!doc.file_data) return res.status(404).json({ error: 'File tidak tersedia' });
+    const mime = doc.file_mime || 'application/octet-stream';
+    const inlineTypes = ['image/jpeg','image/jpg','image/png','image/gif','image/webp','application/pdf'];
+    const disposition = (isView && inlineTypes.includes(mime)) ? 'inline' : 'attachment';
+    res.set('Content-Type', mime);
+    res.set('Content-Disposition', `${disposition}; filename="${doc.file_nama}"`);
+    res.send(doc.file_data);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+};
+
+exports.deleteSilabus = async (req, res) => {
+  try {
+    await db.query('DELETE FROM silabus_pramuka WHERE id = $1', [req.params.id]);
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+};
+
+// ── LAPORAN KEGIATAN PRAMUKA (disimpan biner di DB) ───────────────────────
 
 exports.getAllLaporanKegiatan = async (req, res) => {
   try {
-    const result = await db.query('SELECT * FROM laporan_kegiatan ORDER BY tanggal DESC, id DESC');
+    const result = await db.query(
+      `SELECT id, judul, deskripsi, tanggal, file_nama, file_mime,
+              to_char(created_at, 'YYYY-MM-DD') AS created_at
+       FROM laporan_kegiatan ORDER BY tanggal DESC, id DESC`
+    );
     res.json({ success: true, data: result.rows });
   } catch (err) { res.status(500).json({ error: err.message }); }
 };
 
 exports.createLaporanKegiatan = async (req, res) => {
+  try {
+    await runMulter('file_laporan')(req, res);
+  } catch (err) {
+    return res.status(400).json({ success: false, error: err.message });
+  }
   const { judul, deskripsi, tanggal } = req.body;
   if (!judul) return res.status(400).json({ error: 'Judul wajib diisi' });
-  let file_url = null;
-  let file_nama = null;
-  if (req.file) {
-    file_url = `/api/vocational/uploads/${req.file.filename}`;
-    file_nama = req.file.originalname;
-  }
+
+  const fileData = req.file ? req.file.buffer    : null;
+  const fileMime = req.file ? req.file.mimetype  : null;
+  const fileNama = req.file ? req.file.originalname : null;
+
   try {
     const result = await db.query(
-      'INSERT INTO laporan_kegiatan (judul, deskripsi, tanggal, file_url, file_nama) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-      [judul, deskripsi || '', tanggal || new Date().toISOString().slice(0,10), file_url, file_nama]
+      `INSERT INTO laporan_kegiatan (judul, deskripsi, tanggal, file_data, file_mime, file_nama)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING id, judul, deskripsi, tanggal, file_nama, file_mime,
+                 to_char(created_at, 'YYYY-MM-DD') AS created_at`,
+      [judul, deskripsi || '', tanggal || new Date().toISOString().slice(0, 10),
+       fileData, fileMime, fileNama]
     );
     res.status(201).json({ success: true, data: result.rows[0] });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+};
+
+exports.downloadLaporanKegiatan = async (req, res) => {
+  const isView = req.path.endsWith('/view');
+  try {
+    const result = await db.query(
+      'SELECT file_nama, file_data, file_mime FROM laporan_kegiatan WHERE id = $1',
+      [req.params.id]
+    );
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Laporan tidak ditemukan' });
+    const doc = result.rows[0];
+    if (!doc.file_data) return res.status(404).json({ error: 'File tidak tersedia' });
+    const mime = doc.file_mime || 'application/octet-stream';
+    const inlineTypes = ['image/jpeg','image/jpg','image/png','image/gif','image/webp','application/pdf'];
+    const disposition = (isView && inlineTypes.includes(mime)) ? 'inline' : 'attachment';
+    res.set('Content-Type', mime);
+    res.set('Content-Disposition', `${disposition}; filename="${doc.file_nama}"`);
+    res.send(doc.file_data);
   } catch (err) { res.status(500).json({ error: err.message }); }
 };
 
