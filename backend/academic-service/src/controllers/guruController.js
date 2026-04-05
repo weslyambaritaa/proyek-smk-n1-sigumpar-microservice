@@ -111,3 +111,39 @@ exports.saveBulkAttendance = async (req, res, next) => {
     client.release();
   }
 };
+
+// 6. Ambil semua guru
+exports.getAllGuru = async (req, res, next) => {
+  try {
+    const query = `
+      SELECT id_guru, nama, nip, mapel_diampu, created_at 
+      FROM guru 
+      ORDER BY nama
+    `;
+    const result = await pool.query(query);
+    res.json({ success: true, data: result.rows });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// 7. Ambil guru berdasarkan ID
+exports.getGuruById = async (req, res, next) => {
+  const { id } = req.params;
+  try {
+    const query = `
+      SELECT id_guru, nama, nip, mapel_diampu, created_at 
+      FROM guru 
+      WHERE id_guru = $1
+    `;
+    const result = await pool.query(query, [id]);
+    if (result.rows.length === 0) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Guru tidak ditemukan" });
+    }
+    res.json({ success: true, data: result.rows[0] });
+  } catch (err) {
+    next(err);
+  }
+};

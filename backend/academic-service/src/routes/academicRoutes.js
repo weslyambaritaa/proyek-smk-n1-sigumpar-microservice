@@ -162,4 +162,8 @@ router.post("/upacara", extractIdentity, upacaraController.createUpacara);
 router.put("/upacara/:id", extractIdentity, upacaraController.updateUpacara);
 router.delete("/upacara/:id", extractIdentity, upacaraController.deleteUpacara);
 
+// Rute Guru (tambahan)
+router.get("/guru", extractIdentity, guruController.getAllGuru);
+router.get("/guru/:id", extractIdentity, guruController.getGuruById);
+
 module.exports = router;
