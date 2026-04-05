@@ -38,7 +38,7 @@ import SilabusKegiatanPage from "./pages/pramuka/SilabusKegiatanPage";
 import LaporanKegiatanPage from "./pages/pramuka/LaporanKegiatanPage";
 
 // --- Vokasi ---
-import LokasiPKLPage from "./pages/vokasi/LokasiPKLPage";
+import LokasiPKLPage from "./pages/vokasi/LokasiPKLPage";     // ← versi baru dengan foto preview
 import ProgresPKLPage from "./pages/vokasi/ProgresPKLPage";
 import NilaiPKLPage from "./pages/vokasi/NilaiPKLPage";
 
@@ -51,6 +51,13 @@ import PKLKepsekPage from "./pages/kepala-sekolah/PKLKepsekPage";
 
 // --- Waka Sekolah ---
 import KurikulumPage from "./pages/waka-sekolah/KurikulumPage";
+
+// --- Wakil Kepala Sekolah (Wakakur) — NEW ✨ ---
+import WakakurJadwalPage      from "./pages/wakil-kepala-sekolah/WakakurJadwalPage";
+import WakakurAbsensiGuruPage from "./pages/wakil-kepala-sekolah/WakakurAbsensiGuruPage";
+import WakakurPerangkatPage   from "./pages/wakil-kepala-sekolah/WakakurPerangkatPage";
+import WakakurParentingPage   from "./pages/wakil-kepala-sekolah/WakakurParentingPage";
+import WakakurLaporanPage     from "./pages/wakil-kepala-sekolah/WakakurLaporanPage";
 
 /**
  * Komponen reusable untuk grup menu per role (Dropdown)
@@ -150,7 +157,7 @@ const App = () => {
                 </NavDropdown>
               )}
 
-              {/* Dropdown Waka Sekolah */}
+              {/* ── Dropdown Waka Sekolah (UPDATED ✨) ── */}
               {hasRole("waka-sekolah") && (
                 <NavDropdown
                   title="Waka Sekolah"
@@ -160,6 +167,21 @@ const App = () => {
                 >
                   <NavLink to="/waka/kurikulum" className={subNavClass}>
                     Kurikulum
+                  </NavLink>
+                  <NavLink to="/waka/jadwal" className={subNavClass}>
+                    📅 Monitoring Jadwal
+                  </NavLink>
+                  <NavLink to="/waka/absensi-guru" className={subNavClass}>
+                    📋 Monitoring Absensi Guru
+                  </NavLink>
+                  <NavLink to="/waka/perangkat" className={subNavClass}>
+                    📁 Monitoring Perangkat
+                  </NavLink>
+                  <NavLink to="/waka/parenting" className={subNavClass}>
+                    👨‍👩‍👧 Monitoring Parenting
+                  </NavLink>
+                  <NavLink to="/waka/laporan" className={subNavClass}>
+                    📊 Laporan Ringkas
                   </NavLink>
                 </NavDropdown>
               )}
@@ -342,12 +364,12 @@ const App = () => {
             <Route path="/wali/kebersihan-kelas" element={<KebersihanKelasPage />} />
             <Route path="/wali/refleksi" element={<RefleksiPage />} />
 
-            {/* Pramuka — Regu & Anggota dihapus, Absensi diganti per-kelas */}
+            {/* Pramuka */}
             <Route path="/vocational/absensi" element={<AbsensiPramukaPage />} />
             <Route path="/pramuka/silabus" element={<SilabusKegiatanPage />} />
             <Route path="/pramuka/laporan" element={<LaporanKegiatanPage />} />
 
-            {/* Vokasi */}
+            {/* Vokasi — LokasiPKLPage versi baru dengan foto preview */}
             <Route path="/vokasi/lokasi-pkl" element={<LokasiPKLPage />} />
             <Route path="/vokasi/progres-pkl" element={<ProgresPKLPage />} />
             <Route path="/vokasi/nilai-pkl" element={<NilaiPKLPage />} />
@@ -359,8 +381,15 @@ const App = () => {
             <Route path="/kepsek/evaluasi-kinerja" element={<EvaluasiKinerjaPage />} />
             <Route path="/kepsek/pkl" element={<PKLKepsekPage />} />
 
-            {/* Waka Sekolah */}
+            {/* Waka Sekolah — existing */}
             <Route path="/waka/kurikulum" element={<KurikulumPage />} />
+
+            {/* ── Wakil Kepala Sekolah (Wakakur) — NEW ✨ ── */}
+            <Route path="/waka/jadwal"       element={<WakakurJadwalPage />} />
+            <Route path="/waka/absensi-guru" element={<WakakurAbsensiGuruPage />} />
+            <Route path="/waka/perangkat"    element={<WakakurPerangkatPage />} />
+            <Route path="/waka/parenting"    element={<WakakurParentingPage />} />
+            <Route path="/waka/laporan"      element={<WakakurLaporanPage />} />
           </Routes>
         </main>
       </div>

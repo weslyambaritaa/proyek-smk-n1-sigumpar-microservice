@@ -1,69 +1,88 @@
 import { useState, useEffect, useMemo } from "react";
 import toast from "react-hot-toast";
-import { getAbsensiGuru } from "../../../api/learningApi";
-import ImagePreviewModal from "../../../components/common/ImagePreviewModal";
+import { getAbsensiGuru } from "../../api/learningApi";
+import ImagePreviewModal from "../../components/common/ImagePreviewModal";
+
+const BASE_URL = import.meta.env.VITE_LEARNING_URL || "";
+
+function getFullFotoUrl(foto) {
+  if (!foto) return null;
+  if (foto.startsWith("data:") || foto.startsWith("http")) return foto;
+  return `${BASE_URL}${foto}`;
+}
 
 const STATUS_COLOR = {
-  hadir:     "bg-green-500 text-white",
-  terlambat: "bg-yellow-400 text-white",
-  izin:      "bg-blue-500 text-white",
-  sakit:     "bg-orange-400 text-white",
-  alpa:      "bg-red-500 text-white",
+  hadir:     "bg-green-100 text-green-700 border-green-200",
+  terlambat: "bg-yellow-100 text-yellow-700 border-yellow-200",
+  izin:      "bg-blue-100 text-blue-700 border-blue-200",
+  sakit:     "bg-orange-100 text-orange-700 border-orange-200",
+  alpa:      "bg-red-100 text-red-700 border-red-200",
 };
 
-const STATUS_LIST = ["hadir", "terlambat", "izin", "sakit", "alpa"];
-
 export default function WakakurAbsensiGuruPage() {
-  const [rows,          setRows]          = useState([]);
-  const [loading,       setLoading]       = useState(false);
-  const [filterTanggal, setFilterTanggal] = useState(new Date().toISOString().slice(0, 10));
-  const [filterStatus,  setFilterStatus]  = useState("");
-  const [searchGuru,    setSearchGuru]    = useState("");
-  const [previewSrc,    setPreviewSrc]    = useState(null);
-  const [previewName,   setPreviewName]   = useState("");
+  const [rows,         setRows]         = useState([]);
+  const [loading,      setLoading]      = useState(false);
+  const [tanggal,      setTanggal]      = useState(new Date().toISOString().slice(0, 10));
+  const [searchGuru,   setSearchGuru]   = useState("");
+  const [filterStatus, setFilterStatus] = useState("");
+  const [filterMapel,  setFilterMapel]  = useState("");
+  const [previewSrc,   setPreviewSrc]   = useState(null);
+  const [previewName,  setPreviewName]  = useState("");
 
   // Pagination
-  const PAGE_SIZE = 10;
+  const PAGE_SIZE = 15;
   const [page, setPage] = useState(1);
 
   const loadData = async () => {
     setLoading(true);
     try {
-      const res = await getAbsensiGuru(filterTanggal ? { tanggal: filterTanggal } : {});
+      const params = {};
+      if (tanggal) params.tanggal = tanggal;
+      const res = await getAbsensiGuru(params);
       setRows(Array.isArray(res.data?.data) ? res.data.data : []);
       setPage(1);
-    } catch { toast.error("Gagal memuat data absensi guru"); }
-    finally { setLoading(false); }
+    } catch {
+      toast.error("Gagal memuat data absensi guru");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  useEffect(() => { loadData(); }, [filterTanggal]);
+  useEffect(() => { loadData(); }, [tanggal]);
 
-  const filtered = useMemo(() => rows.filter((r) =>
-    (!filterStatus || r.status === filterStatus) &&
-    (!searchGuru   || r.namaGuru?.toLowerCase().includes(searchGuru.toLowerCase()))
-  ), [rows, filterStatus, searchGuru]);
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-
+  // ── Stats ──────────────────────────────────────────────────────────────
   const stats = useMemo(() =>
-    rows.reduce(
-      (a, r) => { a.total++; a[r.status] = (a[r.status] || 0) + 1; return a; },
-      { total: 0, hadir: 0, terlambat: 0, izin: 0, sakit: 0, alpa: 0 }
-    ), [rows]);
+    rows.reduce((a, r) => {
+      a.total++;
+      a[r.status] = (a[r.status] || 0) + 1;
+      return a;
+    }, { total: 0, hadir: 0, terlambat: 0, izin: 0, sakit: 0, alpa: 0 }),
+    [rows]
+  );
 
-  const bukaFotoBukti = (e, url, nama) => {
-    e.preventDefault();
-    if (/^data:image|(\.(jpg|jpeg|png|gif|webp))(\?.*)?$/i.test(url)) {
-      setPreviewSrc(url);
-      setPreviewName(nama || "Foto Bukti Absensi");
-    } else {
-      window.open(url, "_blank");
-    }
+  // ── Filter ─────────────────────────────────────────────────────────────
+  const filtered = useMemo(() => {
+    return rows.filter(r => {
+      if (searchGuru  && !r.namaGuru?.toLowerCase().includes(searchGuru.toLowerCase()))  return false;
+      if (filterStatus && r.status !== filterStatus)                                      return false;
+      if (filterMapel  && !r.mataPelajaran?.toLowerCase().includes(filterMapel.toLowerCase())) return false;
+      return true;
+    });
+  }, [rows, searchGuru, filterStatus, filterMapel]);
+
+  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+
+  const handlePreviewFoto = (foto, namaGuru) => {
+    const url = getFullFotoUrl(foto);
+    if (!url) { toast("Tidak ada foto bukti untuk absensi ini"); return; }
+    setPreviewSrc(url);
+    setPreviewName(`Foto Bukti — ${namaGuru || "Guru"}`);
   };
 
   return (
     <div className="min-h-screen bg-gray-100">
+      {/* Image Preview Modal */}
       {previewSrc && (
         <ImagePreviewModal
           src={previewSrc}
@@ -72,14 +91,17 @@ export default function WakakurAbsensiGuruPage() {
         />
       )}
 
+      {/* Header */}
       <div className="bg-white border-b px-8 py-5">
-        <h1 className="text-2xl font-bold text-gray-800 tracking-tight">MONITORING ABSENSI GURU MAPEL</h1>
-        <p className="text-sm text-gray-500 mt-0.5">Wakil Kepala Sekolah — Pantau kehadiran, status, dan bukti foto guru</p>
+        <h1 className="text-2xl font-bold text-gray-800">MONITORING ABSENSI GURU</h1>
+        <p className="text-sm text-gray-500 mt-0.5">
+          Rekap kehadiran guru mapel — termasuk foto bukti absensi
+        </p>
       </div>
 
       <div className="px-8 py-6 max-w-7xl mx-auto space-y-5">
 
-        {/* Statistik */}
+        {/* Stats Card */}
         <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
           {[
             { l: "Total",     v: stats.total,     c: "text-gray-800",   cls: "bg-white border" },
@@ -90,7 +112,7 @@ export default function WakakurAbsensiGuruPage() {
             { l: "Alpa",      v: stats.alpa,      c: "text-red-700",    cls: "bg-red-50 border border-red-200" },
           ].map(({ l, v, c, cls }) => (
             <div key={l} className={`rounded-xl p-3 text-center ${cls}`}>
-              <p className="text-xs font-semibold opacity-60 mb-1">{l}</p>
+              <p className="text-xs font-semibold opacity-70 mb-1">{l}</p>
               <p className={`text-2xl font-bold ${c}`}>{v}</p>
             </div>
           ))}
@@ -99,44 +121,59 @@ export default function WakakurAbsensiGuruPage() {
         {/* Filter */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5">
           <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">Filter Absensi</p>
-          <div className="flex flex-wrap gap-3 items-end">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3 items-end">
             <div>
               <label className="block text-xs text-gray-400 mb-1">Tanggal</label>
-              <input type="date" value={filterTanggal} onChange={(e) => { setFilterTanggal(e.target.value); }}
-                className="border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-400 mb-1">Status</label>
-              <select value={filterStatus} onChange={(e) => { setFilterStatus(e.target.value); setPage(1); }}
-                className="border border-gray-300 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <option value="">Semua Status</option>
-                {STATUS_LIST.map((s) => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
-              </select>
+              <input type="date" value={tanggal} onChange={e => setTanggal(e.target.value)}
+                className="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div>
               <label className="block text-xs text-gray-400 mb-1">Nama Guru</label>
-              <input type="text" value={searchGuru} onChange={(e) => { setSearchGuru(e.target.value); setPage(1); }}
+              <input type="text" value={searchGuru} onChange={e => setSearchGuru(e.target.value)}
                 placeholder="Cari nama guru..."
-                className="border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-52" />
+                className="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
-            <button onClick={() => { setFilterStatus(""); setSearchGuru(""); setPage(1); }}
-              className="px-4 py-2.5 border border-gray-300 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-50">
-              🔄 Reset
-            </button>
-            <button onClick={loadData} disabled={loading}
-              className="px-4 py-2.5 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700 disabled:opacity-50">
-              {loading ? "..." : "↻ Refresh"}
-            </button>
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">Mata Pelajaran</label>
+              <input type="text" value={filterMapel} onChange={e => setFilterMapel(e.target.value)}
+                placeholder="Cari mapel..."
+                className="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">Status</label>
+              <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
+                className="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="">Semua Status</option>
+                <option value="hadir">Hadir</option>
+                <option value="terlambat">Terlambat</option>
+                <option value="izin">Izin</option>
+                <option value="sakit">Sakit</option>
+                <option value="alpa">Alpa</option>
+              </select>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={loadData} disabled={loading}
+                className="flex-1 px-3 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-xs font-bold rounded-xl">
+                {loading ? "..." : "↻ Muat"}
+              </button>
+              <button onClick={() => { setSearchGuru(""); setFilterStatus(""); setFilterMapel(""); }}
+                className="px-3 py-2.5 border border-gray-200 rounded-xl text-xs text-gray-500 hover:bg-gray-50 font-semibold">
+                Reset
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Tabel */}
+        {/* Tabel Absensi */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
           <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-            <h2 className="font-bold text-gray-800 text-sm uppercase tracking-wide">
-              Data Kehadiran Guru — {filterTanggal || "Semua Tanggal"}
+            <h2 className="font-bold text-gray-800">
+              Data Kehadiran Guru
+              <span className="ml-2 text-xs font-normal text-gray-400">
+                ({filtered.length} data · halaman {page}/{totalPages || 1})
+              </span>
             </h2>
-            <span className="text-xs text-gray-400 bg-gray-100 px-3 py-1 rounded-full">{filtered.length} data</span>
+            <p className="text-xs text-gray-400">* Klik "Foto Bukti" untuk preview foto absensi</p>
           </div>
 
           {loading ? (
@@ -144,81 +181,84 @@ export default function WakakurAbsensiGuruPage() {
               <div className="inline-block w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mb-3" />
               <p>Memuat data absensi...</p>
             </div>
-          ) : paged.length === 0 ? (
+          ) : paginated.length === 0 ? (
             <div className="py-16 text-center text-gray-400">
               <p className="text-4xl mb-2">📋</p>
-              <p>Belum ada data absensi ditemukan</p>
+              <p>Belum ada data absensi untuk filter ini</p>
             </div>
           ) : (
             <>
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50 text-xs font-bold text-gray-500 uppercase tracking-wider">
-                  <tr>
-                    <th className="px-5 py-3 text-left w-8">No</th>
-                    <th className="px-5 py-3 text-left">Nama Guru</th>
-                    <th className="px-5 py-3 text-left">Tanggal</th>
-                    <th className="px-5 py-3 text-left">Jam Masuk</th>
-                    <th className="px-5 py-3 text-center">Status</th>
-                    <th className="px-5 py-3 text-left">Keterangan</th>
-                    <th className="px-5 py-3 text-center">Foto Bukti</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {paged.map((r, i) => (
-                    <tr key={r.id_absensiGuru || i} className="hover:bg-gray-50/70">
-                      <td className="px-5 py-3 text-gray-400">{(page - 1) * PAGE_SIZE + i + 1}</td>
-                      <td className="px-5 py-3 font-semibold text-gray-800">{r.namaGuru || "—"}</td>
-                      <td className="px-5 py-3 text-gray-500 text-xs">{r.tanggal || "—"}</td>
-                      <td className="px-5 py-3 text-gray-500 font-mono text-xs">
-                        {r.jamMasuk
-                          ? new Date(r.jamMasuk).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }) + " WIB"
-                          : "—"}
-                      </td>
-                      <td className="px-5 py-3 text-center">
-                        <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${STATUS_COLOR[r.status] || "bg-gray-200 text-gray-600"}`}>
-                          {r.status || "—"}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3 text-gray-500 text-xs max-w-xs truncate">{r.keterangan || "—"}</td>
-                      <td className="px-5 py-3 text-center">
-                        {r.foto ? (
-                          <button
-                            onClick={(e) => bukaFotoBukti(e, r.foto, `Foto Bukti – ${r.namaGuru}`)}
-                            className="inline-flex items-center gap-1 px-2 py-1 bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs font-semibold rounded-lg transition-colors border border-blue-200"
-                          >
-                            🖼️ Lihat Foto
-                          </button>
-                        ) : (
-                          <span className="text-gray-300 text-xs">—</span>
-                        )}
-                      </td>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50 text-xs font-bold text-gray-500 uppercase tracking-wider">
+                    <tr>
+                      <th className="px-4 py-3 text-left w-8">No</th>
+                      <th className="px-4 py-3 text-left">Nama Guru</th>
+                      <th className="px-4 py-3 text-left">Mata Pelajaran</th>
+                      <th className="px-4 py-3 text-left">Tanggal</th>
+                      <th className="px-4 py-3 text-left">Jam Masuk</th>
+                      <th className="px-4 py-3 text-center">Status</th>
+                      <th className="px-4 py-3 text-left">Keterangan</th>
+                      <th className="px-4 py-3 text-center">Foto Bukti</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {paginated.map((r, i) => (
+                      <tr key={r.id_absensiGuru || i} className="hover:bg-gray-50/70">
+                        <td className="px-4 py-3 text-gray-400">{(page - 1) * PAGE_SIZE + i + 1}</td>
+                        <td className="px-4 py-3 font-semibold text-gray-800">{r.namaGuru || "-"}</td>
+                        <td className="px-4 py-3 text-gray-600">{r.mataPelajaran || "-"}</td>
+                        <td className="px-4 py-3 text-gray-500">{r.tanggal || "-"}</td>
+                        <td className="px-4 py-3 text-gray-500 font-mono text-xs">
+                          {r.jamMasuk
+                            ? new Date(r.jamMasuk).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }) + " WIB"
+                            : "-"}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <span className={`px-3 py-1 rounded-full text-xs font-bold border uppercase ${STATUS_COLOR[r.status] || "bg-gray-100 text-gray-600 border-gray-200"}`}>
+                            {r.status || "-"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-gray-500 max-w-xs truncate">{r.keterangan || "-"}</td>
+                        <td className="px-4 py-3 text-center">
+                          {r.foto ? (
+                            <button
+                              onClick={() => handlePreviewFoto(r.foto, r.namaGuru)}
+                              className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs font-bold rounded-lg border border-blue-200 transition-colors flex items-center gap-1 mx-auto"
+                            >
+                              📷 Foto Bukti
+                            </button>
+                          ) : (
+                            <span className="text-xs text-gray-300 font-medium">Tidak ada foto</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
 
               {/* Pagination */}
               {totalPages > 1 && (
-                <div className="flex items-center justify-between px-6 py-3 border-t border-gray-100">
+                <div className="px-6 py-3 border-t border-gray-100 flex items-center justify-between">
                   <p className="text-xs text-gray-400">
-                    Halaman {page} dari {totalPages} ({filtered.length} data)
+                    Menampilkan {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} dari {filtered.length} data
                   </p>
                   <div className="flex gap-2">
-                    <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}
+                    <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
                       className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-40">
                       ← Prev
                     </button>
-                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                      const start = Math.max(1, Math.min(page - 2, totalPages - 4));
-                      const p = start + i;
-                      return p <= totalPages ? (
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, k) => {
+                      const p = Math.max(1, Math.min(page - 2, totalPages - 4)) + k;
+                      return (
                         <button key={p} onClick={() => setPage(p)}
                           className={`px-3 py-1.5 rounded-lg text-xs font-semibold border ${p === page ? "bg-blue-600 text-white border-blue-600" : "border-gray-200 text-gray-600 hover:bg-gray-50"}`}>
                           {p}
                         </button>
-                      ) : null;
+                      );
                     })}
-                    <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}
+                    <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
                       className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-40">
                       Next →
                     </button>

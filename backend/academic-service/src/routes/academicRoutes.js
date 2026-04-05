@@ -113,4 +113,16 @@ router.get('/kepsek/rekap-absensi-siswa', extractIdentity, kepsekController.getR
 router.get('/kepsek/rekap-nilai', extractIdentity, kepsekController.getRekapNilai);
 router.get('/kepsek/statistik', extractIdentity, kepsekController.getStatistikUmum);
 
+// ─── WAKIL KEPALA SEKOLAH ──────────────────────────────────────
+
+const wakilMonitoringController = require('../controllers/wakilKepsekMonitoringController');
+
+// ─── WAKIL KEPALA SEKOLAH — MONITORING ───────────────────────────────────────
+
+// Monitoring Jadwal (read-only, sudah ada deteksi bentrok server-side)
+router.get('/wakil/jadwal',          extractIdentity, wakilMonitoringController.getJadwalMonitoring);
+router.get('/wakil/jadwal/rekap-hari', extractIdentity, wakilMonitoringController.getRekapJadwalPerHari);
+router.get('/wakil/parenting-monitoring', extractIdentity, wakilMonitoringController.getParentingMonitoring);
+router.get('/wakil/laporan-ringkas', extractIdentity, wakilMonitoringController.getLaporanRingkas);
+
 module.exports = router;
