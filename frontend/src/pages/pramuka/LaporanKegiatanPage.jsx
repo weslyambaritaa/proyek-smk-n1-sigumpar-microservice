@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import toast from "react-hot-toast";
 import { vocationalApi } from "../../api/vocationalApi";
+import ImagePreviewModal from "../../components/common/ImagePreviewModal";
 
 const isImageMime = (mime) => mime && mime.startsWith("image/");
 const isPdfMime   = (mime) => mime === "application/pdf";
@@ -91,6 +92,7 @@ export default function LaporanKegiatanPage() {
   const [loading,    setLoading]    = useState(false);
   const [saving,     setSaving]     = useState(false);
   const [previewDoc, setPreviewDoc] = useState(null);
+  const [previewImg, setPreviewImg] = useState(null);   // untuk ImagePreviewModal foto
   const [form, setForm] = useState({
     judul: "", deskripsi: "", tanggal: new Date().toISOString().slice(0, 10),
   });
@@ -144,6 +146,13 @@ export default function LaporanKegiatanPage() {
   return (
     <div className="p-6 max-w-5xl mx-auto">
       {previewDoc && <PreviewModal doc={previewDoc} onClose={() => setPreviewDoc(null)} />}
+      {previewImg && (
+        <ImagePreviewModal
+          src={previewImg}
+          fileName="Foto Laporan Kegiatan"
+          onClose={() => setPreviewImg(null)}
+        />
+      )}
 
       <div className="text-center mb-8">
         <h1 className="text-3xl font-bold text-gray-800">Laporan Kegiatan Pramuka</h1>
@@ -227,7 +236,26 @@ export default function LaporanKegiatanPage() {
                   <td className="px-6 py-4 text-gray-500 max-w-xs truncate">{l.deskripsi || "—"}</td>
                   <td className="px-6 py-4 text-gray-500">{l.tanggal}</td>
                   <td className="px-6 py-4 text-gray-400 text-xs truncate max-w-[120px]">
-                    {l.file_nama || <span className="text-gray-300">—</span>}
+                    {l.file_nama ? (
+                      /\.(jpg|jpeg|png|gif|webp)(\?.*)?$/i.test(l.file_nama) ? (
+                        <button
+                          onClick={async () => {
+                            try {
+                              const result = await vocationalApi.viewLaporanKegiatan(l.id, l.file_nama);
+                              if (result.inline) setPreviewImg(result.url);
+                            } catch { toast.error("Gagal memuat foto"); }
+                          }}
+                          className="flex items-center gap-1 text-blue-500 hover:text-blue-700 font-semibold transition-colors"
+                          title="Klik untuk lihat foto"
+                        >
+                          🖼️ <span className="truncate max-w-[90px]">{l.file_nama}</span>
+                        </button>
+                      ) : (
+                        <span className="text-gray-400">{l.file_nama}</span>
+                      )
+                    ) : (
+                      <span className="text-gray-300">—</span>
+                    )}
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center justify-center gap-2">

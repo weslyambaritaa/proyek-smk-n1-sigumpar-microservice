@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import keycloak from "../../keycloak";
+import ImagePreviewModal from "../../components/common/ImagePreviewModal";
 import {
   createAbsensiGuru,
   deleteAbsensiGuru,
@@ -60,6 +61,7 @@ export default function AbsensiGuruPage() {
   const [loading,       setLoading]       = useState(false);
   const [saving,        setSaving]        = useState(false);
   const [filterTanggal, setFilterTanggal] = useState(TODAY_ISO());
+  const [previewImg,    setPreviewImg]    = useState(null); // ImagePreviewModal foto
 
   // pagination
   const PAGE_SIZE = 7;
@@ -155,6 +157,15 @@ export default function AbsensiGuruPage() {
   // ── RENDER ──────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-gray-100">
+
+      {/* ImagePreviewModal foto absensi */}
+      {previewImg && (
+        <ImagePreviewModal
+          src={previewImg}
+          fileName="Foto Absensi Guru"
+          onClose={() => setPreviewImg(null)}
+        />
+      )}
 
       {/* ─── HEADER ─────────────────────────────────────── */}
       <div className="bg-white border-b px-8 py-5 mb-6">
@@ -351,6 +362,7 @@ export default function AbsensiGuruPage() {
                   <th className="px-5 py-3 text-left">Jam Masuk</th>
                   <th className="px-5 py-3 text-left">Status</th>
                   <th className="px-5 py-3 text-left">Keterangan</th>
+                  <th className="px-5 py-3 text-left">Foto</th>
                   <th className="px-5 py-3 text-center">Ubah Status</th>
                   <th className="px-5 py-3 text-center">Hapus</th>
                 </tr>
@@ -358,14 +370,14 @@ export default function AbsensiGuruPage() {
               <tbody className="divide-y divide-gray-50">
                 {loading ? (
                   <tr>
-                    <td colSpan={8} className="py-12 text-center text-gray-400">
+                    <td colSpan={9} className="py-12 text-center text-gray-400">
                       <div className="inline-block w-6 h-6 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mb-2" />
                       <p>Memuat data...</p>
                     </td>
                   </tr>
                 ) : pagedRows.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="py-12 text-center text-gray-400">
+                    <td colSpan={9} className="py-12 text-center text-gray-400">
                       <p className="text-3xl mb-2">📋</p>
                       <p>Belum ada data absensi untuk tanggal ini</p>
                     </td>
@@ -386,6 +398,19 @@ export default function AbsensiGuruPage() {
                       </span>
                     </td>
                     <td className="px-5 py-3 text-gray-500 max-w-xs truncate">{row.keterangan || "-"}</td>
+                    <td className="px-5 py-3">
+                      {row.foto ? (
+                        <img
+                          src={row.foto}
+                          alt="Foto Absensi"
+                          onClick={() => setPreviewImg(row.foto)}
+                          className="w-12 h-12 object-cover rounded-lg border border-gray-200 cursor-pointer hover:opacity-80 hover:shadow-md transition-all"
+                          title="Klik untuk lihat foto"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center text-gray-300 text-lg" title="Tidak ada foto">📷</div>
+                      )}
+                    </td>
                     <td className="px-5 py-3">
                       <div className="flex items-center justify-center flex-wrap gap-1">
                         {["hadir","terlambat","izin","sakit","alpa"].map((s) => (

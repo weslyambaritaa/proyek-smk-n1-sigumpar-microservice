@@ -3,6 +3,7 @@ const router  = express.Router();
 const pramukaController = require('../controllers/pramukaController');
 const pklController     = require('../controllers/pklController');
 const extractIdentity = require('../middleware/extractIdentity');
+const upload = require('../middleware/upload');
 
 // ── PRAMUKA: REGU & ANGGOTA ───────────────────────────────────────────────
 router.get('/regu',                pramukaController.getAllRegu);
@@ -36,10 +37,10 @@ router.get('/siswa',  extractIdentity, pklController.getSiswaForVokasi);
 router.get('/kelas',  extractIdentity, pklController.getKelasForVokasi);
 
 // ── PKL: LOKASI ───────────────────────────────────────────────────────────
-router.get('/pkl/lokasi',        extractIdentity, pklController.getAllLokasiPKL);
-router.post('/pkl/lokasi',       extractIdentity, pklController.createLokasiPKL);
-router.put('/pkl/lokasi/:id',    extractIdentity, pklController.updateLokasiPKL);
-router.delete('/pkl/lokasi/:id', extractIdentity, pklController.deleteLokasiPKL);
+router.get('/pkl/lokasi',        extractIdentity,                             pklController.getAllLokasiPKL);
+router.post('/pkl/lokasi',       extractIdentity, upload.single('foto'),      pklController.createLokasiPKL);
+router.put('/pkl/lokasi/:id',    extractIdentity, upload.single('foto'),      pklController.updateLokasiPKL);
+router.delete('/pkl/lokasi/:id', extractIdentity,                             pklController.deleteLokasiPKL);
 
 // ── PKL: PROGRES ──────────────────────────────────────────────────────────
 router.get('/pkl/progres',        extractIdentity, pklController.getAllProgresPKL);

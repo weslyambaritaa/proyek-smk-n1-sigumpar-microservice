@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import toast from "react-hot-toast";
 import { vocationalApi } from "../../api/vocationalApi";
 import keycloak from "../../keycloak";
+import ImagePreviewModal from "../../components/common/ImagePreviewModal";
 
 export default function LokasiPKLPage() {
   const namaGuru = keycloak.tokenParsed?.name || "Guru Vokasi";
@@ -9,6 +10,7 @@ export default function LokasiPKLPage() {
   const [loading, setLoading] = useState(false);
   const [saving,  setSaving]  = useState(false);
   const [editId,  setEditId]  = useState(null);
+  const [previewImg, setPreviewImg] = useState(null); // ImagePreviewModal
 
   // Form state
   const [namaSiswa,          setNamaSiswa]          = useState("");
@@ -103,6 +105,13 @@ export default function LokasiPKLPage() {
 
   return (
     <div className="min-h-screen bg-gray-100">
+      {previewImg && (
+        <ImagePreviewModal
+          src={previewImg}
+          fileName="Foto Lokasi PKL"
+          onClose={() => setPreviewImg(null)}
+        />
+      )}
       <div className="bg-white border-b px-8 py-5">
         <h1 className="text-2xl font-bold text-gray-800 tracking-tight">PELAPORAN DETAIL PENEMPATAN PKL</h1>
         <p className="text-sm text-blue-600 font-medium mt-0.5">Guru Vokasi: {namaGuru}</p>
@@ -160,46 +169,75 @@ export default function LokasiPKLPage() {
               </div>
             </div>
 
-            {/* Row 3: Pembimbing, Kontak, Foto, Simpan */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-              <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Pembimbing Industri</label>
-                <input type="text" value={pembimbing} onChange={(e) => setPembimbing(e.target.value)}
-                  placeholder="Nama Atasan"
-                  className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            {/* Row 3: Pembimbing, Kontak, Foto + Simpan */}
+            <div className="flex flex-col md:flex-row gap-6">
+
+              {/* Kiri: Pembimbing & Kontak + Tombol Simpan */}
+              <div className="flex-1 space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Pembimbing Industri</label>
+                    <input type="text" value={pembimbing} onChange={(e) => setPembimbing(e.target.value)}
+                      placeholder="Nama Atasan"
+                      className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Kontak Pembimbing</label>
+                    <input type="text" value={kontakPembimbing} onChange={(e) => setKontakPembimbing(e.target.value)}
+                      placeholder="WhatsApp"
+                      className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  </div>
+                </div>
+                <div className="flex gap-3 pt-1">
+                  <button type="submit" disabled={saving}
+                    className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-bold text-sm rounded-xl shadow-sm transition-all active:scale-95">
+                    {saving ? "Menyimpan..." : (editId ? "Update Data" : "Simpan Laporan")}
+                  </button>
+                  {editId && (
+                    <button type="button" onClick={resetForm}
+                      className="px-4 py-2.5 border border-gray-300 rounded-xl text-xs text-gray-500 hover:bg-gray-50">
+                      Batal Edit
+                    </button>
+                  )}
+                </div>
               </div>
-              <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Kontak Pembimbing</label>
-                <input type="text" value={kontakPembimbing} onChange={(e) => setKontakPembimbing(e.target.value)}
-                  placeholder="WhatsApp"
-                  className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Foto Lokasi <span className="text-gray-400 font-normal normal-case">(opsional)</span></label>
-                <input ref={fotoRef} type="file" accept="image/*" onChange={handleFotoChange}
-                  className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700" />
-              </div>
-              <div>
-                <button type="submit" disabled={saving}
-                  className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-bold text-sm rounded-xl shadow-sm transition-all">
-                  {saving ? "..." : (editId ? "Update" : "Simpan Laporan")}
-                </button>
-                {editId && (
-                  <button type="button" onClick={resetForm}
-                    className="w-full mt-2 py-1.5 border border-gray-300 rounded-xl text-xs text-gray-500 hover:bg-gray-50">
-                    Batal Edit
+
+              {/* Kanan: Upload Foto — sama persis seperti Parenting */}
+              <div className="w-full md:w-56 flex flex-col gap-3">
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest">
+                  Foto Lokasi <span className="text-gray-400 font-normal normal-case">(opsional)</span>
+                </label>
+                <div
+                  onClick={() => fotoRef.current?.click()}
+                  className="flex-1 min-h-44 border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-all overflow-hidden"
+                >
+                  {fotoPreview ? (
+                    <img src={fotoPreview} alt="Preview foto lokasi" className="w-full h-full object-cover" />
+                  ) : (
+                    <>
+                      <div className="text-4xl text-gray-300 mb-2">📷</div>
+                      <p className="text-xs text-gray-400 text-center px-3">Klik untuk upload foto lokasi</p>
+                    </>
+                  )}
+                </div>
+                <input
+                  ref={fotoRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleFotoChange}
+                />
+                {fotoPreview && (
+                  <button
+                    type="button"
+                    onClick={() => { setFoto(null); setFotoPreview(null); if (fotoRef.current) fotoRef.current.value = ""; }}
+                    className="text-xs text-red-400 hover:text-red-600 text-center transition-colors"
+                  >
+                    ✕ Hapus foto
                   </button>
                 )}
               </div>
             </div>
-
-            {/* Foto Preview */}
-            {fotoPreview && (
-              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-200">
-                <img src={fotoPreview} alt="Preview" className="w-20 h-20 object-cover rounded-lg border" />
-                <p className="text-xs text-gray-500">Preview foto lokasi</p>
-              </div>
-            )}
           </form>
         </div>
 
@@ -237,7 +275,9 @@ export default function LokasiPKLPage() {
                     <td className="px-5 py-3">
                       {r.foto_url ? (
                         <img src={r.foto_url} alt="Foto PKL"
-                          className="w-14 h-14 object-cover rounded-lg border border-gray-200" />
+                          onClick={() => setPreviewImg(r.foto_url)}
+                          className="w-14 h-14 object-cover rounded-lg border border-gray-200 cursor-pointer hover:opacity-80 hover:shadow-md transition-all"
+                          title="Klik untuk lihat foto" />
                       ) : (
                         <div className="w-14 h-14 bg-gray-100 rounded-lg flex items-center justify-center text-gray-300 text-xl">📷</div>
                       )}
