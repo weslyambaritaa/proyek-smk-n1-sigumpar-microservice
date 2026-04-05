@@ -20,6 +20,13 @@ export const vocationalApi = {
     headers: { 'Content-Type': 'multipart/form-data' },
   }),
 
+  // ── Laporan Kegiatan Pramuka ────────────────────────────────────────────
+  getAllLaporanKegiatan:  () => axiosInstance.get('/api/vocational/laporan-kegiatan'),
+  createLaporanKegiatan: (formData) => axiosInstance.post('/api/vocational/laporan-kegiatan', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }),
+  deleteLaporanKegiatan: (id) => axiosInstance.delete(`/api/vocational/laporan-kegiatan/${id}`),
+
   // ── Silabus Pramuka ─────────────────────────────────────────────────────
   getAllSilabus:  () => axiosInstance.get('/api/vocational/silabus'),
   createSilabus: (formData) => axiosInstance.post('/api/vocational/silabus', formData, {

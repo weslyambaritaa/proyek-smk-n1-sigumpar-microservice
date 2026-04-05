@@ -26,8 +26,13 @@ router.delete('/silabus/:id',      pramukaController.deleteSilabus);
 // ── PRAMUKA: UPLOAD FILE ──────────────────────────────────────────────────
 router.post('/upload', upload.single('file_laporan'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'Tidak ada file yang diupload' });
-  res.json({ file_url: `/uploads/${req.file.filename}` });
+  res.json({ file_url: `/api/vocational/uploads/${req.file.filename}`, file_nama: req.file.originalname });
 });
+
+// ── LAPORAN KEGIATAN PRAMUKA ──────────────────────────────────────────────
+router.get('/laporan-kegiatan',       pramukaController.getAllLaporanKegiatan);
+router.post('/laporan-kegiatan',      upload.single('file_laporan'), pramukaController.createLaporanKegiatan);
+router.delete('/laporan-kegiatan/:id', pramukaController.deleteLaporanKegiatan);
 
 // ── VOKASI: PROXY SISWA & KELAS dari Academic Service ────────────────────
 router.get('/siswa',  extractIdentity, pklController.getSiswaForVokasi);

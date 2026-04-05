@@ -44,10 +44,14 @@ export default function RekapNilaiPage() {
     }
   };
 
-  const handleExport = () => {
+  const handleExport = async () => {
     if (!selectedKelas) { toast.error("Pilih kelas terlebih dahulu"); return; }
-    academicApi.exportNilaiExcel({ kelas_id: selectedKelas, mapel_id: selectedMapel || undefined, tahun_ajar: tahun });
-    toast.success("File Excel sedang diunduh...");
+    try {
+      await academicApi.exportNilaiExcel({ kelas_id: selectedKelas, mapel_id: selectedMapel || undefined, tahun_ajar: tahun });
+      toast.success("File berhasil diunduh!");
+    } catch {
+      toast.error("Gagal mengunduh file. Silakan coba lagi.");
+    }
   };
 
   const gradeColor = (v) =>

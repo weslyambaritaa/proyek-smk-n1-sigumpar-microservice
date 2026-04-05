@@ -10,5 +10,13 @@ sudo -u postgres psql -c "CREATE DATABASE $DB_NAME OWNER $DB_USER;" || true
 # Inisialisasi tabel dari file init.sql yang sudah disalin
 sudo -u postgres psql -d $DB_NAME -f ./init.sql || true
 
+# Jalankan migration files
+for f in migration_*.sql; do
+  if [ -f "$f" ]; then
+    echo "Running migration: $f"
+    sudo -u postgres psql -d $DB_NAME -f ./$f || true
+  fi
+done
+
 # Menjalankan aplikasi Node.js
 npm run dev

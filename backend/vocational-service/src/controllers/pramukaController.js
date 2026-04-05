@@ -127,7 +127,7 @@ exports.getAllSilabus = async (req, res) => {
 exports.createSilabus = async (req, res) => {
   const { tingkat_kelas, judul_kegiatan, tanggal } = req.body;
   let file_url = null;
-  if (req.file) file_url = `/uploads/${req.file.filename}`;
+  if (req.file) file_url = `/api/vocational/uploads/${req.file.filename}`;
   try {
     const result = await db.query(
       'INSERT INTO silabus_pramuka (tingkat_kelas, judul_kegiatan, tanggal, file_url) VALUES ($1, $2, $3, $4) RETURNING *',
@@ -175,5 +175,40 @@ exports.getRekapAbsensiPramuka = async (req, res) => {
     query += ' GROUP BY ar.siswa_id, ar.nama_lengkap, k.nama_regu ORDER BY k.nama_regu, ar.nama_lengkap';
     const result = await db.query(query, params.filter((_, i) => i !== 0 || regu_id));
     res.json({ success: true, data: result.rows });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+};
+
+// ── LAPORAN KEGIATAN PRAMUKA ──────────────────────────────────────────────
+
+exports.getAllLaporanKegiatan = async (req, res) => {
+  try {
+    const result = await db.query('SELECT * FROM laporan_kegiatan ORDER BY tanggal DESC, id DESC');
+    res.json({ success: true, data: result.rows });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+};
+
+exports.createLaporanKegiatan = async (req, res) => {
+  const { judul, deskripsi, tanggal } = req.body;
+  if (!judul) return res.status(400).json({ error: 'Judul wajib diisi' });
+  let file_url = null;
+  let file_nama = null;
+  if (req.file) {
+    file_url = `/api/vocational/uploads/${req.file.filename}`;
+    file_nama = req.file.originalname;
+  }
+  try {
+    const result = await db.query(
+      'INSERT INTO laporan_kegiatan (judul, deskripsi, tanggal, file_url, file_nama) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+      [judul, deskripsi || '', tanggal || new Date().toISOString().slice(0,10), file_url, file_nama]
+    );
+    res.status(201).json({ success: true, data: result.rows[0] });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+};
+
+exports.deleteLaporanKegiatan = async (req, res) => {
+  try {
+    const result = await db.query('DELETE FROM laporan_kegiatan WHERE id = $1 RETURNING *', [req.params.id]);
+    if (result.rowCount === 0) return res.status(404).json({ error: 'Laporan tidak ditemukan' });
+    res.json({ success: true, message: 'Laporan berhasil dihapus' });
   } catch (err) { res.status(500).json({ error: err.message }); }
 };

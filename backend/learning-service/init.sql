@@ -53,3 +53,9 @@ CREATE TABLE IF NOT EXISTS review_wakasek (
   perangkat_id INTEGER,
   komentar TEXT
 );
+
+-- ─── GRANT PERMISSIONS ────────────────────────────────────────────────────
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO learning_user;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO learning_user;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO learning_user;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO learning_user;

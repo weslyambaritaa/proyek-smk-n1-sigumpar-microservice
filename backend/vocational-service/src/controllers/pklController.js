@@ -47,7 +47,7 @@ exports.createLokasiPKL = async (req, res) => {
     deskripsi_pekerjaan, pembimbing_industri, kontak_pembimbing, tanggal } = req.body;
 
   let foto_url = null;
-  if (req.file) foto_url = `/uploads/${req.file.filename}`;
+  if (req.file) foto_url = `/api/vocational/uploads/${req.file.filename}`;
 
   if (!nama_perusahaan) {
     return res.status(400).json({ error: 'nama_perusahaan wajib diisi' });
@@ -76,7 +76,7 @@ exports.updateLokasiPKL = async (req, res) => {
   const { nama_siswa, nama_perusahaan, alamat, posisi,
     deskripsi_pekerjaan, pembimbing_industri, kontak_pembimbing, tanggal } = req.body;
   let foto_url = req.body.foto_url || null;
-  if (req.file) foto_url = `/uploads/${req.file.filename}`;
+  if (req.file) foto_url = `/api/vocational/uploads/${req.file.filename}`;
 
   try {
     const result = await db.query(

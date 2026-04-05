@@ -71,10 +71,20 @@ export const academicApi = {
   getNilai: (params) => axiosInstance.get('/api/academic/nilai', { params }),
   updateNilai: (id, data) => axiosInstance.put(`/api/academic/nilai/${id}`, data),
   deleteNilai: (id) => axiosInstance.delete(`/api/academic/nilai/${id}`),
-  exportNilaiExcel: (params) => {
-    const qstr = new URLSearchParams(params).toString();
-    const base = axiosInstance.defaults.baseURL || 'http://localhost:8001';
-    window.open(`${base}/api/academic/nilai/export-excel?${qstr}`, '_blank');
+  exportNilaiExcel: async (params) => {
+    const response = await axiosInstance.get('/api/academic/nilai/export-excel', {
+      params,
+      responseType: 'blob',
+    });
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    const filename = `rekap-nilai-${Date.now()}.csv`;
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
   },
 
   // ── NILAI WALI KELAS (terintegrasi dari guru mapel) ───────────────────
