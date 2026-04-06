@@ -82,6 +82,9 @@ services:
     build: ./backend/learning-service
     container_name: learning-service
     environment:
+      - KEYCLOAK_URL=http://keycloak:8080
+      - KEYCLOAK_REALM=smk-sigumpar
+      - KEYCLOAK_CLIENT_ID=admin-cli
       - PORT=3006
       - DB_NAME=learning_db
       - DB_USER=learning_user
