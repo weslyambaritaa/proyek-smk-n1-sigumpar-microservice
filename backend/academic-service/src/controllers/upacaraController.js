@@ -1,57 +1,34 @@
-const pool = require('../config/db');
+const { JadwalUpacara } = require('../models');
+const { createError } = require('../middleware/errorHandler');
+const asyncHandler = require('../utils/asyncHandler');
 
-exports.getAllUpacara = async (req, res) => {
-    try {
-        const result = await pool.query('SELECT * FROM jadwal_upacara ORDER BY tanggal DESC');
-        res.json(result.rows);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-};
+exports.getAllUpacara = asyncHandler(async (req, res) => {
+  const data = await JadwalUpacara.findAll({ order: [['tanggal', 'DESC']] });
+  res.json({ success: true, data });
+});
 
-exports.createUpacara = async (req, res) => {
-    const { tanggal, petugas } = req.body;
-    try {
-        const result = await pool.query(
-            'INSERT INTO jadwal_upacara (tanggal, petugas) VALUES ($1, $2) RETURNING *',
-            [tanggal, petugas]
-        );
-        res.status(201).json(result.rows[0]);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-};
+exports.createUpacara = asyncHandler(async (req, res) => {
+  const { tanggal, petugas } = req.body;
+  if (!tanggal || !petugas) throw createError(400, 'Field tanggal dan petugas wajib diisi');
 
-exports.updateUpacara = async (req, res) => {
-    const { id } = req.params;
-    const { tanggal, petugas } = req.body;
-    try {
-        const result = await pool.query(
-            'UPDATE jadwal_upacara SET tanggal = $1, petugas = $2 WHERE id = $3 RETURNING *',
-            [tanggal, petugas, id]
-        );
+  const upacara = await JadwalUpacara.create({ tanggal, petugas });
+  res.status(201).json({ success: true, data: upacara });
+});
 
-        if (result.rowCount === 0) {
-            return res.status(404).json({ message: "Jadwal upacara tidak ditemukan" });
-        }
+exports.updateUpacara = asyncHandler(async (req, res) => {
+  const { tanggal, petugas } = req.body;
+  if (!tanggal || !petugas) throw createError(400, 'Field tanggal dan petugas wajib diisi');
 
-        res.json({ success: true, data: result.rows[0] });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-};
+  const upacara = await JadwalUpacara.findByPk(req.params.id);
+  if (!upacara) throw createError(404, 'Jadwal upacara tidak ditemukan');
 
-exports.deleteUpacara = async (req, res) => {
-    const { id } = req.params;
-    try {
-        const result = await pool.query('DELETE FROM jadwal_upacara WHERE id = $1', [id]);
-        
-        if (result.rowCount === 0) {
-            return res.status(404).json({ message: "Jadwal upacara tidak ditemukan" });
-        }
+  await upacara.update({ tanggal, petugas });
+  res.json({ success: true, data: upacara });
+});
 
-        res.json({ success: true, message: "Jadwal upacara berhasil dihapus" });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-};
+exports.deleteUpacara = asyncHandler(async (req, res) => {
+  const upacara = await JadwalUpacara.findByPk(req.params.id);
+  if (!upacara) throw createError(404, 'Jadwal upacara tidak ditemukan');
+  await upacara.destroy();
+  res.json({ success: true, message: 'Jadwal upacara berhasil dihapus' });
+});

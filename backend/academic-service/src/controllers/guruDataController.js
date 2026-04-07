@@ -1,76 +1,63 @@
-const pool = require('../config/db');
+const { Op } = require('sequelize');
+const { Guru } = require('../models');
+const { createError } = require('../middleware/errorHandler');
+const asyncHandler = require('../utils/asyncHandler');
 
-// Get All Guru
-exports.getAllGuru = async (req, res) => {
-    try {
-        const result = await pool.query('SELECT * FROM guru ORDER BY nama_lengkap ASC');
-        res.json(result.rows);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-};
+exports.getAllGuru = asyncHandler(async (req, res) => {
+  const data = await Guru.findAll({ order: [['nama_lengkap', 'ASC']] });
+  res.json({ success: true, data });
+});
 
-// Create Guru
-exports.createGuru = async (req, res) => {
-    const { nip, nama_lengkap, email, jabatan, mata_pelajaran, no_telepon } = req.body;
-    try {
-        const result = await pool.query(
-            `INSERT INTO guru (nip, nama_lengkap, email, jabatan, mata_pelajaran, no_telepon)
-             VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-            [nip, nama_lengkap, email || null, jabatan || null, mata_pelajaran || null, no_telepon || null]
-        );
-        res.status(201).json(result.rows[0]);
-    } catch (err) {
-        if (err.code === '23505') {
-            return res.status(400).json({ error: 'NIP sudah terdaftar' });
-        }
-        res.status(500).json({ error: err.message });
-    }
-};
+exports.createGuru = asyncHandler(async (req, res) => {
+  const { nip, nama_lengkap, email, jabatan, mata_pelajaran, no_telepon } = req.body;
+  if (!nama_lengkap) throw createError(400, 'Field nama_lengkap wajib diisi');
 
-// Update Guru
-exports.updateGuru = async (req, res) => {
-    const { id } = req.params;
-    const { nip, nama_lengkap, email, jabatan, mata_pelajaran, no_telepon } = req.body;
-    try {
-        const result = await pool.query(
-            `UPDATE guru SET nip=$1, nama_lengkap=$2, email=$3, jabatan=$4, mata_pelajaran=$5, no_telepon=$6
-             WHERE id=$7 RETURNING *`,
-            [nip, nama_lengkap, email || null, jabatan || null, mata_pelajaran || null, no_telepon || null, id]
-        );
-        if (result.rows.length === 0) return res.status(404).json({ error: 'Guru tidak ditemukan' });
-        res.json(result.rows[0]);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-};
+  const guru = await Guru.create({
+    nip, nama_lengkap,
+    email: email || null,
+    jabatan: jabatan || null,
+    mata_pelajaran: mata_pelajaran || null,
+    no_telepon: no_telepon || null,
+  });
+  res.status(201).json({ success: true, data: guru });
+});
 
-// Delete Guru
-exports.deleteGuru = async (req, res) => {
-    const { id } = req.params;
-    try {
-        await pool.query('DELETE FROM guru WHERE id = $1', [id]);
-        res.json({ message: 'Guru berhasil dihapus' });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-};
+exports.updateGuru = asyncHandler(async (req, res) => {
+  const { nip, nama_lengkap, email, jabatan, mata_pelajaran, no_telepon } = req.body;
+  if (!nama_lengkap) throw createError(400, 'Field nama_lengkap wajib diisi');
 
-// Search Guru (untuk dropdown di komponen lain)
-exports.searchGuru = async (req, res) => {
-  const { q, nama } = req.query;
-  const keyword = q || nama || '';
-  try {
-    const result = await pool.query(
-      `SELECT id, nip, nama_lengkap, jabatan, mata_pelajaran, email, no_telepon
-       FROM guru
-       WHERE LOWER(nama_lengkap) LIKE $1 OR LOWER(nip) LIKE $1
-       ORDER BY nama_lengkap ASC
-       LIMIT 50`,
-      [`%${keyword.toLowerCase()}%`]
-    );
-    res.json({ success: true, data: result.rows });
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-};
+  const guru = await Guru.findByPk(req.params.id);
+  if (!guru) throw createError(404, 'Guru tidak ditemukan');
+
+  await guru.update({
+    nip, nama_lengkap,
+    email: email || null,
+    jabatan: jabatan || null,
+    mata_pelajaran: mata_pelajaran || null,
+    no_telepon: no_telepon || null,
+  });
+  res.json({ success: true, data: guru });
+});
+
+exports.deleteGuru = asyncHandler(async (req, res) => {
+  const guru = await Guru.findByPk(req.params.id);
+  if (!guru) throw createError(404, 'Guru tidak ditemukan');
+  await guru.destroy();
+  res.json({ success: true, message: 'Guru berhasil dihapus' });
+});
+
+exports.searchGuru = asyncHandler(async (req, res) => {
+  const keyword = `%${(req.query.q || req.query.nama || '').toLowerCase()}%`;
+  const data = await Guru.findAll({
+    where: {
+      [Op.or]: [
+        { nama_lengkap: { [Op.iLike]: keyword } },
+        { nip: { [Op.iLike]: keyword } },
+      ],
+    },
+    attributes: ['id', 'nip', 'nama_lengkap', 'jabatan', 'mata_pelajaran', 'email', 'no_telepon'],
+    order: [['nama_lengkap', 'ASC']],
+    limit: 50,
+  });
+  res.json({ success: true, data });
+});

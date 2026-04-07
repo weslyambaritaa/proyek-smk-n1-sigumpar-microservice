@@ -1,67 +1,34 @@
-const pool = require('../config/db');
+const { Pengumuman } = require('../models');
+const { createError } = require('../middleware/errorHandler');
+const asyncHandler = require('../utils/asyncHandler');
 
-// ==========================================
-// --- KONTROLLER PENGUMUMAN ---
-// ==========================================
+exports.getAllPengumuman = asyncHandler(async (req, res) => {
+  const data = await Pengumuman.findAll({ order: [['id', 'DESC']] });
+  res.json({ success: true, data });
+});
 
-// Get All Pengumuman
-exports.getAllPengumuman = async (req, res) => {
-    try {
-        // Mengambil data pengumuman dan mengurutkannya dari yang paling baru
-        const result = await pool.query('SELECT * FROM pengumuman ORDER BY id DESC');
-        res.json(result.rows);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-};
+exports.createPengumuman = asyncHandler(async (req, res) => {
+  const { judul, isi } = req.body;
+  if (!judul || !isi) throw createError(400, 'Field judul dan isi wajib diisi');
 
-// Create Pengumuman
-exports.createPengumuman = async (req, res) => {
-    const { judul, isi } = req.body;
-    try {
-        const result = await pool.query(
-            "INSERT INTO pengumuman (judul, isi) VALUES ($1, $2) RETURNING *",
-            [judul, isi]
-        );
-        res.status(201).json(result.rows[0]);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-};
+  const pengumuman = await Pengumuman.create({ judul, isi });
+  res.status(201).json({ success: true, data: pengumuman });
+});
 
-// Update Pengumuman
-exports.updatePengumuman = async (req, res) => {
-    const { id } = req.params;
-    const { judul, isi } = req.body;
-    try {
-        const result = await pool.query(
-            "UPDATE pengumuman SET judul = $1, isi = $2 WHERE id = $3 RETURNING *",
-            [judul, isi, id]
-        );
+exports.updatePengumuman = asyncHandler(async (req, res) => {
+  const { judul, isi } = req.body;
+  if (!judul || !isi) throw createError(400, 'Field judul dan isi wajib diisi');
 
-        if (result.rowCount === 0) {
-            return res.status(404).json({ message: "Pengumuman tidak ditemukan" });
-        }
+  const pengumuman = await Pengumuman.findByPk(req.params.id);
+  if (!pengumuman) throw createError(404, 'Pengumuman tidak ditemukan');
 
-        res.json({ success: true, data: result.rows[0] });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-};
+  await pengumuman.update({ judul, isi });
+  res.json({ success: true, data: pengumuman });
+});
 
-// Delete Pengumuman
-exports.deletePengumuman = async (req, res) => {
-    const { id } = req.params;
-    try {
-        const result = await pool.query("DELETE FROM pengumuman WHERE id = $1", [id]);
-        
-        if (result.rowCount === 0) {
-            return res.status(404).json({ message: "Pengumuman tidak ditemukan" });
-        }
-
-        res.json({ message: "Pengumuman berhasil dihapus" });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-};
-
+exports.deletePengumuman = asyncHandler(async (req, res) => {
+  const pengumuman = await Pengumuman.findByPk(req.params.id);
+  if (!pengumuman) throw createError(404, 'Pengumuman tidak ditemukan');
+  await pengumuman.destroy();
+  res.json({ success: true, message: 'Pengumuman berhasil dihapus' });
+});

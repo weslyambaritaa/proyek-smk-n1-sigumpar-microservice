@@ -1,134 +1,78 @@
-const pool = require('../config/db');
-const fs = require('fs');
+const fs   = require('fs');
 const path = require('path');
+const { ArsipSurat } = require('../models');
+const { createError } = require('../middleware/errorHandler');
+const asyncHandler = require('../utils/asyncHandler');
 
-//--------------------------------------------
-//----------ARSIP SURAT ---------------------
-//--------------------------------------------
-// GET semua data
-// Get All Arsip Surat
-exports.getAllArsipSurat = async (req, res) => {
-    try {
-        const result = await pool.query('SELECT * FROM arsip_surat ORDER BY id DESC');
-        res.json(result.rows);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
+exports.getAllArsipSurat = asyncHandler(async (req, res) => {
+  const data = await ArsipSurat.findAll({ order: [['id', 'DESC']] });
+  res.json({ success: true, data });
+});
+
+exports.createArsipSurat = asyncHandler(async (req, res) => {
+  const { nomor_surat } = req.body;
+  if (!req.file) throw createError(400, 'File surat harus diunggah');
+
+  const arsip = await ArsipSurat.create({
+    nomor_surat,
+    file_url: `/api/academic/uploads/${req.file.filename}`,
+  });
+  res.status(201).json({ success: true, data: arsip });
+});
+
+exports.updateArsipSurat = asyncHandler(async (req, res) => {
+  const { nomor_surat } = req.body;
+  const arsip = await ArsipSurat.findByPk(req.params.id);
+  if (!arsip) throw createError(404, 'Arsip surat tidak ditemukan');
+
+  const updates = { nomor_surat };
+
+  if (req.file) {
+    // Hapus file lama dari disk jika ada
+    if (arsip.file_url) {
+      const oldPath = path.join(__dirname, '../../', arsip.file_url);
+      if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
     }
-};
-
-// Create Arsip Surat
-exports.createArsipSurat = async (req, res) => {
-    const { nomor_surat } = req.body;
-    const file = req.file; // Diambil dari multer middleware
-
-    if (!file) {
-        return res.status(400).json({ message: "File surat harus diunggah" });
-    }
-
-    const fileUrl = `/api/academic/uploads/${file.filename}`;
-
-    try {
-        const result = await pool.query(
-            "INSERT INTO arsip_surat (nomor_surat, file_url) VALUES ($1, $2) RETURNING *",
-            [nomor_surat, fileUrl]
-        );
-        res.status(201).json(result.rows[0]);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-};
-
-// Update Arsip Surat
-exports.updateArsipSurat = async (req, res) => {
-    const { id } = req.params;
-    const { nomor_surat } = req.body;
-    const file = req.file;
-
-    try {
-        // Cek file_url lama untuk dihapus jika ada file baru
-        const oldData = await pool.query("SELECT file_url FROM arsip_surat WHERE id = $1", [id]);
-        if (oldData.rowCount === 0) {
-            return res.status(404).json({ message: "Arsip surat tidak ditemukan" });
-        }
-
-        let query, params;
-
-        if (file) {
-            // Jika user upload file baru
-            const fileUrl = `/api/academic/uploads/${file.filename}`;
-            query = "UPDATE arsip_surat SET nomor_surat = $1, file_url = $2 WHERE id = $3 RETURNING *";
-            params = [nomor_surat, fileUrl, id];
-
-            // Hapus file lama dari storage
-            if (oldData.rows[0].file_url) {
-                const oldFilePath = path.join(__dirname, '../../', oldData.rows[0].file_url);
-                if (fs.existsSync(oldFilePath)) fs.unlinkSync(oldFilePath);
-            }
-        } else {
-            // Jika user hanya update nomor surat tanpa ganti file
-            query = "UPDATE arsip_surat SET nomor_surat = $1 WHERE id = $2 RETURNING *";
-            params = [nomor_surat, id];
-        }
-
-        const result = await pool.query(query, params);
-        res.json({ success: true, data: result.rows[0] });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-};
-
-// Delete Arsip Surat
-exports.deleteArsipSurat = async (req, res) => {
-    const { id } = req.params;
-    try {
-        const arsip = await pool.query("SELECT file_url FROM arsip_surat WHERE id = $1", [id]);
-        
-        if (arsip.rowCount === 0) {
-            return res.status(404).json({ message: "Arsip surat tidak ditemukan" });
-        }
-
-        // Hapus data dari DB
-        await pool.query("DELETE FROM arsip_surat WHERE id = $1", [id]);
-
-        // Hapus file fisik dari folder uploads
-        if (arsip.rows[0].file_url) {
-            const filePath = path.join(__dirname, '../../', arsip.rows[0].file_url);
-            if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-        }
-
-        res.json({ message: "Arsip surat beserta file berhasil dihapus" });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-};
-// Preview Arsip Surat — stream file ke browser (inline)
-exports.previewArsipSurat = async (req, res) => {
-  try {
-    const result = await pool.query('SELECT * FROM arsip_surat WHERE id = $1', [req.params.id]);
-    if (result.rows.length === 0) return res.status(404).json({ error: 'Dokumen tidak ditemukan' });
-
-    const arsip = result.rows[0];
-    // Coba dari file_data (jika disimpan sebagai bytea)
-    if (arsip.file_data) {
-      const mime = arsip.file_mime || arsip.jenis_file || 'application/octet-stream';
-      res.set('Content-Type', mime);
-      res.set('Content-Disposition', `inline; filename="${arsip.nama_file || 'dokumen'}"`);
-      return res.send(arsip.file_data);
-    }
-    // Fallback: dari path file di disk
-    if (arsip.file_url || arsip.file_path) {
-      const filePath = path.join(__dirname, '../../uploads', path.basename(arsip.file_url || arsip.file_path));
-      if (fs.existsSync(filePath)) {
-        const ext = path.extname(filePath).toLowerCase();
-        const mimeMap = { '.pdf': 'application/pdf', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.gif': 'image/gif', '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' };
-        res.set('Content-Type', mimeMap[ext] || 'application/octet-stream');
-        res.set('Content-Disposition', `inline; filename="${path.basename(filePath)}"`);
-        return fs.createReadStream(filePath).pipe(res);
-      }
-    }
-    return res.status(404).json({ error: 'File tidak ditemukan di server' });
-  } catch (err) {
-    console.error('[previewArsipSurat]', err);
-    res.status(500).json({ error: err.message });
+    updates.file_url = `/api/academic/uploads/${req.file.filename}`;
   }
-};
+
+  await arsip.update(updates);
+  res.json({ success: true, data: arsip });
+});
+
+exports.deleteArsipSurat = asyncHandler(async (req, res) => {
+  const arsip = await ArsipSurat.findByPk(req.params.id);
+  if (!arsip) throw createError(404, 'Arsip surat tidak ditemukan');
+
+  // Hapus file fisik
+  if (arsip.file_url) {
+    const filePath = path.join(__dirname, '../../', arsip.file_url);
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+  }
+
+  await arsip.destroy();
+  res.json({ success: true, message: 'Arsip surat beserta file berhasil dihapus' });
+});
+
+exports.previewArsipSurat = asyncHandler(async (req, res) => {
+  const arsip = await ArsipSurat.findByPk(req.params.id);
+  if (!arsip) throw createError(404, 'Dokumen tidak ditemukan');
+
+  if (!arsip.file_url) throw createError(404, 'File tidak ditemukan di server');
+
+  const filePath = path.join(__dirname, '../../uploads', path.basename(arsip.file_url));
+  if (!fs.existsSync(filePath)) throw createError(404, 'File tidak ditemukan di server');
+
+  const ext = path.extname(filePath).toLowerCase();
+  const mimeMap = {
+    '.pdf':  'application/pdf',
+    '.jpg':  'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.png':  'image/png',
+    '.gif':  'image/gif',
+    '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  };
+  res.set('Content-Type', mimeMap[ext] || 'application/octet-stream');
+  res.set('Content-Disposition', `inline; filename="${path.basename(filePath)}"`);
+  fs.createReadStream(filePath).pipe(res);
+});

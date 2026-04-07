@@ -1,63 +1,41 @@
-const pool = require('../config/db');
+const { MataPelajaran, Kelas } = require('../models');
+const { createError } = require('../middleware/errorHandler');
+const asyncHandler = require('../utils/asyncHandler');
 
-exports.getAllMapel = async (req, res) => {
-    try {
-        // Mengambil data mapel beserta nama kelasnya
-        const result = await pool.query(`
-            SELECT m.*, k.nama_kelas 
-            FROM mata_pelajaran m 
-            LEFT JOIN kelas k ON m.kelas_id = k.id 
-            ORDER BY m.id DESC
-        `);
-        res.json(result.rows);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-};
+exports.getAllMapel = asyncHandler(async (req, res) => {
+  const data = await MataPelajaran.findAll({
+    include: [{ model: Kelas, as: 'kelas', attributes: ['nama_kelas'] }],
+    order: [['id', 'DESC']],
+  });
+  res.json({ success: true, data });
+});
 
-exports.createMapel = async (req, res) => {
-    const { nama_mapel, kelas_id, guru_mapel_id } = req.body;
-    try {
-        const result = await pool.query(
-            'INSERT INTO mata_pelajaran (nama_mapel, kelas_id, guru_mapel_id) VALUES ($1, $2, $3) RETURNING *',
-            [nama_mapel, kelas_id || null, guru_mapel_id || null]
-        );
-        res.status(201).json(result.rows[0]);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-};
+exports.createMapel = asyncHandler(async (req, res) => {
+  const { nama_mapel, kelas_id, guru_mapel_id } = req.body;
+  if (!nama_mapel) throw createError(400, 'Field nama_mapel wajib diisi');
 
-exports.updateMapel = async (req, res) => {
-    const { id } = req.params;
-    const { nama_mapel, kelas_id, guru_mapel_id } = req.body;
-    try {
-        const result = await pool.query(
-            'UPDATE mata_pelajaran SET nama_mapel = $1, kelas_id = $2, guru_mapel_id = $3 WHERE id = $4 RETURNING *',
-            [nama_mapel, kelas_id || null, guru_mapel_id || null, id]
-        );
+  const mapel = await MataPelajaran.create({
+    nama_mapel,
+    kelas_id: kelas_id || null,
+    guru_mapel_id: guru_mapel_id || null,
+  });
+  res.status(201).json({ success: true, data: mapel });
+});
 
-        if (result.rowCount === 0) {
-            return res.status(404).json({ message: "Mata pelajaran tidak ditemukan" });
-        }
+exports.updateMapel = asyncHandler(async (req, res) => {
+  const { nama_mapel, kelas_id, guru_mapel_id } = req.body;
+  if (!nama_mapel) throw createError(400, 'Field nama_mapel wajib diisi');
 
-        res.json({ success: true, data: result.rows[0] });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-};
+  const mapel = await MataPelajaran.findByPk(req.params.id);
+  if (!mapel) throw createError(404, 'Mata pelajaran tidak ditemukan');
 
-exports.deleteMapel = async (req, res) => {
-    const { id } = req.params;
-    try {
-        const result = await pool.query('DELETE FROM mata_pelajaran WHERE id = $1', [id]);
-        
-        if (result.rowCount === 0) {
-            return res.status(404).json({ message: "Mata pelajaran tidak ditemukan" });
-        }
+  await mapel.update({ nama_mapel, kelas_id: kelas_id || null, guru_mapel_id: guru_mapel_id || null });
+  res.json({ success: true, data: mapel });
+});
 
-        res.json({ success: true, message: "Mata pelajaran berhasil dihapus" });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-};
+exports.deleteMapel = asyncHandler(async (req, res) => {
+  const mapel = await MataPelajaran.findByPk(req.params.id);
+  if (!mapel) throw createError(404, 'Mata pelajaran tidak ditemukan');
+  await mapel.destroy();
+  res.json({ success: true, message: 'Mata pelajaran berhasil dihapus' });
+});

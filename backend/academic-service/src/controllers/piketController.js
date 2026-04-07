@@ -1,57 +1,34 @@
-const pool = require('../config/db');
+const { JadwalPiket } = require('../models');
+const { createError } = require('../middleware/errorHandler');
+const asyncHandler = require('../utils/asyncHandler');
 
-exports.getAllPiket = async (req, res) => {
-    try {
-        const result = await pool.query('SELECT * FROM jadwal_piket ORDER BY tanggal DESC');
-        res.json(result.rows);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-};
+exports.getAllPiket = asyncHandler(async (req, res) => {
+  const data = await JadwalPiket.findAll({ order: [['tanggal', 'DESC']] });
+  res.json({ success: true, data });
+});
 
-exports.createPiket = async (req, res) => {
-    const { tanggal, guru_id } = req.body;
-    try {
-        const result = await pool.query(
-            'INSERT INTO jadwal_piket (tanggal, guru_id) VALUES ($1, $2) RETURNING *',
-            [tanggal, guru_id || null]
-        );
-        res.status(201).json(result.rows[0]);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-};
+exports.createPiket = asyncHandler(async (req, res) => {
+  const { tanggal, guru_id } = req.body;
+  if (!tanggal) throw createError(400, 'Field tanggal wajib diisi');
 
-exports.updatePiket = async (req, res) => {
-    const { id } = req.params;
-    const { tanggal, guru_id } = req.body;
-    try {
-        const result = await pool.query(
-            'UPDATE jadwal_piket SET tanggal = $1, guru_id = $2 WHERE id = $3 RETURNING *',
-            [tanggal, guru_id || null, id]
-        );
+  const piket = await JadwalPiket.create({ tanggal, guru_id: guru_id || null });
+  res.status(201).json({ success: true, data: piket });
+});
 
-        if (result.rowCount === 0) {
-            return res.status(404).json({ message: "Jadwal piket tidak ditemukan" });
-        }
+exports.updatePiket = asyncHandler(async (req, res) => {
+  const { tanggal, guru_id } = req.body;
+  if (!tanggal) throw createError(400, 'Field tanggal wajib diisi');
 
-        res.json({ success: true, data: result.rows[0] });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-};
+  const piket = await JadwalPiket.findByPk(req.params.id);
+  if (!piket) throw createError(404, 'Jadwal piket tidak ditemukan');
 
-exports.deletePiket = async (req, res) => {
-    const { id } = req.params;
-    try {
-        const result = await pool.query('DELETE FROM jadwal_piket WHERE id = $1', [id]);
-        
-        if (result.rowCount === 0) {
-            return res.status(404).json({ message: "Jadwal piket tidak ditemukan" });
-        }
+  await piket.update({ tanggal, guru_id: guru_id || null });
+  res.json({ success: true, data: piket });
+});
 
-        res.json({ success: true, message: "Jadwal piket berhasil dihapus" });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-};
+exports.deletePiket = asyncHandler(async (req, res) => {
+  const piket = await JadwalPiket.findByPk(req.params.id);
+  if (!piket) throw createError(404, 'Jadwal piket tidak ditemukan');
+  await piket.destroy();
+  res.json({ success: true, message: 'Jadwal piket berhasil dihapus' });
+});

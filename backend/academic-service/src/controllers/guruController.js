@@ -1,86 +1,77 @@
-const pool = require('../config/db');
+const { Kelas, MataPelajaran, Siswa, AbsensiSiswa } = require('../models');
 const { createError } = require('../middleware/errorHandler');
+const asyncHandler = require('../utils/asyncHandler');
+const sequelize = require('../config/db');
+const { QueryTypes } = require('sequelize');
 
-// Ambil semua kelas yang tersedia (semua guru bisa melihat semua kelas untuk absensi)
-exports.getTeacherClasses = async (req, res, next) => {
-  try {
-    const result = await pool.query(
-      `SELECT id, nama_kelas, tingkat FROM kelas ORDER BY tingkat, nama_kelas`
-    );
-    res.json(result.rows);
-  } catch (err) { next(err); }
-};
+exports.getTeacherClasses = asyncHandler(async (req, res) => {
+  const data = await Kelas.findAll({
+    attributes: ['id', 'nama_kelas', 'tingkat'],
+    order: [['tingkat', 'ASC'], ['nama_kelas', 'ASC']],
+  });
+  res.json(data);
+});
 
-// Ambil mapel berdasarkan kelas (tidak filter per guru agar semua mapel bisa dipilih)
-exports.getSubjectsByClass = async (req, res, next) => {
-  const { classId } = req.params;
-  try {
-    const result = await pool.query(
-      `SELECT id, nama_mapel FROM mata_pelajaran WHERE kelas_id = $1 ORDER BY nama_mapel ASC`,
-      [classId]
-    );
-    res.json(result.rows);
-  } catch (err) { next(err); }
-};
+exports.getSubjectsByClass = asyncHandler(async (req, res) => {
+  const data = await MataPelajaran.findAll({
+    where: { kelas_id: req.params.classId },
+    attributes: ['id', 'nama_mapel'],
+    order: [['nama_mapel', 'ASC']],
+  });
+  res.json(data);
+});
 
-exports.getClassStudents = async (req, res, next) => {
-  const { classId } = req.params;
-  try {
-    const result = await pool.query(
-      `SELECT id AS id_siswa, nama_lengkap AS namasiswa, nisn AS nis FROM siswa WHERE kelas_id = $1 ORDER BY nama_lengkap ASC`,
-      [classId]
-    );
-    res.json(result.rows);
-  } catch (err) { next(err); }
-};
+exports.getClassStudents = asyncHandler(async (req, res) => {
+  const data = await Siswa.findAll({
+    where: { kelas_id: req.params.classId },
+    attributes: [['id', 'id_siswa'], ['nama_lengkap', 'namasiswa'], ['nisn', 'nis']],
+    order: [['nama_lengkap', 'ASC']],
+  });
+  res.json(data);
+});
 
-exports.getAttendanceByClass = async (req, res, next) => {
+exports.getAttendanceByClass = asyncHandler(async (req, res) => {
   const { classId } = req.params;
   const { date, subjectId } = req.query;
-  if (!date) return next(createError(400, 'Parameter date wajib diisi'));
-  try {
-    let query = `
-      SELECT a.siswa_id AS id_siswa, a.status, a.keterangan
-      FROM absensi_siswa a
-      JOIN siswa s ON a.siswa_id = s.id
-      WHERE s.kelas_id = $1 AND a.tanggal = $2`;
-    const params = [classId, date];
-    if (subjectId) { query += ` AND a.mapel_id = $3`; params.push(subjectId); }
-    const result = await pool.query(query, params);
-    res.json(result.rows);
-  } catch (err) { next(err); }
-};
+  if (!date) throw createError(400, 'Parameter date wajib diisi');
 
-exports.saveBulkAttendance = async (req, res, next) => {
+  const whereAbsensi = { tanggal: date };
+  if (subjectId) whereAbsensi.mapel_id = subjectId;
+
+  const rows = await sequelize.query(
+    `SELECT a.siswa_id AS id_siswa, a.status, a.keterangan
+     FROM absensi_siswa a
+     JOIN siswa s ON a.siswa_id = s.id
+     WHERE s.kelas_id = :classId AND a.tanggal = :date
+     ${subjectId ? 'AND a.mapel_id = :subjectId' : ''}`,
+    { replacements: { classId, date, subjectId: subjectId || null }, type: QueryTypes.SELECT }
+  );
+  res.json(rows);
+});
+
+exports.saveBulkAttendance = asyncHandler(async (req, res) => {
   const { classId, date, subjectId, attendance } = req.body;
-  if (!classId || !date || !Array.isArray(attendance)) {
-    return next(createError(400, 'Data tidak lengkap'));
-  }
-  if (attendance.length === 0) {
-    return res.json({ success: true, message: 'Tidak ada absensi yang disimpan' });
-  }
-  const client = await pool.connect();
-  try {
-    await client.query('BEGIN');
+  if (!classId || !date || !Array.isArray(attendance)) throw createError(400, 'Data tidak lengkap');
+  if (attendance.length === 0) return res.json({ success: true, message: 'Tidak ada absensi yang disimpan' });
+
+  await sequelize.transaction(async (t) => {
     for (const item of attendance) {
       const { id_siswa, status, keterangan } = item;
       if (!id_siswa || !status) continue;
       const mapelId = subjectId ? parseInt(subjectId) : null;
-      await client.query(
+      await sequelize.query(
         `INSERT INTO absensi_siswa (siswa_id, tanggal, status, keterangan, mapel_id)
-         VALUES ($1, $2, $3, $4, $5)
+         VALUES (:siswa_id, :date, :status, :ket, :mapel_id)
          ON CONFLICT (siswa_id, tanggal, COALESCE(mapel_id, 0))
-         DO UPDATE SET status = EXCLUDED.status, keterangan = EXCLUDED.keterangan, updated_at = NOW()`,
-        [parseInt(id_siswa), date, status, keterangan || null, mapelId]
+         DO UPDATE SET status=EXCLUDED.status, keterangan=EXCLUDED.keterangan, updated_at=NOW()`,
+        {
+          replacements: { siswa_id: parseInt(id_siswa), date, status, ket: keterangan || null, mapel_id: mapelId },
+          type: QueryTypes.INSERT,
+          transaction: t,
+        }
       );
     }
-    await client.query('COMMIT');
-    res.json({ success: true, message: 'Absensi berhasil disimpan' });
-  } catch (err) {
-    await client.query('ROLLBACK');
-    next(err);
-  } finally {
-    client.release();
-  }
-};
-// Note: saveBulkAttendance already fixed above in this file
+  });
+
+  res.json({ success: true, message: 'Absensi berhasil disimpan' });
+});

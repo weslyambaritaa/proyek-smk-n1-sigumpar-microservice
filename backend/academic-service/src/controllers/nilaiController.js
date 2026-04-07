@@ -1,320 +1,163 @@
-const pool = require('../config/db');
+const { NilaiSiswa, Siswa, MataPelajaran, Kelas } = require('../models');
+const { createError } = require('../middleware/errorHandler');
+const asyncHandler = require('../utils/asyncHandler');
+const sequelize = require('../config/db');
+const { QueryTypes, Op } = require('sequelize');
 
-// =============================================
-// NILAI CONTROLLER
-// Mengelola nilai tugas, kuis, UTS, UAS, praktik siswa
-// =============================================
-
-/**
- * GET /api/academic/nilai
- * Query params: mapel_id, kelas_id, tahun_ajar, search
- * Mengembalikan daftar nilai siswa berdasarkan filter
- */
-exports.getNilai = async (req, res) => {
+exports.getNilai = asyncHandler(async (req, res) => {
   const { mapel_id, kelas_id, tahun_ajar, search } = req.query;
+  const where = {};
+  if (mapel_id)   where.mapel_id   = mapel_id;
+  if (kelas_id)   where.kelas_id   = kelas_id;
+  if (tahun_ajar) where.tahun_ajar = tahun_ajar;
 
-  try {
-    let query = `
-      SELECT 
-        n.id,
-        n.siswa_id,
-        s.nisn,
-        s.nama_lengkap,
-        k.nama_kelas,
-        m.nama_mapel,
-        n.mapel_id,
-        n.kelas_id,
-        n.tahun_ajar,
-        n.nilai_tugas,
-        n.nilai_kuis,
-        n.nilai_uts,
-        n.nilai_uas,
-        n.nilai_praktik,
-        ROUND(
-          (
-            n.nilai_tugas * 0.15 +
-            n.nilai_kuis * 0.15 +
-            n.nilai_uts * 0.20 +
-            n.nilai_uas * 0.30 +
-            n.nilai_praktik * 0.20
-          )::numeric,
-          2
-        ) AS nilai_akhir
-      FROM nilai_siswa n
-      JOIN siswa s ON n.siswa_id = s.id
-      JOIN kelas k ON n.kelas_id = k.id
-      JOIN mata_pelajaran m ON n.mapel_id = m.id
-      WHERE 1=1
-    `;
-    const params = [];
-    let idx = 1;
+  const siswaWhere = search
+    ? { nama_lengkap: { [Op.iLike]: `%${search}%` } }
+    : undefined;
 
-    if (mapel_id) {
-      query += ` AND n.mapel_id = $${idx++}`;
-      params.push(mapel_id);
-    }
-    if (kelas_id) {
-      query += ` AND n.kelas_id = $${idx++}`;
-      params.push(kelas_id);
-    }
-    if (tahun_ajar) {
-      query += ` AND n.tahun_ajar = $${idx++}`;
-      params.push(tahun_ajar);
-    }
-    if (search) {
-      query += ` AND LOWER(s.nama_lengkap) LIKE $${idx++}`;
-      params.push(`%${search.toLowerCase()}%`);
-    }
+  const data = await NilaiSiswa.findAll({
+    where,
+    include: [
+      { model: Siswa, as: 'siswa', attributes: ['nisn', 'nama_lengkap'], where: siswaWhere },
+      { model: MataPelajaran, as: 'mapel', attributes: ['nama_mapel'] },
+      { model: Kelas, as: 'kelas', attributes: ['nama_kelas'] },
+    ],
+    order: [[{ model: Siswa, as: 'siswa' }, 'nama_lengkap', 'ASC']],
+  });
 
-    query += ` ORDER BY s.nama_lengkap ASC`;
+  // Hitung nilai_akhir di JS (lebih portable daripada raw SQL ROUND)
+  const enriched = data.map((n) => ({
+    ...n.toJSON(),
+    nilai_akhir: +(
+      n.nilai_tugas * 0.15 + n.nilai_kuis * 0.15 +
+      n.nilai_uts * 0.20 + n.nilai_uas * 0.30 + n.nilai_praktik * 0.20
+    ).toFixed(2),
+  }));
 
-    const result = await pool.query(query, params);
-    res.json({ success: true, data: result.rows });
-  } catch (err) {
-    console.error('Error getNilai:', err);
-    res.status(500).json({ success: false, error: err.message });
-  }
-};
+  res.json({ success: true, data: enriched });
+});
 
-/**
- * GET /api/academic/nilai/siswa-by-kelas
- * Query params: kelas_id, mapel_id, tahun_ajar
- * Mengembalikan daftar siswa di kelas + nilai mereka (jika ada)
- */
-exports.getSiswaByKelas = async (req, res) => {
+exports.getSiswaByKelas = asyncHandler(async (req, res) => {
   const { kelas_id, mapel_id, tahun_ajar } = req.query;
+  if (!kelas_id) throw createError(400, 'kelas_id wajib diisi');
 
-  if (!kelas_id) {
-    return res.status(400).json({ success: false, message: 'kelas_id wajib diisi' });
-  }
+  // Tetap raw query karena LEFT JOIN kondisional + COALESCE kompleks
+  const rows = await sequelize.query(
+    `SELECT
+       s.id AS siswa_id, s.nisn, s.nama_lengkap, k.nama_kelas,
+       COALESCE(n.id, NULL)         AS nilai_id,
+       COALESCE(n.mapel_id, NULL)   AS mapel_id,
+       COALESCE(n.tahun_ajar, :tahun_ajar) AS tahun_ajar,
+       COALESCE(n.nilai_tugas,   0) AS nilai_tugas,
+       COALESCE(n.nilai_kuis,    0) AS nilai_kuis,
+       COALESCE(n.nilai_uts,     0) AS nilai_uts,
+       COALESCE(n.nilai_uas,     0) AS nilai_uas,
+       COALESCE(n.nilai_praktik, 0) AS nilai_praktik,
+       CASE WHEN n.id IS NOT NULL THEN
+         ROUND((n.nilai_tugas*0.15 + n.nilai_kuis*0.15 + n.nilai_uts*0.20 + n.nilai_uas*0.30 + n.nilai_praktik*0.20)::numeric, 2)
+       ELSE 0 END AS nilai_akhir
+     FROM siswa s
+     JOIN kelas k ON s.kelas_id = k.id
+     LEFT JOIN nilai_siswa n
+       ON n.siswa_id = s.id AND n.kelas_id = :kelas_id
+       AND (:mapel_id::INTEGER IS NULL OR n.mapel_id = :mapel_id::INTEGER)
+       AND (:tahun_ajar::VARCHAR IS NULL OR n.tahun_ajar = :tahun_ajar)
+     WHERE s.kelas_id = :kelas_id
+     ORDER BY s.nama_lengkap ASC`,
+    {
+      replacements: { kelas_id, mapel_id: mapel_id || null, tahun_ajar: tahun_ajar || null },
+      type: QueryTypes.SELECT,
+    }
+  );
+  res.json({ success: true, data: rows });
+});
 
-  try {
-    const query = `
-      SELECT 
-        s.id AS siswa_id,
-        s.nisn,
-        s.nama_lengkap,
-        k.nama_kelas,
-        COALESCE(n.id, NULL) AS nilai_id,
-        COALESCE(n.mapel_id, NULL) AS mapel_id,
-        COALESCE(n.tahun_ajar, $3) AS tahun_ajar,
-        COALESCE(n.nilai_tugas, 0) AS nilai_tugas,
-        COALESCE(n.nilai_kuis, 0) AS nilai_kuis,
-        COALESCE(n.nilai_uts, 0) AS nilai_uts,
-        COALESCE(n.nilai_uas, 0) AS nilai_uas,
-        COALESCE(n.nilai_praktik, 0) AS nilai_praktik,
-        CASE 
-          WHEN n.id IS NOT NULL THEN
-            ROUND(
-              (
-                n.nilai_tugas * 0.15 +
-                n.nilai_kuis * 0.15 +
-                n.nilai_uts * 0.20 +
-                n.nilai_uas * 0.30 +
-                n.nilai_praktik * 0.20
-              )::numeric,
-              2
-            )
-          ELSE 0
-        END AS nilai_akhir
-      FROM siswa s
-      JOIN kelas k ON s.kelas_id = k.id
-      LEFT JOIN nilai_siswa n 
-        ON n.siswa_id = s.id 
-        AND n.kelas_id = $1
-        AND ($2::INTEGER IS NULL OR n.mapel_id = $2::INTEGER)
-        AND ($3::VARCHAR IS NULL OR n.tahun_ajar = $3)
-      WHERE s.kelas_id = $1
-      ORDER BY s.nama_lengkap ASC
-    `;
-
-    const result = await pool.query(query, [
-      kelas_id,
-      mapel_id || null,
-      tahun_ajar || null,
-    ]);
-
-    res.json({ success: true, data: result.rows });
-  } catch (err) {
-    console.error('Error getSiswaByKelas:', err);
-    res.status(500).json({ success: false, error: err.message });
-  }
-};
-
-/**
- * POST /api/academic/nilai/bulk
- * Body: { mapel_id, kelas_id, tahun_ajar, nilai: [{ siswa_id, nilai_tugas, nilai_kuis, nilai_uts, nilai_uas, nilai_praktik }] }
- * Upsert massal nilai siswa
- */
-exports.saveNilaiBulk = async (req, res) => {
+exports.saveNilaiBulk = asyncHandler(async (req, res) => {
   const { mapel_id, kelas_id, tahun_ajar, nilai } = req.body;
-
   if (!mapel_id || !kelas_id || !tahun_ajar || !Array.isArray(nilai)) {
-    return res.status(400).json({
-      success: false,
-      message: 'mapel_id, kelas_id, tahun_ajar, dan nilai[] wajib diisi',
-    });
+    throw createError(400, 'mapel_id, kelas_id, tahun_ajar, dan nilai[] wajib diisi');
   }
 
-  const client = await pool.connect();
-  try {
-    await client.query('BEGIN');
-
-    const results = [];
+  const results = await sequelize.transaction(async (t) => {
+    const saved = [];
     for (const item of nilai) {
       const { siswa_id, nilai_tugas, nilai_kuis, nilai_uts, nilai_uas, nilai_praktik } = item;
-
-      const upsertQuery = `
-  INSERT INTO nilai_siswa
-    (
-      siswa_id,
-      mapel_id,
-      kelas_id,
-      tahun_ajar,
-      nilai_tugas,
-      nilai_kuis,
-      nilai_uts,
-      nilai_uas,
-      nilai_praktik,
-      updated_at
-    )
-  VALUES
-    ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
-  ON CONFLICT (siswa_id, mapel_id, kelas_id, tahun_ajar)
-  DO UPDATE SET
-    nilai_tugas = EXCLUDED.nilai_tugas,
-    nilai_kuis = EXCLUDED.nilai_kuis,
-    nilai_uts = EXCLUDED.nilai_uts,
-    nilai_uas = EXCLUDED.nilai_uas,
-    nilai_praktik = EXCLUDED.nilai_praktik,
-    updated_at = NOW()
-  RETURNING *;
-`;
-
-      const r = await client.query(upsertQuery, [
-        siswa_id,
-        mapel_id,
-        kelas_id,
-        tahun_ajar,
-        Number(nilai_tugas) || 0,
-        Number(nilai_kuis) || 0,
-        Number(nilai_uts) || 0,
-        Number(nilai_uas) || 0,
-        Number(nilai_praktik) || 0,
-      ]);
-
-      results.push(r.rows[0]);
+      const [row] = await sequelize.query(
+        `INSERT INTO nilai_siswa (siswa_id, mapel_id, kelas_id, tahun_ajar, nilai_tugas, nilai_kuis, nilai_uts, nilai_uas, nilai_praktik, updated_at)
+         VALUES (:siswa_id,:mapel_id,:kelas_id,:tahun_ajar,:nt,:nk,:nuts,:nuas,:np,NOW())
+         ON CONFLICT (siswa_id, mapel_id, kelas_id, tahun_ajar)
+         DO UPDATE SET nilai_tugas=EXCLUDED.nilai_tugas, nilai_kuis=EXCLUDED.nilai_kuis,
+           nilai_uts=EXCLUDED.nilai_uts, nilai_uas=EXCLUDED.nilai_uas,
+           nilai_praktik=EXCLUDED.nilai_praktik, updated_at=NOW()
+         RETURNING *`,
+        {
+          replacements: {
+            siswa_id, mapel_id, kelas_id, tahun_ajar,
+            nt: +nilai_tugas || 0, nk: +nilai_kuis || 0,
+            nuts: +nilai_uts || 0, nuas: +nilai_uas || 0, np: +nilai_praktik || 0,
+          },
+          type: QueryTypes.SELECT,
+          transaction: t,
+        }
+      );
+      saved.push(row);
     }
+    return saved;
+  });
 
-    await client.query('COMMIT');
-    res.json({ success: true, message: 'Nilai berhasil disimpan', data: results });
-  } catch (err) {
-    await client.query('ROLLBACK');
-    console.error('Error saveNilaiBulk:', err);
-    res.status(500).json({
-      success: false,
-      error: err.message,
-      detail: err.detail || null,
-      code: err.code || null,
-    });
-  } finally {
-    client.release();
-  }
-};
+  res.json({ success: true, message: 'Nilai berhasil disimpan', data: results });
+});
 
-/**
- * PUT /api/academic/nilai/:id
- * Update satu record nilai
- */
-exports.updateNilai = async (req, res) => {
-  const { id } = req.params;
+exports.updateNilai = asyncHandler(async (req, res) => {
   const { nilai_tugas, nilai_kuis, nilai_uts, nilai_uas, nilai_praktik } = req.body;
-
-  try {
-    const result = await pool.query(
-      `UPDATE nilai_siswa 
-       SET nilai_tugas=$1, nilai_kuis=$2, nilai_uts=$3, nilai_uas=$4, nilai_praktik=$5, updated_at=NOW()
-       WHERE id=$6 RETURNING *`,
-      [nilai_tugas, nilai_kuis, nilai_uts, nilai_uas, nilai_praktik, id]
-    );
-
-    if (result.rowCount === 0) {
-      return res.status(404).json({ success: false, message: 'Nilai tidak ditemukan' });
-    }
-
-    res.json({ success: true, data: result.rows[0] });
-  } catch (err) {
-    console.error('Error updateNilai:', err);
-    res.status(500).json({ success: false, error: err.message });
+  if ([nilai_tugas, nilai_kuis, nilai_uts, nilai_uas, nilai_praktik].every((v) => v === undefined)) {
+    throw createError(400, 'Minimal satu field nilai harus diisi');
   }
-};
 
-/**
- * DELETE /api/academic/nilai/:id
- */
-exports.deleteNilai = async (req, res) => {
-  const { id } = req.params;
-  try {
-    await pool.query('DELETE FROM nilai_siswa WHERE id = $1', [id]);
-    res.json({ success: true, message: 'Nilai berhasil dihapus' });
-  } catch (err) {
-    console.error('Error deleteNilai:', err);
-    res.status(500).json({ success: false, error: err.message });
-  }
-};
-/**
- * GET /api/academic/nilai/export-excel
- * Export data nilai ke Excel (buffer dikirim ke frontend)
- */
-exports.exportNilaiExcel = async (req, res) => {
+  const nilai = await NilaiSiswa.findByPk(req.params.id);
+  if (!nilai) throw createError(404, 'Nilai tidak ditemukan');
+
+  await nilai.update({ nilai_tugas, nilai_kuis, nilai_uts, nilai_uas, nilai_praktik, updated_at: new Date() });
+  res.json({ success: true, data: nilai });
+});
+
+exports.deleteNilai = asyncHandler(async (req, res) => {
+  const nilai = await NilaiSiswa.findByPk(req.params.id);
+  if (!nilai) throw createError(404, 'Nilai tidak ditemukan');
+  await nilai.destroy();
+  res.json({ success: true, message: 'Nilai berhasil dihapus' });
+});
+
+exports.exportNilaiExcel = asyncHandler(async (req, res) => {
   const { kelas_id, mapel_id, tahun_ajar } = req.query;
-  try {
-    let query = `
-      SELECT
-        s.nisn, s.nama_lengkap, k.nama_kelas, m.nama_mapel,
-        n.tahun_ajar,
-        COALESCE(n.nilai_tugas, 0)   AS nilai_tugas,
-        COALESCE(n.nilai_kuis, 0)    AS nilai_kuis,
-        COALESCE(n.nilai_uts, 0)     AS nilai_uts,
-        COALESCE(n.nilai_uas, 0)     AS nilai_uas,
-        COALESCE(n.nilai_praktik, 0) AS nilai_praktik,
-        ROUND((
-          COALESCE(n.nilai_tugas,0)*0.15 + COALESCE(n.nilai_kuis,0)*0.15 +
-          COALESCE(n.nilai_uts,0)*0.20   + COALESCE(n.nilai_uas,0)*0.30 +
-          COALESCE(n.nilai_praktik,0)*0.20
-        )::numeric,2) AS nilai_akhir
-      FROM siswa s
-      JOIN kelas k ON s.kelas_id = k.id
-      LEFT JOIN nilai_siswa n ON n.siswa_id = s.id AND n.kelas_id = s.kelas_id
-      LEFT JOIN mata_pelajaran m ON n.mapel_id = m.id
-      WHERE 1=1
-    `;
-    const params = [];
-    let idx = 1;
-    if (kelas_id) { query += ` AND s.kelas_id = $${idx++}`; params.push(kelas_id); }
-    if (mapel_id) { query += ` AND n.mapel_id = $${idx++}`; params.push(mapel_id); }
-    if (tahun_ajar) { query += ` AND n.tahun_ajar = $${idx++}`; params.push(tahun_ajar); }
-    query += ' ORDER BY s.nama_lengkap ASC, m.nama_mapel ASC';
 
-    const result = await pool.query(query, params);
-    const rows = result.rows;
+  const where = {};
+  if (kelas_id)   where.kelas_id   = kelas_id;
+  if (mapel_id)   where.mapel_id   = mapel_id;
+  if (tahun_ajar) where.tahun_ajar = tahun_ajar;
 
-    // Build CSV sebagai fallback (ExcelJS bisa ditambahkan nanti)
-    const header = ['NISN','Nama Siswa','Kelas','Mata Pelajaran','Tahun Ajar','Tugas','Kuis','UTS','UAS','Praktik','Nilai Akhir'];
-    const csvRows = [header.join(',')];
-    rows.forEach(r => {
-      csvRows.push([
-        r.nisn, r.nama_lengkap, r.nama_kelas, r.nama_mapel, r.tahun_ajar,
-        r.nilai_tugas, r.nilai_kuis, r.nilai_uts, r.nilai_uas, r.nilai_praktik, r.nilai_akhir
-      ].map(v => `"${v ?? ''}"`).join(','));
-    });
+  const rows = await NilaiSiswa.findAll({
+    where,
+    include: [
+      { model: Siswa, as: 'siswa', attributes: ['nisn', 'nama_lengkap'] },
+      { model: Kelas, as: 'kelas', attributes: ['nama_kelas'] },
+      { model: MataPelajaran, as: 'mapel', attributes: ['nama_mapel'] },
+    ],
+    order: [[{ model: Siswa, as: 'siswa' }, 'nama_lengkap', 'ASC']],
+  });
 
-    const csvContent = csvRows.join('\n');
-    res.set('Content-Type', 'text/csv; charset=utf-8');
-    res.set('Content-Disposition', `attachment; filename="rekap-nilai-${Date.now()}.csv"`);
-    res.send('\ufeff' + csvContent); // BOM untuk Excel UTF-8
-  } catch (err) {
-    console.error('exportNilaiExcel:', err);
-    res.status(500).json({ success: false, error: err.message });
-  }
-};
+  const header = ['NISN', 'Nama Siswa', 'Kelas', 'Mata Pelajaran', 'Tahun Ajar', 'Tugas', 'Kuis', 'UTS', 'UAS', 'Praktik', 'Nilai Akhir'];
+  const csvRows = [header.join(',')];
+  rows.forEach((n) => {
+    const akhir = +(n.nilai_tugas*0.15 + n.nilai_kuis*0.15 + n.nilai_uts*0.20 + n.nilai_uas*0.30 + n.nilai_praktik*0.20).toFixed(2);
+    csvRows.push([
+      n.siswa?.nisn, n.siswa?.nama_lengkap, n.kelas?.nama_kelas,
+      n.mapel?.nama_mapel, n.tahun_ajar,
+      n.nilai_tugas, n.nilai_kuis, n.nilai_uts, n.nilai_uas, n.nilai_praktik, akhir,
+    ].map((v) => `"${v ?? ''}"`).join(','));
+  });
+
+  res.set('Content-Type', 'text/csv; charset=utf-8');
+  res.set('Content-Disposition', `attachment; filename="rekap-nilai-${Date.now()}.csv"`);
+  res.send('\ufeff' + csvRows.join('\n'));
+});

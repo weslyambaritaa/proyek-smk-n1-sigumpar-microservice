@@ -1,52 +1,41 @@
-const pool = require('../config/db');
+const { Siswa, Kelas } = require('../models');
+const { createError } = require('../middleware/errorHandler');
+const asyncHandler = require('../utils/asyncHandler');
 
-exports.getAllSiswa = async (req, res) => {
-  try {
-    const { kelas_id } = req.query;
-    let query = `SELECT s.*, k.nama_kelas FROM siswa s LEFT JOIN kelas k ON s.kelas_id = k.id WHERE 1=1`;
-    const params = [];
-    if (kelas_id) { query += ` AND s.kelas_id = $1`; params.push(kelas_id); }
-    query += ` ORDER BY s.nama_lengkap ASC`;
-    const result = await pool.query(query, params);
-    res.json({ success: true, data: result.rows });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
+exports.getAllSiswa = asyncHandler(async (req, res) => {
+  const where = {};
+  if (req.query.kelas_id) where.kelas_id = req.query.kelas_id;
 
-exports.createSiswa = async (req, res) => {
+  const data = await Siswa.findAll({
+    where,
+    include: [{ model: Kelas, as: 'kelas', attributes: ['nama_kelas'] }],
+    order: [['nama_lengkap', 'ASC']],
+  });
+  res.json({ success: true, data });
+});
+
+exports.createSiswa = asyncHandler(async (req, res) => {
   const { nisn, nama_lengkap, kelas_id } = req.body;
-  try {
-    const result = await pool.query(
-      'INSERT INTO siswa (nisn, nama_lengkap, kelas_id) VALUES ($1, $2, $3) RETURNING *',
-      [nisn, nama_lengkap, kelas_id || null]
-    );
-    res.status(201).json({ success: true, data: result.rows[0] });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
+  if (!nisn || !nama_lengkap) throw createError(400, 'Field nisn dan nama_lengkap wajib diisi');
 
-exports.updateSiswa = async (req, res) => {
-  const { id } = req.params;
+  const siswa = await Siswa.create({ nisn, nama_lengkap, kelas_id: kelas_id || null });
+  res.status(201).json({ success: true, data: siswa });
+});
+
+exports.updateSiswa = asyncHandler(async (req, res) => {
   const { nisn, nama_lengkap, kelas_id } = req.body;
-  try {
-    const result = await pool.query(
-      'UPDATE siswa SET nisn=$1, nama_lengkap=$2, kelas_id=$3 WHERE id=$4 RETURNING *',
-      [nisn, nama_lengkap, kelas_id || null, id]
-    );
-    res.json({ success: true, data: result.rows[0] });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
+  if (!nisn || !nama_lengkap) throw createError(400, 'Field nisn dan nama_lengkap wajib diisi');
 
-exports.deleteSiswa = async (req, res) => {
-  const { id } = req.params;
-  try {
-    await pool.query('DELETE FROM siswa WHERE id=$1', [id]);
-    res.json({ success: true, message: 'Siswa berhasil dihapus' });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
+  const siswa = await Siswa.findByPk(req.params.id);
+  if (!siswa) throw createError(404, 'Siswa tidak ditemukan');
+
+  await siswa.update({ nisn, nama_lengkap, kelas_id: kelas_id || null });
+  res.json({ success: true, data: siswa });
+});
+
+exports.deleteSiswa = asyncHandler(async (req, res) => {
+  const siswa = await Siswa.findByPk(req.params.id);
+  if (!siswa) throw createError(404, 'Siswa tidak ditemukan');
+  await siswa.destroy();
+  res.json({ success: true, message: 'Siswa berhasil dihapus' });
+});

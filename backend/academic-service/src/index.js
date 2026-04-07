@@ -7,6 +7,9 @@ const mime    = require("mime-types");
 const academicRoutes = require("./routes/academicRoutes");
 const { errorHandler } = require("./middleware/errorHandler");
 
+// Inisialisasi koneksi Sequelize + semua model saat app pertama kali start
+require("./models");
+
 const app  = express();
 const PORT = process.env.PORT || 3003;
 
@@ -15,8 +18,7 @@ app.use(morgan("dev"));
 app.use(express.json({ limit: "20mb" }));
 app.use(express.urlencoded({ extended: true, limit: "20mb" }));
 
-// FIX #4: Serve upload files dengan MIME type yang benar (mencegah file corrupt)
-// Menggantikan express.static yang tidak selalu mengirim Content-Type benar
+// Serve upload files dengan MIME type yang benar (mencegah file corrupt)
 app.get("/uploads/:filename", (req, res) => {
   const safeName = path.basename(req.params.filename);
   const filePath = path.join(__dirname, "../uploads", safeName);

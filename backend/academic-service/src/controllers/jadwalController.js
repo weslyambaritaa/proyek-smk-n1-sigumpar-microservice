@@ -1,74 +1,58 @@
-const pool = require('../config/db');
+const { JadwalMengajar, Kelas } = require('../models');
+const { createError } = require('../middleware/errorHandler');
+const asyncHandler = require('../utils/asyncHandler');
 
-exports.getAllJadwal = async (req, res) => {
-    try {
-        // Ambil data jadwal beserta nama kelasnya
-        const result = await pool.query(`
-            SELECT j.*, k.nama_kelas 
-            FROM jadwal_mengajar j 
-            LEFT JOIN kelas k ON j.kelas_id = k.id 
-            ORDER BY 
-                CASE j.hari
-                    WHEN 'Senin' THEN 1
-                    WHEN 'Selasa' THEN 2
-                    WHEN 'Rabu' THEN 3
-                    WHEN 'Kamis' THEN 4
-                    WHEN 'Jumat' THEN 5
-                    WHEN 'Sabtu' THEN 6
-                    WHEN 'Minggu' THEN 7
-                    ELSE 8
-                END, 
-                j.waktu_mulai ASC
-        `);
-        res.json(result.rows);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-};
+const URUTAN_HARI = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
 
-exports.createJadwal = async (req, res) => {
-    const { guru_id, kelas_id, mata_pelajaran, hari, waktu_mulai, waktu_berakhir } = req.body;
-    try {
-        const result = await pool.query(
-            'INSERT INTO jadwal_mengajar (guru_id, kelas_id, mata_pelajaran, hari, waktu_mulai, waktu_berakhir) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-            [guru_id || null, kelas_id || null, mata_pelajaran, hari, waktu_mulai, waktu_berakhir]
-        );
-        res.status(201).json(result.rows[0]);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-};
+exports.getAllJadwal = asyncHandler(async (req, res) => {
+  const data = await JadwalMengajar.findAll({
+    include: [{ model: Kelas, as: 'kelas', attributes: ['nama_kelas'] }],
+  });
 
-exports.updateJadwal = async (req, res) => {
-    const { id } = req.params;
-    const { guru_id, kelas_id, mata_pelajaran, hari, waktu_mulai, waktu_berakhir } = req.body;
-    try {
-        const result = await pool.query(
-            'UPDATE jadwal_mengajar SET guru_id = $1, kelas_id = $2, mata_pelajaran = $3, hari = $4, waktu_mulai = $5, waktu_berakhir = $6 WHERE id = $7 RETURNING *',
-            [guru_id || null, kelas_id || null, mata_pelajaran, hari, waktu_mulai, waktu_berakhir, id]
-        );
+  // Urutkan hari secara custom (tidak bisa lewat Sequelize ORDER untuk CASE)
+  data.sort((a, b) => {
+    const hariA = URUTAN_HARI.indexOf(a.hari);
+    const hariB = URUTAN_HARI.indexOf(b.hari);
+    if (hariA !== hariB) return hariA - hariB;
+    return a.waktu_mulai > b.waktu_mulai ? 1 : -1;
+  });
 
-        if (result.rowCount === 0) {
-            return res.status(404).json({ message: "Jadwal mengajar tidak ditemukan" });
-        }
+  res.json({ success: true, data });
+});
 
-        res.json({ success: true, data: result.rows[0] });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-};
+exports.createJadwal = asyncHandler(async (req, res) => {
+  const { guru_id, kelas_id, mata_pelajaran, hari, waktu_mulai, waktu_berakhir } = req.body;
+  if (!mata_pelajaran || !hari || !waktu_mulai || !waktu_berakhir) {
+    throw createError(400, 'Field mata_pelajaran, hari, waktu_mulai, dan waktu_berakhir wajib diisi');
+  }
 
-exports.deleteJadwal = async (req, res) => {
-    const { id } = req.params;
-    try {
-        const result = await pool.query('DELETE FROM jadwal_mengajar WHERE id = $1', [id]);
-        
-        if (result.rowCount === 0) {
-            return res.status(404).json({ message: "Jadwal mengajar tidak ditemukan" });
-        }
+  const jadwal = await JadwalMengajar.create({
+    guru_id: guru_id || null,
+    kelas_id: kelas_id || null,
+    mata_pelajaran, hari, waktu_mulai, waktu_berakhir,
+  });
+  res.status(201).json({ success: true, data: jadwal });
+});
 
-        res.json({ success: true, message: "Jadwal mengajar berhasil dihapus" });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-};
+exports.updateJadwal = asyncHandler(async (req, res) => {
+  const { guru_id, kelas_id, mata_pelajaran, hari, waktu_mulai, waktu_berakhir } = req.body;
+  if (!mata_pelajaran || !hari || !waktu_mulai || !waktu_berakhir) {
+    throw createError(400, 'Field mata_pelajaran, hari, waktu_mulai, dan waktu_berakhir wajib diisi');
+  }
+
+  const jadwal = await JadwalMengajar.findByPk(req.params.id);
+  if (!jadwal) throw createError(404, 'Jadwal mengajar tidak ditemukan');
+
+  await jadwal.update({
+    guru_id: guru_id || null, kelas_id: kelas_id || null,
+    mata_pelajaran, hari, waktu_mulai, waktu_berakhir,
+  });
+  res.json({ success: true, data: jadwal });
+});
+
+exports.deleteJadwal = asyncHandler(async (req, res) => {
+  const jadwal = await JadwalMengajar.findByPk(req.params.id);
+  if (!jadwal) throw createError(404, 'Jadwal mengajar tidak ditemukan');
+  await jadwal.destroy();
+  res.json({ success: true, message: 'Jadwal mengajar berhasil dihapus' });
+});
