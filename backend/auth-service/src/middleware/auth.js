@@ -2,6 +2,7 @@ const jwt = require('jsonwebtoken');
 const jwksClient = require('jwks-rsa');
 const authController = require('../controllers/authController');
 
+// Ambil public key dari Keycloak pakai nama container Docker
 const client = jwksClient({
   jwksUri: `http://keycloak:8080/realms/smk-sigumpar/protocol/openid-connect/certs`,
   cache: true,
@@ -11,7 +12,10 @@ const client = jwksClient({
 
 function getKey(header, callback) {
   client.getSigningKey(header.kid, function (err, key) {
-    if (err) return callback(err);
+    if (err) {
+      console.error("JWKS Error:", err.message);
+      return callback(err);
+    }
     const signingKey = key.getPublicKey();
     callback(null, signingKey);
   });
@@ -27,20 +31,20 @@ const verifyToken = (req, res, next) => {
 
   jwt.verify(token, getKey, {
     algorithms: ['RS256'],
-    // TIDAK pakai issuer check karena token dari browser ber-issuer localhost:8080
-    // tapi JWKS diambil dari keycloak:8080 (nama container Docker)
-    // Validasi signature RS256 sudah cukup aman
+    // TIDAK pakai issuer — token dari browser ber-issuer http://localhost:8080
+    // tapi JWKS diambil dari http://keycloak:8080 (nama container)
+    // Kalau issuer divalidasi akan SELALU GAGAL di environment Docker
   }, (err, decoded) => {
     if (err) {
       console.error("JWT Verification Error:", err.message);
-      return res.status(403).json({ message: 'Token tidak valid', detail: err.message });
+      return res.status(401).json({ message: 'Token tidak valid', detail: err.message });
     }
 
     req.user = decoded;
 
     if (authController.syncUserFromToken) {
-      authController.syncUserFromToken(decoded).catch(err => {
-        console.error("Gagal sinkronisasi user:", err.message);
+      authController.syncUserFromToken(decoded).catch(syncErr => {
+        console.error("Gagal sinkronisasi user:", syncErr.message);
       });
     }
 
