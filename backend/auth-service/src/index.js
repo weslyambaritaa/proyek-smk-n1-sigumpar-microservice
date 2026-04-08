@@ -4,13 +4,19 @@ const helmet = require("helmet");
 const morgan = require("morgan");
 const authRoutes = require('./routes/authRoutes');
 const { errorHandler } = require("./middleware/errorHandler");
+require('dotenv').config();
+const constUtil = require('./utils/constUtil');
 
 const app = express();
-const PORT = process.env.PORT || 3005;
+// Ambil port secara dinamis
+const PORT = constUtil.APP.PORT;
+app.listen(PORT, () => {
+  console.log(`Auth Service berjalan di port ${PORT}`);
+});
 
 // Middleware global (identik dengan users-service)
 app.use(helmet());
-// app.use(cors({ origin: process.env.CORS_ORIGIN || "*" }));
+app.use(cors());
 app.use(morgan("dev"));
 app.use(express.json());
 
