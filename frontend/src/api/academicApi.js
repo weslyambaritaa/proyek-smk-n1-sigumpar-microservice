@@ -65,7 +65,6 @@ export const academicApi = {
   updateUpacara: (id, data) => axiosInstance.put(`/api/academic/upacara/${id}`, data),
   deleteUpacara: (id) => axiosInstance.delete(`/api/academic/upacara/${id}`),
 
-<<<<<<< Updated upstream
   // ── NILAI SISWA (Guru Mapel) ───────────────────────────────────────────
   getSiswaByKelas: (params) => axiosInstance.get('/api/academic/nilai/siswa-by-kelas', { params }),
   saveNilaiBulk: (data) => axiosInstance.post('/api/academic/nilai/bulk', data),
@@ -101,9 +100,3 @@ export const academicApi = {
   getRekapAbsensiSiswa: (params) => axiosInstance.get('/api/academic/kepsek/rekap-absensi-siswa', { params }),
   getRekapNilai: (params) => axiosInstance.get('/api/academic/kepsek/rekap-nilai', { params }),
 };
-=======
-  getSiswaByKelas: (params) => axiosInstance.get('/api/academic/nilai/siswa-kelas', { params }),
-  
-  saveNilaiBulk: (data) => axiosInstance.post('/api/academic/nilai/bulk', data),
-};
->>>>>>> Stashed changes
