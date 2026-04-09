@@ -1,7 +1,18 @@
-const db = require('../config/db');
 const multer = require('multer');
+const { QueryTypes } = require('sequelize');
+const {
+  sequelize,
+  KelasPramuka,
+  AnggotaRegu,
+  AbsensiPramuka,
+  LaporanPramuka,
+  SilabusPramuka,
+  LaporanKegiatan,
+} = require('../models');
 const { createError } = require('../middleware/errorHandler');
 const asyncHandler = require('../utils/asyncHandler');
+
+// ── Upload middleware ─────────────────────────────────────────────────────
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -23,23 +34,26 @@ const runMulter = (field) => (req, res) =>
     upload.single(field)(req, res, (err) => (err ? reject(err) : resolve()));
   });
 
+const INLINE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
+
 // ── REGU ──────────────────────────────────────────────────────────────────
 
 exports.getAllRegu = asyncHandler(async (req, res) => {
-  const result = await db.query('SELECT * FROM kelas_pramuka ORDER BY id ASC');
-  res.json({ success: true, data: result.rows });
+  const data = await KelasPramuka.findAll({ order: [['id', 'ASC']] });
+  res.json({ success: true, data });
 });
 
 exports.createRegu = asyncHandler(async (req, res) => {
   const { nama_regu } = req.body;
   if (!nama_regu) throw createError(400, 'nama_regu wajib diisi');
-  const result = await db.query('INSERT INTO kelas_pramuka (nama_regu) VALUES ($1) RETURNING *', [nama_regu]);
-  res.status(201).json({ success: true, data: result.rows[0] });
+  const data = await KelasPramuka.create({ nama_regu });
+  res.status(201).json({ success: true, data });
 });
 
 exports.deleteRegu = asyncHandler(async (req, res) => {
-  const result = await db.query('DELETE FROM kelas_pramuka WHERE id=$1 RETURNING id', [req.params.id]);
-  if (!result.rowCount) throw createError(404, 'Regu tidak ditemukan');
+  const regu = await KelasPramuka.findByPk(req.params.id);
+  if (!regu) throw createError(404, 'Regu tidak ditemukan');
+  await regu.destroy();
   res.json({ success: true, message: 'Regu berhasil dihapus' });
 });
 
@@ -52,19 +66,21 @@ exports.getSiswaTersedia = asyncHandler(async (_req, res) => {
 exports.assignSiswaToRegu = asyncHandler(async (req, res) => {
   const { regu_id, siswa_id, nama_lengkap } = req.body;
   if (!regu_id || !siswa_id) throw createError(400, 'regu_id dan siswa_id wajib diisi');
-  const result = await db.query(
-    'INSERT INTO anggota_regu (regu_id, siswa_id, nama_lengkap) VALUES ($1,$2,$3) ON CONFLICT DO NOTHING RETURNING *',
-    [regu_id, siswa_id, nama_lengkap || '']
-  );
-  res.status(201).json({ success: true, data: result.rows[0] || { message: 'Sudah ada' } });
+
+  // findOrCreate untuk handle duplikasi
+  const [data, created] = await AnggotaRegu.findOrCreate({
+    where:    { regu_id, siswa_id },
+    defaults: { nama_lengkap: nama_lengkap || '' },
+  });
+  res.status(created ? 201 : 200).json({ success: true, data });
 });
 
 exports.getSiswaByRegu = asyncHandler(async (req, res) => {
-  const result = await db.query(
-    'SELECT * FROM anggota_regu WHERE regu_id=$1 ORDER BY nama_lengkap ASC',
-    [req.params.regu_id]
-  );
-  res.json({ success: true, data: result.rows });
+  const data = await AnggotaRegu.findAll({
+    where: { regu_id: req.params.regu_id },
+    order: [['nama_lengkap', 'ASC']],
+  });
+  res.json({ success: true, data });
 });
 
 // ── ABSENSI PRAMUKA ───────────────────────────────────────────────────────
@@ -76,170 +92,201 @@ exports.submitAbsensiPramuka = asyncHandler(async (req, res) => {
     throw createError(400, 'kelas_id, tanggal, dan data_absensi wajib diisi');
   }
 
-  const client = await db.connect();
-  try {
-    await client.query('BEGIN');
-    await client.query(
-      'INSERT INTO laporan_pramuka (regu_id, tanggal, deskripsi, file_url) VALUES ($1,$2,$3,$4)',
-      [kelasOrRegu, tanggal, deskripsi || '', file_url || '']
+  await sequelize.transaction(async (t) => {
+    await LaporanPramuka.create(
+      { regu_id: kelasOrRegu, tanggal, deskripsi: deskripsi || '', file_url: file_url || '' },
+      { transaction: t }
     );
+
     for (const item of data_absensi) {
       const { siswa_id, nama_lengkap, status } = item;
       if (!siswa_id) continue;
-      await client.query(
+
+      // ON CONFLICT dengan index unik — tetap pakai raw query
+      await sequelize.query(
         `INSERT INTO absensi_pramuka (regu_id, siswa_id, tanggal, status, nama_lengkap, kelas_id)
-         VALUES ($1,$2,$3,$4,$5,$6)
+         VALUES (:regu_id, :siswa_id, :tanggal, :status, :nama_lengkap, :kelas_id)
          ON CONFLICT (regu_id, siswa_id, tanggal)
-         DO UPDATE SET status=EXCLUDED.status, nama_lengkap=EXCLUDED.nama_lengkap`,
-        [kelasOrRegu, siswa_id, tanggal, status || 'Hadir', nama_lengkap || '', kelas_id || kelasOrRegu]
+         DO UPDATE SET status = EXCLUDED.status, nama_lengkap = EXCLUDED.nama_lengkap`,
+        {
+          replacements: {
+            regu_id:      kelasOrRegu,
+            siswa_id,
+            tanggal,
+            status:       status       || 'Hadir',
+            nama_lengkap: nama_lengkap || '',
+            kelas_id:     kelas_id     || kelasOrRegu,
+          },
+          type: QueryTypes.INSERT,
+          transaction: t,
+        }
       );
     }
-    await client.query('COMMIT');
-    res.json({ success: true, message: 'Absensi pramuka berhasil disimpan' });
-  } catch (err) {
-    await client.query('ROLLBACK');
-    throw err;
-  } finally {
-    client.release();
-  }
+  });
+
+  res.json({ success: true, message: 'Absensi pramuka berhasil disimpan' });
 });
 
 exports.getAbsensiPramuka = asyncHandler(async (req, res) => {
   const { regu_id, kelas_id, tanggal, tanggal_mulai, tanggal_akhir } = req.query;
   const kelasFilter = kelas_id || regu_id;
-  let query = 'SELECT ap.*, ap.nama_lengkap FROM absensi_pramuka ap WHERE 1=1';
-  const params = [];
-  let idx = 1;
-  if (kelasFilter)   { query += ` AND ap.regu_id = $${idx++}`;   params.push(kelasFilter); }
-  if (tanggal)       { query += ` AND ap.tanggal = $${idx++}`;   params.push(tanggal); }
-  if (tanggal_mulai) { query += ` AND ap.tanggal >= $${idx++}`;  params.push(tanggal_mulai); }
-  if (tanggal_akhir) { query += ` AND ap.tanggal <= $${idx++}`;  params.push(tanggal_akhir); }
-  query += ' ORDER BY ap.tanggal DESC, ap.id ASC';
-  const result = await db.query(query, params);
-  res.json({ success: true, data: result.rows });
+
+  const where = {};
+  if (kelasFilter)   where.regu_id = kelasFilter;
+  if (tanggal)       where.tanggal = tanggal;
+
+  // Range tanggal pakai Op dari Sequelize
+  const { Op } = require('sequelize');
+  if (tanggal_mulai || tanggal_akhir) {
+    where.tanggal = {};
+    if (tanggal_mulai) where.tanggal[Op.gte] = tanggal_mulai;
+    if (tanggal_akhir) where.tanggal[Op.lte] = tanggal_akhir;
+  }
+
+  const data = await AbsensiPramuka.findAll({
+    where,
+    order: [['tanggal', 'DESC'], ['id', 'ASC']],
+  });
+  res.json({ success: true, data });
 });
 
 exports.getRekapAbsensiPramuka = asyncHandler(async (req, res) => {
   const { tanggal_mulai, tanggal_akhir, regu_id } = req.query;
-  let query = `
-    SELECT ar.siswa_id, ar.nama_lengkap, k.nama_regu,
-      COUNT(CASE WHEN ap.status='Hadir' THEN 1 END) AS hadir,
-      COUNT(CASE WHEN ap.status='Izin'  THEN 1 END) AS izin,
-      COUNT(CASE WHEN ap.status='Sakit' THEN 1 END) AS sakit,
-      COUNT(CASE WHEN ap.status='Alpa'  THEN 1 END) AS alpa,
-      COUNT(ap.id) AS total
-    FROM anggota_regu ar
-    JOIN kelas_pramuka k ON ar.regu_id = k.id
-    LEFT JOIN absensi_pramuka ap ON ap.siswa_id = ar.siswa_id AND ap.regu_id = ar.regu_id
-      AND ($1::DATE IS NULL OR ap.tanggal >= $1)
-      AND ($2::DATE IS NULL OR ap.tanggal <= $2)
-    WHERE 1=1`;
+
   const params = [tanggal_mulai || null, tanggal_akhir || null];
-  let idx = 3;
-  if (regu_id) { query += ` AND ar.regu_id = $${idx++}`; params.push(regu_id); }
-  query += ' GROUP BY ar.siswa_id, ar.nama_lengkap, k.nama_regu ORDER BY k.nama_regu, ar.nama_lengkap';
-  const result = await db.query(query, params);
-  res.json({ success: true, data: result.rows });
+  let extraWhere = '';
+  if (regu_id) {
+    extraWhere = ' AND ar.regu_id = :regu_id';
+    params.push(regu_id);
+  }
+
+  const rows = await sequelize.query(
+    `SELECT ar.siswa_id, ar.nama_lengkap, k.nama_regu,
+       COUNT(CASE WHEN ap.status = 'Hadir' THEN 1 END) AS hadir,
+       COUNT(CASE WHEN ap.status = 'Izin'  THEN 1 END) AS izin,
+       COUNT(CASE WHEN ap.status = 'Sakit' THEN 1 END) AS sakit,
+       COUNT(CASE WHEN ap.status = 'Alpa'  THEN 1 END) AS alpa,
+       COUNT(ap.id) AS total
+     FROM anggota_regu ar
+     JOIN kelas_pramuka k ON ar.regu_id = k.id
+     LEFT JOIN absensi_pramuka ap
+       ON ap.siswa_id = ar.siswa_id AND ap.regu_id = ar.regu_id
+       AND (:tanggal_mulai::DATE IS NULL OR ap.tanggal >= :tanggal_mulai)
+       AND (:tanggal_akhir::DATE IS NULL OR ap.tanggal <= :tanggal_akhir)
+     WHERE 1=1 ${regu_id ? 'AND ar.regu_id = :regu_id' : ''}
+     GROUP BY ar.siswa_id, ar.nama_lengkap, k.nama_regu
+     ORDER BY k.nama_regu, ar.nama_lengkap`,
+    {
+      replacements: {
+        tanggal_mulai: tanggal_mulai || null,
+        tanggal_akhir: tanggal_akhir || null,
+        ...(regu_id ? { regu_id } : {}),
+      },
+      type: QueryTypes.SELECT,
+    }
+  );
+  res.json({ success: true, data: rows });
 });
 
 // ── SILABUS PRAMUKA ───────────────────────────────────────────────────────
 
 exports.getAllSilabus = asyncHandler(async (req, res) => {
-  const result = await db.query(
-    `SELECT id, tingkat_kelas, judul_kegiatan, tanggal, file_nama, file_mime,
-            to_char(created_at,'YYYY-MM-DD') AS created_at
-     FROM silabus_pramuka ORDER BY tanggal DESC, id DESC`
-  );
-  res.json({ success: true, data: result.rows });
+  const data = await SilabusPramuka.findAll({
+    attributes: { exclude: ['file_data'] },
+    order: [['tanggal', 'DESC'], ['id', 'DESC']],
+  });
+  res.json({ success: true, data });
 });
 
 exports.createSilabus = asyncHandler(async (req, res) => {
-  try {
-    await runMulter('file')(req, res);
-  } catch (err) {
-    throw createError(400, err.message);
-  }
+  try { await runMulter('file')(req, res); }
+  catch (err) { throw createError(400, err.message); }
+
   const { tingkat_kelas, judul_kegiatan, tanggal } = req.body;
   if (!judul_kegiatan) throw createError(400, 'judul_kegiatan wajib diisi');
 
-  const result = await db.query(
-    `INSERT INTO silabus_pramuka (tingkat_kelas, judul_kegiatan, tanggal, file_data, file_mime, file_nama)
-     VALUES ($1,$2,$3,$4,$5,$6)
-     RETURNING id, tingkat_kelas, judul_kegiatan, tanggal, file_nama, file_mime,
-               to_char(created_at,'YYYY-MM-DD') AS created_at`,
-    [tingkat_kelas || null, judul_kegiatan,
-     tanggal || new Date().toISOString().slice(0, 10),
-     req.file?.buffer || null, req.file?.mimetype || null, req.file?.originalname || null]
-  );
-  res.status(201).json({ success: true, data: result.rows[0] });
+  const data = await SilabusPramuka.create({
+    tingkat_kelas:  tingkat_kelas || null,
+    judul_kegiatan,
+    tanggal:        tanggal || new Date().toISOString().slice(0, 10),
+    file_data:  req.file?.buffer        || null,
+    file_mime:  req.file?.mimetype      || null,
+    file_nama:  req.file?.originalname  || null,
+  });
+
+  // Jangan kirim file_data ke client
+  const { file_data: _, ...result } = data.toJSON();
+  res.status(201).json({ success: true, data: result });
 });
 
 exports.downloadSilabus = asyncHandler(async (req, res) => {
   const isView = req.path.endsWith('/view');
-  const result = await db.query('SELECT file_nama, file_data, file_mime FROM silabus_pramuka WHERE id=$1', [req.params.id]);
-  if (!result.rows.length) throw createError(404, 'Silabus tidak ditemukan');
-  const doc = result.rows[0];
-  if (!doc.file_data) throw createError(404, 'File tidak tersedia');
-  const mime = doc.file_mime || 'application/octet-stream';
-  const inlineTypes = ['image/jpeg','image/jpg','image/png','image/gif','image/webp','application/pdf'];
+  const silabus = await SilabusPramuka.findByPk(req.params.id);
+  if (!silabus)          throw createError(404, 'Silabus tidak ditemukan');
+  if (!silabus.file_data) throw createError(404, 'File tidak tersedia');
+
+  const mime = silabus.file_mime || 'application/octet-stream';
   res.set('Content-Type', mime);
-  res.set('Content-Disposition', `${isView && inlineTypes.includes(mime) ? 'inline' : 'attachment'}; filename="${doc.file_nama}"`);
-  res.send(doc.file_data);
+  res.set('Content-Disposition',
+    `${isView && INLINE_TYPES.includes(mime) ? 'inline' : 'attachment'}; filename="${silabus.file_nama}"`
+  );
+  res.send(silabus.file_data);
 });
 
 exports.deleteSilabus = asyncHandler(async (req, res) => {
-  const result = await db.query('DELETE FROM silabus_pramuka WHERE id=$1 RETURNING id', [req.params.id]);
-  if (!result.rowCount) throw createError(404, 'Silabus tidak ditemukan');
+  const silabus = await SilabusPramuka.findByPk(req.params.id);
+  if (!silabus) throw createError(404, 'Silabus tidak ditemukan');
+  await silabus.destroy();
   res.json({ success: true, message: 'Silabus berhasil dihapus' });
 });
 
 // ── LAPORAN KEGIATAN PRAMUKA ──────────────────────────────────────────────
 
 exports.getAllLaporanKegiatan = asyncHandler(async (req, res) => {
-  const result = await db.query(
-    `SELECT id, judul, deskripsi, tanggal, file_nama, file_mime,
-            to_char(created_at,'YYYY-MM-DD') AS created_at
-     FROM laporan_kegiatan ORDER BY tanggal DESC, id DESC`
-  );
-  res.json({ success: true, data: result.rows });
+  const data = await LaporanKegiatan.findAll({
+    attributes: { exclude: ['file_data'] },
+    order: [['tanggal', 'DESC'], ['id', 'DESC']],
+  });
+  res.json({ success: true, data });
 });
 
 exports.createLaporanKegiatan = asyncHandler(async (req, res) => {
-  try {
-    await runMulter('file_laporan')(req, res);
-  } catch (err) {
-    throw createError(400, err.message);
-  }
+  try { await runMulter('file_laporan')(req, res); }
+  catch (err) { throw createError(400, err.message); }
+
   const { judul, deskripsi, tanggal } = req.body;
   if (!judul) throw createError(400, 'judul wajib diisi');
 
-  const result = await db.query(
-    `INSERT INTO laporan_kegiatan (judul, deskripsi, tanggal, file_data, file_mime, file_nama)
-     VALUES ($1,$2,$3,$4,$5,$6)
-     RETURNING id, judul, deskripsi, tanggal, file_nama, file_mime,
-               to_char(created_at,'YYYY-MM-DD') AS created_at`,
-    [judul, deskripsi || '',
-     tanggal || new Date().toISOString().slice(0, 10),
-     req.file?.buffer || null, req.file?.mimetype || null, req.file?.originalname || null]
-  );
-  res.status(201).json({ success: true, data: result.rows[0] });
+  const data = await LaporanKegiatan.create({
+    judul,
+    deskripsi:  deskripsi || '',
+    tanggal:    tanggal   || new Date().toISOString().slice(0, 10),
+    file_data:  req.file?.buffer        || null,
+    file_mime:  req.file?.mimetype      || null,
+    file_nama:  req.file?.originalname  || null,
+  });
+
+  const { file_data: _, ...result } = data.toJSON();
+  res.status(201).json({ success: true, data: result });
 });
 
 exports.downloadLaporanKegiatan = asyncHandler(async (req, res) => {
   const isView = req.path.endsWith('/view');
-  const result = await db.query('SELECT file_nama, file_data, file_mime FROM laporan_kegiatan WHERE id=$1', [req.params.id]);
-  if (!result.rows.length) throw createError(404, 'Laporan tidak ditemukan');
-  const doc = result.rows[0];
-  if (!doc.file_data) throw createError(404, 'File tidak tersedia');
-  const mime = doc.file_mime || 'application/octet-stream';
-  const inlineTypes = ['image/jpeg','image/jpg','image/png','image/gif','image/webp','application/pdf'];
+  const laporan = await LaporanKegiatan.findByPk(req.params.id);
+  if (!laporan)           throw createError(404, 'Laporan tidak ditemukan');
+  if (!laporan.file_data) throw createError(404, 'File tidak tersedia');
+
+  const mime = laporan.file_mime || 'application/octet-stream';
   res.set('Content-Type', mime);
-  res.set('Content-Disposition', `${isView && inlineTypes.includes(mime) ? 'inline' : 'attachment'}; filename="${doc.file_nama}"`);
-  res.send(doc.file_data);
+  res.set('Content-Disposition',
+    `${isView && INLINE_TYPES.includes(mime) ? 'inline' : 'attachment'}; filename="${laporan.file_nama}"`
+  );
+  res.send(laporan.file_data);
 });
 
 exports.deleteLaporanKegiatan = asyncHandler(async (req, res) => {
-  const result = await db.query('DELETE FROM laporan_kegiatan WHERE id=$1 RETURNING id', [req.params.id]);
-  if (!result.rowCount) throw createError(404, 'Laporan tidak ditemukan');
+  const laporan = await LaporanKegiatan.findByPk(req.params.id);
+  if (!laporan) throw createError(404, 'Laporan tidak ditemukan');
+  await laporan.destroy();
   res.json({ success: true, message: 'Laporan berhasil dihapus' });
 });

@@ -1,7 +1,7 @@
 {
-  "name": "users-service",
+  "name": "student-service",
   "version": "1.0.0",
-  "description": "Microservice untuk manajemen data users",
+  "description": "Microservice untuk manajemen data students",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
@@ -11,12 +11,13 @@
   "dependencies": {
     "cors": "^2.8.6",
     "express": "^5.2.1",
-    "express-session": "^1.19.0",
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.3",
     "jwks-rsa": "^4.0.1",
-    "keycloak-connect": "^26.1.1",
     "morgan": "^1.10.1",
+    "pg": "^8.20.0",
+    "pg-hstore": "^2.3.4",
+    "sequelize": "^6.37.3",
     "uuid": "^13.0.0"
   },
   "devDependencies": {
