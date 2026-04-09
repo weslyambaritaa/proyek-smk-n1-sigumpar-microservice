@@ -1,9 +1,11 @@
 const multer = require('multer');
-const pool = require('../config/db');
+const { Op } = require('sequelize');
+const { PerangkatPembelajaran, ReviewKepsek } = require('../models');
 const { createError } = require('../middleware/errorHandler');
 const asyncHandler = require('../utils/asyncHandler');
 
-// ── Upload multer (memory storage — file disimpan sebagai BYTEA di DB) ────
+// ── Upload middleware ─────────────────────────────────────────────────────
+
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 20 * 1024 * 1024 },
@@ -37,41 +39,24 @@ exports.getAllPerangkat = asyncHandler(async (req, res) => {
   const kepsek = isKepsek(user);
   const { status_review, jenis_dokumen, search } = req.query;
 
-  let query, params;
-
-  if (kepsek) {
-    query = `
-      SELECT p.id, p.guru_id,
-        COALESCE(p.nama_guru, p.guru_id::text) AS nama_guru,
-        p.nama_dokumen, p.jenis_dokumen, p.file_name, p.file_mime,
-        COALESCE(p.status_review, 'menunggu') AS status_review,
-        p.catatan_review, p.reviewed_by, p.reviewed_at,
-        COALESCE(p.versi, 1) AS versi, p.parent_id,
-        to_char(p.tanggal_upload, 'YYYY-MM-DD HH24:MI') AS tanggal_upload,
-        (SELECT COUNT(*) FROM perangkat_pembelajaran r
-         WHERE r.parent_id = COALESCE(p.parent_id, p.id) OR r.id = COALESCE(p.parent_id, p.id)
-        )::int AS total_versi
-      FROM perangkat_pembelajaran p WHERE 1=1`;
-    params = [];
-    let idx = 1;
-    if (status_review)  { query += ` AND COALESCE(p.status_review,'menunggu') = $${idx++}`; params.push(status_review); }
-    if (jenis_dokumen)  { query += ` AND p.jenis_dokumen = $${idx++}`; params.push(jenis_dokumen); }
-    if (search)         { query += ` AND (p.nama_dokumen ILIKE $${idx} OR COALESCE(p.nama_guru,'') ILIKE $${idx})`; params.push(`%${search}%`); idx++; }
-    query += ' ORDER BY p.tanggal_upload DESC, p.id DESC';
-  } else {
-    query = `
-      SELECT id, guru_id, nama_dokumen, jenis_dokumen, file_name, file_mime,
-        COALESCE(status_review, 'menunggu') AS status_review,
-        catatan_review, reviewed_at, COALESCE(versi, 1) AS versi, parent_id,
-        to_char(tanggal_upload, 'YYYY-MM-DD HH24:MI') AS tanggal_upload
-      FROM perangkat_pembelajaran
-      WHERE ($1::uuid IS NULL OR guru_id = $1)
-      ORDER BY tanggal_upload DESC, id DESC`;
-    params = [guruId || null];
+  const where = {};
+  if (!kepsek && guruId) where.guru_id = guruId;
+  if (status_review) where.status_review = status_review;
+  if (jenis_dokumen) where.jenis_dokumen = jenis_dokumen;
+  if (search) {
+    where[Op.or] = [
+      { nama_dokumen: { [Op.iLike]: `%${search}%` } },
+      { nama_guru:    { [Op.iLike]: `%${search}%` } },
+    ];
   }
 
-  const result = await pool.query(query, params);
-  res.json({ success: true, count: result.rows.length, data: result.rows });
+  const data = await PerangkatPembelajaran.findAll({
+    where,
+    attributes: { exclude: ['file_data'] }, // jangan kirim binary ke list
+    order: [['tanggal_upload', 'DESC'], ['id', 'DESC']],
+  });
+
+  res.json({ success: true, count: data.length, data });
 });
 
 exports.uploadPerangkat = asyncHandler(async (req, res) => {
@@ -79,49 +64,48 @@ exports.uploadPerangkat = asyncHandler(async (req, res) => {
   const guruId = user?.sub || user?.id || user?.userId;
   if (!guruId) throw createError(401, 'Identitas guru tidak ditemukan');
 
-  try {
-    await runMulter(req, res);
-  } catch (err) {
-    throw createError(400, err.message);
-  }
+  try { await runMulter(req, res); }
+  catch (err) { throw createError(400, err.message); }
 
   const { nama_dokumen, jenis_dokumen, parent_id, nama_guru } = req.body;
   if (!nama_dokumen || !jenis_dokumen) throw createError(400, 'nama_dokumen dan jenis_dokumen wajib diisi');
   if (!req.file) throw createError(400, 'File wajib diunggah (PDF/DOCX)');
 
+  // Hitung versi jika ini adalah revisi
   let versi = 1;
   const resolvedParentId = parent_id ? parseInt(parent_id) : null;
   if (resolvedParentId) {
-    const vRes = await pool.query(
-      `SELECT COALESCE(MAX(versi), 1) + 1 AS next_versi FROM perangkat_pembelajaran WHERE parent_id = $1 OR id = $1`,
-      [resolvedParentId]
-    );
-    versi = vRes.rows[0]?.next_versi || 2;
+    const maxVersi = await PerangkatPembelajaran.max('versi', {
+      where: {
+        [Op.or]: [{ id: resolvedParentId }, { parent_id: resolvedParentId }],
+      },
+    });
+    versi = (maxVersi || 1) + 1;
   }
 
-  const result = await pool.query(
-    `INSERT INTO perangkat_pembelajaran
-       (guru_id, nama_dokumen, jenis_dokumen, file_name, file_data, file_mime, status_review, versi, parent_id, nama_guru)
-     VALUES ($1, $2, $3, $4, $5, $6, 'menunggu', $7, $8, $9)
-     RETURNING id, guru_id, nama_dokumen, jenis_dokumen, file_name, file_mime,
-               status_review, versi, parent_id, nama_guru,
-               to_char(tanggal_upload, 'YYYY-MM-DD HH24:MI') AS tanggal_upload`,
-    [guruId, nama_dokumen.trim(), jenis_dokumen, req.file.originalname,
-     req.file.buffer, req.file.mimetype, versi, resolvedParentId,
-     nama_guru || user?.name || user?.preferred_username || null]
-  );
-  res.status(201).json({ success: true, data: result.rows[0] });
+  const data = await PerangkatPembelajaran.create({
+    guru_id:       guruId,
+    nama_guru:     nama_guru || user?.name || user?.preferred_username || null,
+    nama_dokumen:  nama_dokumen.trim(),
+    jenis_dokumen,
+    file_name:     req.file.originalname,
+    file_data:     req.file.buffer,
+    file_mime:     req.file.mimetype,
+    status_review: 'menunggu',
+    versi,
+    parent_id:     resolvedParentId,
+  });
+
+  // Kembalikan tanpa file_data
+  const { file_data: _, ...result } = data.toJSON();
+  res.status(201).json({ success: true, data: result });
 });
 
 exports.downloadPerangkat = asyncHandler(async (req, res) => {
   const isView = req.path.endsWith('/view');
-  const result = await pool.query(
-    'SELECT file_name, file_data, file_mime FROM perangkat_pembelajaran WHERE id = $1',
-    [req.params.id]
-  );
-  if (!result.rows.length) throw createError(404, 'Dokumen tidak ditemukan');
+  const doc = await PerangkatPembelajaran.findByPk(req.params.id);
+  if (!doc) throw createError(404, 'Dokumen tidak ditemukan');
 
-  const doc  = result.rows[0];
   const mime = doc.file_mime || 'application/octet-stream';
   res.set('Content-Type', mime);
   res.set('Content-Disposition', `${isView ? 'inline' : 'attachment'}; filename="${doc.file_name}"`);
@@ -133,18 +117,20 @@ exports.deletePerangkat = asyncHandler(async (req, res) => {
   const guruId = user?.sub || user?.id || user?.userId;
   const kepsek = isKepsek(user);
 
-  const check = await pool.query('SELECT guru_id FROM perangkat_pembelajaran WHERE id = $1', [req.params.id]);
-  if (!check.rows.length) throw createError(404, 'Dokumen tidak ditemukan');
-  if (!kepsek && guruId && String(check.rows[0].guru_id) !== String(guruId)) {
+  const doc = await PerangkatPembelajaran.findByPk(req.params.id, {
+    attributes: ['id', 'guru_id'],
+  });
+  if (!doc) throw createError(404, 'Dokumen tidak ditemukan');
+  if (!kepsek && guruId && String(doc.guru_id) !== String(guruId)) {
     throw createError(403, 'Akses ditolak');
   }
 
-  await pool.query('DELETE FROM perangkat_pembelajaran WHERE id = $1', [req.params.id]);
+  await doc.destroy();
   res.json({ success: true, message: 'Dokumen berhasil dihapus' });
 });
 
 exports.reviewPerangkat = asyncHandler(async (req, res) => {
-  const user   = req.user;
+  const user = req.user;
   if (!isKepsek(user)) throw createError(403, 'Hanya kepala sekolah yang dapat mereview dokumen');
 
   const { status, catatan } = req.body;
@@ -154,63 +140,72 @@ exports.reviewPerangkat = asyncHandler(async (req, res) => {
   }
 
   const kepsekNama = user?.name || user?.preferred_username || 'Kepala Sekolah';
-  const kepsekId   = user?.sub || user?.id || null;
+  const kepsekId   = user?.sub  || user?.id || null;
 
-  const result = await pool.query(
-    `UPDATE perangkat_pembelajaran
-     SET status_review=$1, catatan_review=$2, reviewed_by=$3, reviewed_at=NOW()
-     WHERE id=$4
-     RETURNING id, nama_dokumen, jenis_dokumen, status_review, catatan_review,
-               reviewed_by, reviewed_at, guru_id, nama_guru, versi`,
-    [status, catatan || null, kepsekNama, req.params.id]
-  );
-  if (!result.rowCount) throw createError(404, 'Dokumen tidak ditemukan');
+  const doc = await PerangkatPembelajaran.findByPk(req.params.id);
+  if (!doc) throw createError(404, 'Dokumen tidak ditemukan');
 
-  // Simpan riwayat — abaikan error jika kolom belum ada
-  await pool.query(
-    `INSERT INTO review_kepsek (perangkat_id, status, komentar, kepsek_id, kepsek_nama, created_at)
-     VALUES ($1, $2, $3, $4, $5, NOW()) ON CONFLICT DO NOTHING`,
-    [req.params.id, status, catatan || null, kepsekId, kepsekNama]
-  ).catch((e) => console.warn('[review_kepsek insert]', e.message));
+  await doc.update({
+    status_review:  status,
+    catatan_review: catatan || null,
+    reviewed_by:    kepsekNama,
+    reviewed_at:    new Date(),
+  });
 
-  res.json({ success: true, data: result.rows[0] });
+  // Simpan riwayat review
+  await ReviewKepsek.create({
+    perangkat_id: doc.id,
+    status,
+    komentar:    catatan    || null,
+    kepsek_id:   kepsekId,
+    kepsek_nama: kepsekNama,
+  }).catch((e) => console.warn('[ReviewKepsek create]', e.message));
+
+  const { file_data: _, ...result } = doc.toJSON();
+  res.json({ success: true, data: result });
 });
 
 exports.getRiwayatReview = asyncHandler(async (req, res) => {
-  const docRes = await pool.query('SELECT id, parent_id FROM perangkat_pembelajaran WHERE id = $1', [req.params.id]);
-  if (!docRes.rows.length) throw createError(404, 'Dokumen tidak ditemukan');
+  const doc = await PerangkatPembelajaran.findByPk(req.params.id, {
+    attributes: ['id', 'parent_id'],
+  });
+  if (!doc) throw createError(404, 'Dokumen tidak ditemukan');
 
-  const rootId  = docRes.rows[0].parent_id || req.params.id;
-  const versiRes = await pool.query(
-    'SELECT id FROM perangkat_pembelajaran WHERE id = $1 OR parent_id = $1 ORDER BY versi ASC',
-    [rootId]
-  );
-  const allIds = versiRes.rows.map(r => r.id);
+  const rootId = doc.parent_id || doc.id;
 
-  const result = await pool.query(
-    `SELECT r.*, p.nama_dokumen, p.jenis_dokumen, p.versi, p.file_name
-     FROM review_kepsek r
-     JOIN perangkat_pembelajaran p ON r.perangkat_id = p.id
-     WHERE r.perangkat_id = ANY($1) ORDER BY r.created_at DESC`,
-    [allIds]
-  );
-  res.json({ success: true, data: result.rows });
+  // Semua versi dokumen (root + revisi)
+  const allDocs = await PerangkatPembelajaran.findAll({
+    where: { [Op.or]: [{ id: rootId }, { parent_id: rootId }] },
+    attributes: ['id'],
+  });
+  const allIds = allDocs.map(d => d.id);
+
+  const data = await ReviewKepsek.findAll({
+    where: { perangkat_id: { [Op.in]: allIds } },
+    include: [{
+      model: PerangkatPembelajaran,
+      as: 'perangkat',
+      attributes: ['nama_dokumen', 'jenis_dokumen', 'versi', 'file_name'],
+    }],
+    order: [['created_at', 'DESC']],
+  });
+
+  res.json({ success: true, data });
 });
 
 exports.getVersiDokumen = asyncHandler(async (req, res) => {
-  const docRes = await pool.query('SELECT id, parent_id FROM perangkat_pembelajaran WHERE id = $1', [req.params.id]);
-  if (!docRes.rows.length) throw createError(404, 'Dokumen tidak ditemukan');
+  const doc = await PerangkatPembelajaran.findByPk(req.params.id, {
+    attributes: ['id', 'parent_id'],
+  });
+  if (!doc) throw createError(404, 'Dokumen tidak ditemukan');
 
-  const rootId = docRes.rows[0].parent_id || req.params.id;
-  const result = await pool.query(
-    `SELECT id, nama_dokumen, jenis_dokumen, file_name, file_mime,
-            COALESCE(status_review,'menunggu') AS status_review,
-            catatan_review, reviewed_by, reviewed_at,
-            COALESCE(versi,1) AS versi, parent_id, nama_guru,
-            to_char(tanggal_upload,'YYYY-MM-DD HH24:MI') AS tanggal_upload
-     FROM perangkat_pembelajaran
-     WHERE id = $1 OR parent_id = $1 ORDER BY versi ASC`,
-    [rootId]
-  );
-  res.json({ success: true, data: result.rows });
+  const rootId = doc.parent_id || doc.id;
+
+  const data = await PerangkatPembelajaran.findAll({
+    where: { [Op.or]: [{ id: rootId }, { parent_id: rootId }] },
+    attributes: { exclude: ['file_data'] },
+    order: [['versi', 'ASC']],
+  });
+
+  res.json({ success: true, data });
 });

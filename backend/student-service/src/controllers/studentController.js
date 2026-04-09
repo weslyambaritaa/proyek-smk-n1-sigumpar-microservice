@@ -1,89 +1,64 @@
+const { Op } = require('sequelize');
+const { User } = require('../models');
 const { createError } = require('../middleware/errorHandler');
 const asyncHandler = require('../utils/asyncHandler');
-const pool = require('../config/db');
 
-/**
- * GET /users
- * Ambil semua user. Support query param:
- * - ?search=keyword  => filter username atau email
- */
+// GET /api/students — ambil semua user, support ?search=
 exports.getAllUsers = asyncHandler(async (req, res) => {
-  const { search } = req.query;
-  let query = 'SELECT * FROM users';
-  const params = [];
-
-  if (search) {
-    query += ' WHERE LOWER(username) LIKE $1 OR LOWER(email) LIKE $1';
-    params.push(`%${search.toLowerCase()}%`);
+  const where = {};
+  if (req.query.search) {
+    const kw = `%${req.query.search}%`;
+    where[Op.or] = [
+      { username: { [Op.iLike]: kw } },
+      { email:    { [Op.iLike]: kw } },
+    ];
   }
-
-  query += ' ORDER BY created_at DESC';
-  const result = await pool.query(query, params);
-  res.json({ success: true, data: result.rows });
+  const data = await User.findAll({ where, order: [['created_at', 'DESC']] });
+  res.json({ success: true, data });
 });
 
-/**
- * GET /users/:id
- * Ambil satu user berdasarkan ID.
- */
+// GET /api/students/:id
 exports.getUserById = asyncHandler(async (req, res) => {
-  const result = await pool.query('SELECT * FROM users WHERE id = $1', [req.params.id]);
-  if (!result.rows.length) throw createError(404, `User dengan ID '${req.params.id}' tidak ditemukan`);
-  res.json({ success: true, data: result.rows[0] });
+  const user = await User.findByPk(req.params.id);
+  if (!user) throw createError(404, `User dengan ID '${req.params.id}' tidak ditemukan`);
+  res.json({ success: true, data: user });
 });
 
-/**
- * POST /users
- * Buat user baru. ID dikirim dari Keycloak.
- * Body: { id, username, email }
- */
+// POST /api/students — id dikirim dari Keycloak
+// Body: { id, username, email }
 exports.createUser = asyncHandler(async (req, res) => {
   const { id, username, email } = req.body;
   if (!id || !username || !email) throw createError(400, 'Field id, username, dan email wajib diisi');
 
-  const result = await pool.query(
-    'INSERT INTO users (id, username, email) VALUES ($1, $2, $3) RETURNING *',
-    [id, username, email]
-  );
-  res.status(201).json({ success: true, data: result.rows[0] });
+  const user = await User.create({ id, username, email });
+  res.status(201).json({ success: true, data: user });
 });
 
-/**
- * PUT /users/:id
- * Update username dan/atau email user.
- * Body: { username?, email? }
- */
+// PUT /api/students/:id — partial update username dan/atau email
 exports.updateUser = asyncHandler(async (req, res) => {
   const { username, email } = req.body;
   if (!username && !email) throw createError(400, 'Minimal satu field (username atau email) harus diisi');
 
-  // Cek user ada
-  const existing = await pool.query('SELECT * FROM users WHERE id = $1', [req.params.id]);
-  if (!existing.rows.length) throw createError(404, `User dengan ID '${req.params.id}' tidak ditemukan`);
+  const user = await User.findByPk(req.params.id);
+  if (!user) throw createError(404, `User dengan ID '${req.params.id}' tidak ditemukan`);
 
   // Cek duplikat email jika email diubah
-  if (email && email !== existing.rows[0].email) {
-    const emailCheck = await pool.query('SELECT id FROM users WHERE LOWER(email) = LOWER($1) AND id != $2', [email, req.params.id]);
-    if (emailCheck.rows.length) throw createError(409, `Email '${email}' sudah digunakan user lain`);
+  if (email && email !== user.email) {
+    const existing = await User.findOne({ where: { email: { [Op.iLike]: email } } });
+    if (existing) throw createError(409, `Email '${email}' sudah digunakan user lain`);
   }
 
-  const result = await pool.query(
-    `UPDATE users
-     SET username = COALESCE($1, username),
-         email    = COALESCE($2, email)
-     WHERE id = $3
-     RETURNING *`,
-    [username || null, email || null, req.params.id]
-  );
-  res.json({ success: true, data: result.rows[0] });
+  await user.update({
+    ...(username && { username }),
+    ...(email    && { email }),
+  });
+  res.json({ success: true, data: user });
 });
 
-/**
- * DELETE /users/:id
- * Hapus user berdasarkan ID.
- */
+// DELETE /api/students/:id
 exports.deleteUser = asyncHandler(async (req, res) => {
-  const result = await pool.query('DELETE FROM users WHERE id = $1 RETURNING *', [req.params.id]);
-  if (!result.rows.length) throw createError(404, `User dengan ID '${req.params.id}' tidak ditemukan`);
-  res.json({ success: true, message: 'User berhasil dihapus', data: result.rows[0] });
+  const user = await User.findByPk(req.params.id);
+  if (!user) throw createError(404, `User dengan ID '${req.params.id}' tidak ditemukan`);
+  await user.destroy();
+  res.json({ success: true, message: 'User berhasil dihapus', data: user });
 });
