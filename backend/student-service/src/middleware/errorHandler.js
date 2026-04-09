@@ -1,38 +1,41 @@
+const { ValidationError, UniqueConstraintError, ForeignKeyConstraintError } = require('sequelize');
+
 /**
- * Middleware: Global Error Handler
- *
- * Menangani semua error yang di-throw dengan next(error).
- * Dipasang di akhir chain middleware Express.
- *
- * @param {Error} err   - Objek error yang diterima
- * @param {Request} req  - Objek request Express
- * @param {Response} res - Objek response Express
- * @param {Function} next - Fungsi next (wajib ada agar Express tahu ini error handler)
+ * Global Error Handler — ditaruh paling akhir di app.use()
+ * Menangani semua error dari controller secara terpusat.
+ * Controller TIDAK perlu res.status(500) sendiri-sendiri — cukup next(err).
  */
 const errorHandler = (err, req, res, next) => {
-  // Log error ke console untuk debugging
-  console.error(`[ERROR] ${err.message}`);
+  console.error(`[ERROR] ${req.method} ${req.originalUrl} →`, err.message);
 
-  // Gunakan status code dari error jika ada, default ke 500
+  // ── Sequelize: Validasi model gagal ──────────────────────────────────────
+  if (err instanceof ValidationError) {
+    const messages = err.errors.map((e) => e.message);
+    return res.status(400).json({ success: false, message: 'Validasi gagal', errors: messages });
+  }
+
+  // ── Sequelize: Data duplikat (unique constraint) ──────────────────────────
+  if (err instanceof UniqueConstraintError) {
+    return res.status(409).json({ success: false, message: 'Data sudah ada / duplikat', errors: err.errors.map((e) => e.message) });
+  }
+
+  // ── Sequelize: Foreign key tidak valid ────────────────────────────────────
+  if (err instanceof ForeignKeyConstraintError) {
+    return res.status(400).json({ success: false, message: 'Referensi data tidak valid (foreign key)' });
+  }
+
+  // ── Error custom (dibuat via createError) ─────────────────────────────────
   const statusCode = err.statusCode || 500;
-
   res.status(statusCode).json({
     success: false,
-    message: err.message || "Internal Server Error",
-    // Hanya tampilkan stack trace di environment development
-    ...(process.env.NODE_ENV === "development" && { stack: err.stack }),
+    message: err.message || 'Internal Server Error',
+    ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
   });
 };
 
 /**
- * Helper: Membuat error dengan status code custom
- *
- * Contoh penggunaan:
- *   throw createError(404, "User tidak ditemukan");
- *
- * @param {number} statusCode - HTTP status code
- * @param {string} message    - Pesan error
- * @returns {Error}
+ * Membuat error dengan statusCode agar ditangkap errorHandler dengan status yang tepat.
+ * Contoh: throw createError(404, 'Siswa tidak ditemukan');
  */
 const createError = (statusCode, message) => {
   const error = new Error(message);
