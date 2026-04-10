@@ -61,3 +61,8 @@ export const learningApi = {
 
   deletePerangkat: (id) => api.delete(`/api/learning/perangkat/${id}`),
 };
+
+// ── Kepsek Dashboard ─────────────────────────────────────────────────────
+export const kepsekApi = {
+  getKepsekDashboard: () => api.get("/api/academic/kepsek/statistik"),
+};
