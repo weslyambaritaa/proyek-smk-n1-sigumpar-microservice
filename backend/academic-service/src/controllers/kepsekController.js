@@ -1,4 +1,13 @@
-const pool = require('../config/db');
+const sequelize = require("../config/db");
+const { QueryTypes } = require("sequelize");
+const { Pool } = require("pg");
+const pool = new Pool({
+  host: process.env.DB_HOST || "localhost",
+  port: process.env.DB_PORT || 5432,
+  database: process.env.DB_NAME || "academic_db",
+  user: process.env.DB_USER || "academic_user",
+  password: process.env.DB_PASSWORD || "password",
+});
 
 /**
  * GET /api/academic/kepsek/rekap-absensi-siswa
@@ -29,16 +38,25 @@ exports.getRekapAbsensiSiswa = async (req, res) => {
     const params = [];
     let idx = 1;
 
-    if (kelas_id) { query += ` AND s.kelas_id = $${idx++}`; params.push(kelas_id); }
-    if (tanggal)  { query += ` AND a.tanggal = $${idx++}`;  params.push(tanggal); }
-    if (bulan)    { query += ` AND TO_CHAR(a.tanggal,'YYYY-MM') = $${idx++}`; params.push(bulan); }
+    if (kelas_id) {
+      query += ` AND s.kelas_id = $${idx++}`;
+      params.push(kelas_id);
+    }
+    if (tanggal) {
+      query += ` AND a.tanggal = $${idx++}`;
+      params.push(tanggal);
+    }
+    if (bulan) {
+      query += ` AND TO_CHAR(a.tanggal,'YYYY-MM') = $${idx++}`;
+      params.push(bulan);
+    }
 
     query += ` GROUP BY s.id, s.nama_lengkap, s.nisn, k.nama_kelas ORDER BY k.nama_kelas, s.nama_lengkap`;
 
     const result = await pool.query(query, params);
     res.json({ success: true, data: result.rows });
   } catch (err) {
-    console.error('[getRekapAbsensiSiswa]', err);
+    console.error("[getRekapAbsensiSiswa]", err);
     res.status(500).json({ success: false, error: err.message });
   }
 };
@@ -72,22 +90,28 @@ exports.getRekapNilai = async (req, res) => {
     `;
     const params = [];
     let idx = 1;
-    if (kelas_id)   { query += ` AND n.kelas_id = $${idx++}`;   params.push(kelas_id); }
-    if (tahun_ajar) { query += ` AND n.tahun_ajar = $${idx++}`; params.push(tahun_ajar); }
+    if (kelas_id) {
+      query += ` AND n.kelas_id = $${idx++}`;
+      params.push(kelas_id);
+    }
+    if (tahun_ajar) {
+      query += ` AND n.tahun_ajar = $${idx++}`;
+      params.push(tahun_ajar);
+    }
 
     query += ` GROUP BY k.id, k.nama_kelas, m.id, m.nama_mapel ORDER BY k.nama_kelas, m.nama_mapel`;
 
     const result = await pool.query(query, params);
     res.json({ success: true, data: result.rows });
   } catch (err) {
-    console.error('[getRekapNilai]', err);
+    console.error("[getRekapNilai]", err);
     res.status(500).json({ success: false, error: err.message });
   }
 };
 
 // ─── HELPER: buat tabel konfirmasi jika belum ada (idempotent) ────────────────
 const ensureKonfirmasiTable = (client) =>
-  (client || pool).query(`
+  pool.query(`
     CREATE TABLE IF NOT EXISTS konfirmasi_rekap_nilai (
       id              SERIAL PRIMARY KEY,
       kelas_id        INTEGER NOT NULL,
@@ -148,15 +172,24 @@ exports.getRekapNilaiFinal = async (req, res) => {
     `;
     const params = [];
     let idx = 1;
-    if (kelas_id)   { query += ` AND s.kelas_id = $${idx++}`;   params.push(kelas_id); }
-    if (mapel_id)   { query += ` AND n.mapel_id = $${idx++}`;   params.push(mapel_id); }
-    if (tahun_ajar) { query += ` AND n.tahun_ajar = $${idx++}`; params.push(tahun_ajar); }
+    if (kelas_id) {
+      query += ` AND s.kelas_id = $${idx++}`;
+      params.push(kelas_id);
+    }
+    if (mapel_id) {
+      query += ` AND n.mapel_id = $${idx++}`;
+      params.push(mapel_id);
+    }
+    if (tahun_ajar) {
+      query += ` AND n.tahun_ajar = $${idx++}`;
+      params.push(tahun_ajar);
+    }
     query += ` ORDER BY k.nama_kelas, s.nama_lengkap, m.nama_mapel`;
 
     const result = await pool.query(query, params);
     res.json({ success: true, data: result.rows });
   } catch (err) {
-    console.error('[getRekapNilaiFinal]', err);
+    console.error("[getRekapNilaiFinal]", err);
     res.status(500).json({ success: false, error: err.message });
   }
 };
@@ -210,42 +243,56 @@ exports.getDetailNilaiSiswa = async (req, res) => {
     `;
     const params = [siswa_id];
     let idx = 2;
-    if (tahun_ajar) { query += ` AND n.tahun_ajar = $${idx++}`; params.push(tahun_ajar); }
+    if (tahun_ajar) {
+      query += ` AND n.tahun_ajar = $${idx++}`;
+      params.push(tahun_ajar);
+    }
     query += ` ORDER BY m.nama_mapel`;
 
     const result = await pool.query(query, params);
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ success: false, message: 'Data nilai siswa tidak ditemukan' });
+      return res
+        .status(404)
+        .json({ success: false, message: "Data nilai siswa tidak ditemukan" });
     }
 
     const { siswa_id: id, nisn, nama_lengkap, nama_kelas } = result.rows[0];
     const nilaiMapel = result.rows.map((r) => ({
-      mapel_id:           r.mapel_id,
-      nama_mapel:         r.nama_mapel,
-      tahun_ajar:         r.tahun_ajar,
-      nilai_tugas:        r.nilai_tugas,
-      nilai_kuis:         r.nilai_kuis,
-      nilai_uts:          r.nilai_uts,
-      nilai_uas:          r.nilai_uas,
-      nilai_praktik:      r.nilai_praktik,
-      nilai_akhir:        r.nilai_akhir,
+      mapel_id: r.mapel_id,
+      nama_mapel: r.nama_mapel,
+      tahun_ajar: r.tahun_ajar,
+      nilai_tugas: r.nilai_tugas,
+      nilai_kuis: r.nilai_kuis,
+      nilai_uts: r.nilai_uts,
+      nilai_uas: r.nilai_uas,
+      nilai_praktik: r.nilai_praktik,
+      nilai_akhir: r.nilai_akhir,
       sudah_dikonfirmasi: r.sudah_dikonfirmasi,
-      dikonfirmasi_at:    r.dikonfirmasi_at,
+      dikonfirmasi_at: r.dikonfirmasi_at,
     }));
 
     const rata_rata_umum = nilaiMapel.length
       ? Math.round(
-          (nilaiMapel.reduce((s, n) => s + Number(n.nilai_akhir), 0) / nilaiMapel.length) * 100
+          (nilaiMapel.reduce((s, n) => s + Number(n.nilai_akhir), 0) /
+            nilaiMapel.length) *
+            100,
         ) / 100
       : 0;
 
     res.json({
       success: true,
-      data: { siswa_id: id, nisn, nama_lengkap, nama_kelas, nilai_mapel: nilaiMapel, rata_rata_umum },
+      data: {
+        siswa_id: id,
+        nisn,
+        nama_lengkap,
+        nama_kelas,
+        nilai_mapel: nilaiMapel,
+        rata_rata_umum,
+      },
     });
   } catch (err) {
-    console.error('[getDetailNilaiSiswa]', err);
+    console.error("[getDetailNilaiSiswa]", err);
     res.status(500).json({ success: false, error: err.message });
   }
 };
@@ -260,7 +307,9 @@ exports.konfirmasiRekapNilai = async (req, res) => {
   const wali_id = req.identity?.id || null;
 
   if (!kelas_id || !tahun_ajar) {
-    return res.status(400).json({ success: false, message: 'kelas_id dan tahun_ajar wajib diisi' });
+    return res
+      .status(400)
+      .json({ success: false, message: "kelas_id dan tahun_ajar wajib diisi" });
   }
 
   try {
@@ -272,12 +321,16 @@ exports.konfirmasiRekapNilai = async (req, res) => {
        ON CONFLICT (kelas_id, mapel_id, tahun_ajar)
        DO UPDATE SET wali_id = EXCLUDED.wali_id, dikonfirmasi_at = NOW()
        RETURNING *`,
-      [kelas_id, mapel_id || null, tahun_ajar, wali_id]
+      [kelas_id, mapel_id || null, tahun_ajar, wali_id],
     );
 
-    res.json({ success: true, message: 'Rekap nilai berhasil dikonfirmasi', data: result.rows[0] });
+    res.json({
+      success: true,
+      message: "Rekap nilai berhasil dikonfirmasi",
+      data: result.rows[0],
+    });
   } catch (err) {
-    console.error('[konfirmasiRekapNilai]', err);
+    console.error("[konfirmasiRekapNilai]", err);
     res.status(500).json({ success: false, error: err.message });
   }
 };
@@ -289,23 +342,25 @@ exports.konfirmasiRekapNilai = async (req, res) => {
 exports.getStatistikUmum = async (req, res) => {
   try {
     const [siswa, kelas, guru, mapel] = await Promise.all([
-      pool.query('SELECT COUNT(*) AS total FROM siswa'),
-      pool.query('SELECT COUNT(*) AS total FROM kelas'),
-      pool.query('SELECT COUNT(DISTINCT guru_mapel_id) AS total FROM mata_pelajaran WHERE guru_mapel_id IS NOT NULL'),
-      pool.query('SELECT COUNT(*) AS total FROM mata_pelajaran'),
+      pool.query("SELECT COUNT(*) AS total FROM siswa"),
+      pool.query("SELECT COUNT(*) AS total FROM kelas"),
+      pool.query(
+        "SELECT COUNT(DISTINCT guru_mapel_id) AS total FROM mata_pelajaran WHERE guru_mapel_id IS NOT NULL",
+      ),
+      pool.query("SELECT COUNT(*) AS total FROM mata_pelajaran"),
     ]);
 
     res.json({
       success: true,
       data: {
-        total_siswa: parseInt(siswa.rows[0].total),
-        total_kelas: parseInt(kelas.rows[0].total),
-        total_guru:  parseInt(guru.rows[0].total),
-        total_mapel: parseInt(mapel.rows[0].total),
+        total_siswa: parseInt(siswa.rows[0]?.total || 0),
+        total_kelas: parseInt(kelas.rows[0]?.total || 0),
+        total_guru: parseInt(guru.rows[0]?.total || 0),
+        total_mapel: parseInt(mapel.rows[0]?.total || 0),
       },
     });
   } catch (err) {
-    console.error('[getStatistikUmum]', err);
+    console.error("[getStatistikUmum]", err);
     res.status(500).json({ success: false, error: err.message });
   }
 };
