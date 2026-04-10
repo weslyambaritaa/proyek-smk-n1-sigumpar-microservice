@@ -1,18 +1,13 @@
-import React, { useEffect, useState } from "react";
-import { kepsekApi, learningApi } from "../../api/learningApi";
-import {
-  PageHeader,
-  Panel,
-  SimpleTable,
-  StatCard,
-} from "../../components/role/RolePage";
+﻿import React, { useEffect, useState } from 'react';
+import { kepsekApi, learningApi } from '../../api/learningApi';
+import { PageHeader, Panel, SimpleTable, StatCard } from '../../components/role/RolePage';
 
 export default function KepsekDashboardPage() {
   const [dashboard, setDashboard] = useState({
     absensiGuru: 0,
     perangkat: 0,
     evaluasiSelesai: 0,
-    rataSkor: 0,
+    rataSkor: 0
   });
   const [perangkat, setPerangkat] = useState([]);
 
@@ -21,13 +16,13 @@ export default function KepsekDashboardPage() {
       try {
         const [d, p] = await Promise.all([
           kepsekApi.getKepsekDashboard(),
-          learningApi.getAllPerangkat(),
+          learningApi.getAllPerangkat()
         ]);
         setDashboard(d.data.data || dashboard);
         const raw = p.data.data;
         setPerangkat(Array.isArray(raw) ? raw : []);
       } catch (e) {
-        console.error("Dashboard error:", e);
+        console.error('Dashboard error:', e);
       }
     })();
   }, []);
@@ -40,34 +35,23 @@ export default function KepsekDashboardPage() {
         badge="Semester Ganjil 2024/2025"
       />
       <div className="grid md:grid-cols-4 gap-4">
-        <StatCard
-          label="Absensi Guru"
-          value={dashboard.absensiGuru}
-          tone="green"
-        />
-        <StatCard label="Perangkat Ajar" value={dashboard.perangkat} />
-        <StatCard
-          label="Evaluasi Selesai"
-          value={dashboard.evaluasiSelesai}
-          tone="yellow"
-        />
-        <StatCard
-          label="Rata-rata Skor"
-          value={dashboard.rataSkor}
-          tone="blue"
-        />
+        <StatCard label="Absensi Guru"     value={dashboard.absensiGuru}     tone="green" />
+        <StatCard label="Perangkat Ajar"   value={dashboard.perangkat} />
+        <StatCard label="Evaluasi Selesai" value={dashboard.evaluasiSelesai} tone="yellow" />
+        <StatCard label="Rata-rata Skor"   value={dashboard.rataSkor}        tone="blue" />
       </div>
       <Panel title="Perangkat Ajar Terbaru">
         <SimpleTable
           data={perangkat.slice(0, 5)}
           columns={[
-            { key: "no", label: "No", render: (_, i) => i + 1 },
-            { key: "nama_dokumen", label: "Nama Dokumen" },
-            { key: "jenis_dokumen", label: "Jenis" },
-            { key: "tanggal_upload", label: "Tanggal" },
+            { key: 'no',             label: 'No',       render: (_, i) => i + 1 },
+            { key: 'nama_dokumen',   label: 'Nama Dokumen' },
+            { key: 'jenis_dokumen',  label: 'Jenis' },
+            { key: 'tanggal_upload', label: 'Tanggal' },
           ]}
         />
       </Panel>
     </div>
   );
 }
+// v2
