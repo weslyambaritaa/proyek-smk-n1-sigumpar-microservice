@@ -3,14 +3,27 @@ const router = express.Router();
 const verifyToken = require('../middleware/auth'); 
 const authController = require('../controllers/authController');
 
+// Role-role yang dikenali sistem (sesuai realm Keycloak)
+const SYSTEM_ROLES = [
+  'tata-usaha',
+  'guru-mapel',
+  'kepala-sekolah',
+  'wakil-kepsek',
+  'wali-kelas',
+  'pramuka',
+];
+
 // ========================================================
 // RUTE SUPER PENTING UNTUK SATPAM NGINX
 // ========================================================
 router.get('/verify', verifyToken, (req, res) => {
     try {
         const user = req.user || {};
-        const userId = user.id || user.sub || 'unknown_id';
-        const userRole = user.role || 'user';
+        const userId = user.sub || user.id || 'unknown_id';
+
+        // Ambil role dari realm_access (standar Keycloak), bukan user.role
+        const realmRoles = user.realm_access?.roles || [];
+        const userRole = realmRoles.find(r => SYSTEM_ROLES.includes(r)) || 'user';
 
         // Sisipkan identitas ke header agar Nginx bisa membacanya
         res.setHeader('X-User-Id', userId);
