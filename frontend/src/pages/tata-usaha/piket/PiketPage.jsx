@@ -4,6 +4,7 @@ import axiosInstance from "../../../api/axiosInstance";
 import Button from "../../../components/ui/Button";
 import PiketDialog from "./dialog/PiketDialog";
 import toast from "react-hot-toast";
+import { extractArray } from "../../../utils/apiUtils";
 
 const PiketPage = () => {
   const [piketData, setPiketData] = useState([]);
@@ -23,9 +24,10 @@ const PiketPage = () => {
       let users = [];
       try {
         const resUsers = await axiosInstance.get("/api/auth/");
-        users = Array.isArray(resUsers.data) ? resUsers.data : (resUsers.data?.data || []);
+        users = extractArray(resUsers);
       } catch { /* users gagal, data utama tetap tampil */ }
-      const rawPiket = Array.isArray(resPiket.data) ? resPiket.data : resPiket.data.data || [];
+
+      const rawPiket = extractArray(resPiket);
 
       const piketWithGuru = rawPiket.map((p) => {
         const guru = users.find((u) => u.id === p.guru_id);
@@ -39,6 +41,7 @@ const PiketPage = () => {
     } catch (err) {
       console.error("Gagal mengambil data piket:", err);
       toast.error("Gagal memuat jadwal piket");
+      setPiketData([]);
     }
   };
 
@@ -105,42 +108,50 @@ const PiketPage = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {piketData.map((p, index) => {
-              // Cek apakah tanggal di baris ini beda dengan tanggal di baris sebelumnya
-              const isNewDay = index > 0 && p.tanggal !== piketData[index - 1].tanggal;
+            {piketData.length > 0 ? (
+              piketData.map((p, index) => {
+                // Cek apakah tanggal di baris ini beda dengan tanggal di baris sebelumnya
+                const isNewDay = index > 0 && p.tanggal !== piketData[index - 1].tanggal;
 
-              return (
-                <React.Fragment key={p.id}>
-                  {/* Jika harinya berbeda, tampilkan baris kosong sebagai pemisah (spacer) */}
-                  {isNewDay && (
-                    <tr>
-                      <td colSpan="3" className="h-6 bg-gray-100/50 border-y border-gray-200"></td>
-                    </tr>
-                  )}
-                  
-                  {/* Baris data utama */}
-                  <tr className="hover:bg-gray-50">
-                    <td className="px-6 py-4 font-medium">
-                      {new Date(p.tanggal).toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-                    </td>
-                    <td className="px-6 py-4">{p.nama_guru}</td>
-                    <td className="px-6 py-4 text-center relative" ref={openMenuId === p.id ? menuRef : null}>
-                      <button onClick={() => setOpenMenuId(openMenuId === p.id ? null : p.id)} className="text-gray-500 hover:text-gray-800 p-2 rounded-full hover:bg-gray-100 transition-colors">
-                        <span className="font-bold text-lg">⋮</span>
-                      </button>
-                      {openMenuId === p.id && (
-                        <div className="absolute right-6 mt-1 w-32 bg-white border border-gray-200 rounded-lg shadow-xl z-10 overflow-hidden">
-                          <div className="py-1">
-                            <button onClick={() => handleEdit(p)} className="w-full text-left px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 font-medium flex items-center gap-2">Edit</button>
-                            <button onClick={() => handleDeleteClick(p)} className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 font-medium flex items-center gap-2 border-t border-gray-100">Hapus</button>
+                return (
+                  <React.Fragment key={p.id}>
+                    {/* Jika harinya berbeda, tampilkan baris kosong sebagai pemisah (spacer) */}
+                    {isNewDay && (
+                      <tr>
+                        <td colSpan="3" className="h-6 bg-gray-100/50 border-y border-gray-200"></td>
+                      </tr>
+                    )}
+
+                    {/* Baris data utama */}
+                    <tr className="hover:bg-gray-50">
+                      <td className="px-6 py-4 font-medium">
+                        {new Date(p.tanggal).toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                      </td>
+                      <td className="px-6 py-4">{p.nama_guru}</td>
+                      <td className="px-6 py-4 text-center relative" ref={openMenuId === p.id ? menuRef : null}>
+                        <button onClick={() => setOpenMenuId(openMenuId === p.id ? null : p.id)} className="text-gray-500 hover:text-gray-800 p-2 rounded-full hover:bg-gray-100 transition-colors">
+                          <span className="font-bold text-lg">⋮</span>
+                        </button>
+                        {openMenuId === p.id && (
+                          <div className="absolute right-6 mt-1 w-32 bg-white border border-gray-200 rounded-lg shadow-xl z-10 overflow-hidden">
+                            <div className="py-1">
+                              <button onClick={() => handleEdit(p)} className="w-full text-left px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 font-medium flex items-center gap-2">Edit</button>
+                              <button onClick={() => handleDeleteClick(p)} className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 font-medium flex items-center gap-2 border-t border-gray-100">Hapus</button>
+                            </div>
                           </div>
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                </React.Fragment>
-              );
-            })}
+                        )}
+                      </td>
+                    </tr>
+                  </React.Fragment>
+                );
+              })
+            ) : (
+              <tr>
+                <td colSpan="3" className="px-6 py-10 text-center text-gray-400">
+                  Belum ada data jadwal piket.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

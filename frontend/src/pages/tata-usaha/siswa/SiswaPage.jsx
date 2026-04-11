@@ -3,6 +3,7 @@ import { academicApi } from "../../../api/academicApi";
 import Button from "../../../components/ui/Button";
 import SiswaDialog from "./dialog/SiswaDialog";
 import toast from "react-hot-toast";
+import { extractArray } from "../../../utils/apiUtils";
 
 const SiswaPage = () => {
   const [siswaData, setSiswaData] = useState([]);
@@ -25,8 +26,8 @@ const SiswaPage = () => {
         academicApi.getAllKelas()
       ]);
 
-      const rawSiswa = Array.isArray(resSiswa.data) ? resSiswa.data : resSiswa.data.data || [];
-      const rawKelas = Array.isArray(resKelas.data) ? resKelas.data : resKelas.data.data || [];
+      const rawSiswa = extractArray(resSiswa);
+      const rawKelas = extractArray(resKelas);
 
       const siswaWithKelas = rawSiswa.map((siswa) => {
         const kelas = rawKelas.find((k) => k.id === siswa.kelas_id);
@@ -40,7 +41,7 @@ const SiswaPage = () => {
     } catch (err) {
       console.error("Gagal mengambil data:", err);
       toast.error("Gagal memuat data siswa");
-      setSiswaData([]); 
+      setSiswaData([]);
     }
   };
 
@@ -83,7 +84,7 @@ const SiswaPage = () => {
 
   const handleDeleteClick = (siswa) => {
     setSiswaToDelete(siswa);
-    setDeleteConfirmation(""); 
+    setDeleteConfirmation("");
     setIsDeleteDialogOpen(true);
     setOpenMenuId(null); // Tutup menu setelah opsi dipilih
   };
@@ -133,7 +134,6 @@ const SiswaPage = () => {
               <th className="px-6 py-4">NISN</th>
               <th className="px-6 py-4">Nama Lengkap</th>
               <th className="px-6 py-4">Kelas</th>
-              {/* --- HEADER KOLOM DIUBAH MENJADI 'TINDAKAN' --- */}
               <th className="px-6 py-4 text-center w-20">Tindakan</th>
             </tr>
           </thead>
@@ -148,17 +148,15 @@ const SiswaPage = () => {
                       {s.nama_kelas}
                     </span>
                   </td>
-                  {/* --- KOLOM TINDAKAN DENGAN MENU TITIK TIGA --- */}
                   <td className="px-6 py-4 text-center relative" ref={openMenuId === s.id ? menuRef : null}>
                     <button
                       onClick={() => toggleMenu(s.id)}
                       className="text-gray-500 hover:text-gray-800 p-2 rounded-full hover:bg-gray-100 transition-colors"
                       aria-label="Tampilkan opsi"
                     >
-                      <span className="font-bold text-lg">⋮</span> {/* Karakter titik tiga vertikal */}
+                      <span className="font-bold text-lg">⋮</span>
                     </button>
 
-                    {/* --- DROPDOWN OPSI (MUNCUL JIKA ID COCOK) --- */}
                     {openMenuId === s.id && (
                       <div className="absolute right-6 mt-1 w-32 bg-white border border-gray-200 rounded-lg shadow-xl z-10 animate-fade-in-down overflow-hidden">
                         <div className="py-1">

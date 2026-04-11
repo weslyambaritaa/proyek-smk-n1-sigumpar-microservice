@@ -4,6 +4,7 @@ import axiosInstance from "../../../api/axiosInstance";
 import Button from "../../../components/ui/Button";
 import JadwalDialog from "./dialog/JadwalDialog";
 import toast from "react-hot-toast";
+import { extractArray } from "../../../utils/apiUtils";
 
 const JadwalPage = () => {
   const [jadwalData, setJadwalData] = useState([]);
@@ -25,9 +26,10 @@ const JadwalPage = () => {
       let users = [];
       try {
         const resUsers = await axiosInstance.get("/api/auth/");
-        users = Array.isArray(resUsers.data) ? resUsers.data : (resUsers.data?.data || []);
+        users = extractArray(resUsers);
       } catch { /* users gagal, data utama tetap tampil */ }
-      const rawJadwal = Array.isArray(resJadwal.data) ? resJadwal.data : resJadwal.data.data || [];
+
+      const rawJadwal = extractArray(resJadwal);
 
       // Mapping UUID guru dengan data dari Auth Service
       const jadwalWithGuru = rawJadwal.map((j) => {
@@ -42,6 +44,7 @@ const JadwalPage = () => {
     } catch (err) {
       console.error("Gagal mengambil data jadwal:", err);
       toast.error("Gagal memuat data jadwal mengajar");
+      setJadwalData([]);
     }
   };
 
@@ -115,53 +118,61 @@ const JadwalPage = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {jadwalData.map((j, index) => {
-              // Mengecek apakah hari pada baris ini BEDA dengan hari pada baris sebelumnya
-              const isNewDay = index > 0 && j.hari !== jadwalData[index - 1].hari;
+            {jadwalData.length > 0 ? (
+              jadwalData.map((j, index) => {
+                // Mengecek apakah hari pada baris ini BEDA dengan hari pada baris sebelumnya
+                const isNewDay = index > 0 && j.hari !== jadwalData[index - 1].hari;
 
-              return (
-                <React.Fragment key={j.id}>
-                  {/* Jika harinya berbeda, render baris kosong sebagai pemisah (spacer) */}
-                  {isNewDay && (
-                    <tr>
-                      <td colSpan="5" className="h-6 bg-gray-100/50 border-y border-gray-200"></td>
-                    </tr>
-                  )}
-                  
-                  {/* Baris data utama */}
-                  <tr className="hover:bg-gray-50">
-                    <td className="px-6 py-4">
-                      <span className="font-semibold block">{j.hari}</span>
-                      <span className="text-sm text-gray-500">{j.waktu_mulai?.slice(0, 5)} - {j.waktu_berakhir?.slice(0, 5)}</span>
-                    </td>
-                    <td className="px-6 py-4 font-medium">{j.mata_pelajaran}</td>
-                    <td className="px-6 py-4">{j.nama_kelas || "-"}</td>
-                    <td className="px-6 py-4">{j.nama_guru}</td>
-                    <td className="px-6 py-4 text-center relative" ref={openMenuId === j.id ? menuRef : null}>
-                      <button
-                        onClick={() => setOpenMenuId(openMenuId === j.id ? null : j.id)}
-                        className="text-gray-500 hover:text-gray-800 p-2 rounded-full hover:bg-gray-100 transition-colors"
-                      >
-                        <span className="font-bold text-lg">⋮</span>
-                      </button>
+                return (
+                  <React.Fragment key={j.id}>
+                    {/* Jika harinya berbeda, render baris kosong sebagai pemisah (spacer) */}
+                    {isNewDay && (
+                      <tr>
+                        <td colSpan="5" className="h-6 bg-gray-100/50 border-y border-gray-200"></td>
+                      </tr>
+                    )}
 
-                      {openMenuId === j.id && (
-                        <div className="absolute right-6 mt-1 w-32 bg-white border border-gray-200 rounded-lg shadow-xl z-10 overflow-hidden">
-                          <div className="py-1">
-                            <button onClick={() => handleEdit(j)} className="w-full text-left px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 font-medium flex items-center gap-2">
-                              Edit
-                            </button>
-                            <button onClick={() => handleDeleteClick(j)} className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 font-medium flex items-center gap-2 border-t border-gray-100">
-                              Hapus
-                            </button>
+                    {/* Baris data utama */}
+                    <tr className="hover:bg-gray-50">
+                      <td className="px-6 py-4">
+                        <span className="font-semibold block">{j.hari}</span>
+                        <span className="text-sm text-gray-500">{j.waktu_mulai?.slice(0, 5)} - {j.waktu_berakhir?.slice(0, 5)}</span>
+                      </td>
+                      <td className="px-6 py-4 font-medium">{j.mata_pelajaran}</td>
+                      <td className="px-6 py-4">{j.nama_kelas || "-"}</td>
+                      <td className="px-6 py-4">{j.nama_guru}</td>
+                      <td className="px-6 py-4 text-center relative" ref={openMenuId === j.id ? menuRef : null}>
+                        <button
+                          onClick={() => setOpenMenuId(openMenuId === j.id ? null : j.id)}
+                          className="text-gray-500 hover:text-gray-800 p-2 rounded-full hover:bg-gray-100 transition-colors"
+                        >
+                          <span className="font-bold text-lg">⋮</span>
+                        </button>
+
+                        {openMenuId === j.id && (
+                          <div className="absolute right-6 mt-1 w-32 bg-white border border-gray-200 rounded-lg shadow-xl z-10 overflow-hidden">
+                            <div className="py-1">
+                              <button onClick={() => handleEdit(j)} className="w-full text-left px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 font-medium flex items-center gap-2">
+                                Edit
+                              </button>
+                              <button onClick={() => handleDeleteClick(j)} className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 font-medium flex items-center gap-2 border-t border-gray-100">
+                                Hapus
+                              </button>
+                            </div>
                           </div>
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                </React.Fragment>
-              );
-            })}
+                        )}
+                      </td>
+                    </tr>
+                  </React.Fragment>
+                );
+              })
+            ) : (
+              <tr>
+                <td colSpan="5" className="px-6 py-10 text-center text-gray-400">
+                  Belum ada data jadwal mengajar.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

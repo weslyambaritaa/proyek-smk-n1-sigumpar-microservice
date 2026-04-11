@@ -4,6 +4,7 @@ import axiosInstance from "../../../api/axiosInstance";
 import Button from "../../../components/ui/Button";
 import MapelDialog from "./dialog/MapelDialog";
 import toast from "react-hot-toast";
+import { extractArray } from "../../../utils/apiUtils";
 
 const MapelPage = () => {
   const [mapelData, setMapelData] = useState([]);
@@ -25,9 +26,10 @@ const MapelPage = () => {
       let users = [];
       try {
         const resUsers = await axiosInstance.get("/api/auth/");
-        users = Array.isArray(resUsers.data) ? resUsers.data : (resUsers.data?.data || []);
+        users = extractArray(resUsers);
       } catch { /* users gagal, data utama tetap tampil */ }
-      const rawMapel = Array.isArray(resMapel.data) ? resMapel.data : resMapel.data.data || [];
+
+      const rawMapel = extractArray(resMapel);
 
       // Mapping UUID guru dengan data dari Auth Service
       const mapelWithGuru = rawMapel.map((m) => {
@@ -42,6 +44,7 @@ const MapelPage = () => {
     } catch (err) {
       console.error("Gagal mengambil data mapel:", err);
       toast.error("Gagal memuat data mata pelajaran");
+      setMapelData([]);
     }
   };
 
@@ -114,34 +117,42 @@ const MapelPage = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {mapelData.map((m) => (
-              <tr key={m.id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 font-medium">{m.nama_mapel}</td>
-                <td className="px-6 py-4">{m.nama_kelas || "-"}</td>
-                <td className="px-6 py-4">{m.nama_guru}</td>
-                <td className="px-6 py-4 text-center relative" ref={openMenuId === m.id ? menuRef : null}>
-                  <button
-                    onClick={() => setOpenMenuId(openMenuId === m.id ? null : m.id)}
-                    className="text-gray-500 hover:text-gray-800 p-2 rounded-full hover:bg-gray-100 transition-colors"
-                  >
-                    <span className="font-bold text-lg">⋮</span>
-                  </button>
+            {mapelData.length > 0 ? (
+              mapelData.map((m) => (
+                <tr key={m.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 font-medium">{m.nama_mapel}</td>
+                  <td className="px-6 py-4">{m.nama_kelas || "-"}</td>
+                  <td className="px-6 py-4">{m.nama_guru}</td>
+                  <td className="px-6 py-4 text-center relative" ref={openMenuId === m.id ? menuRef : null}>
+                    <button
+                      onClick={() => setOpenMenuId(openMenuId === m.id ? null : m.id)}
+                      className="text-gray-500 hover:text-gray-800 p-2 rounded-full hover:bg-gray-100 transition-colors"
+                    >
+                      <span className="font-bold text-lg">⋮</span>
+                    </button>
 
-                  {openMenuId === m.id && (
-                    <div className="absolute right-6 mt-1 w-32 bg-white border border-gray-200 rounded-lg shadow-xl z-10 overflow-hidden">
-                      <div className="py-1">
-                        <button onClick={() => handleEdit(m)} className="w-full text-left px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 font-medium flex items-center gap-2">
-                          Edit
-                        </button>
-                        <button onClick={() => handleDeleteClick(m)} className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 font-medium flex items-center gap-2 border-t border-gray-100">
-                          Hapus
-                        </button>
+                    {openMenuId === m.id && (
+                      <div className="absolute right-6 mt-1 w-32 bg-white border border-gray-200 rounded-lg shadow-xl z-10 overflow-hidden">
+                        <div className="py-1">
+                          <button onClick={() => handleEdit(m)} className="w-full text-left px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 font-medium flex items-center gap-2">
+                            Edit
+                          </button>
+                          <button onClick={() => handleDeleteClick(m)} className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 font-medium flex items-center gap-2 border-t border-gray-100">
+                            Hapus
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan="4" className="px-6 py-10 text-center text-gray-400">
+                  Belum ada data mata pelajaran.
                 </td>
               </tr>
-            ))}
+            )}
           </tbody>
         </table>
       </div>

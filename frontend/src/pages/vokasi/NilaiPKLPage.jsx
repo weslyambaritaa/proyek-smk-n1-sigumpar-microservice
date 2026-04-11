@@ -44,7 +44,8 @@ export default function NilaiPKLPage() {
       const nilaiData = nilaiRes.data?.data || [];
 
       // Merge: siswa dari tata usaha + nilai PKL yang sudah ada
-      setRows(allSiswa.map((s) => {
+      const safeList = Array.isArray(allSiswa) ? allSiswa : [];
+      setRows(safeList.map((s) => {
         const existing = nilaiData.find((n) => String(n.siswa_id) === String(s.id)) || {};
         return {
           siswa_id:      s.id,

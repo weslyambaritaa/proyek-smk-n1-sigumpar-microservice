@@ -4,6 +4,7 @@ import Button from "../../../components/ui/Button";
 import PengumumanDialog from "./dialog/PengumumanDialog";
 import PengumumanDetailDialog from "./dialog/PengumumanDetailDialog";
 import toast from "react-hot-toast";
+import { extractArray } from "../../../utils/apiUtils";
 
 const PengumumanPage = () => {
   const [pengumumanData, setPengumumanData] = useState([]);
@@ -20,10 +21,10 @@ const PengumumanPage = () => {
   const fetchPengumuman = async () => {
     try {
       const res = await academicApi.getAllPengumuman();
-      const data = Array.isArray(res.data) ? res.data : res.data.data || [];
-      setPengumumanData(data);
+      setPengumumanData(extractArray(res));
     } catch (err) {
       toast.error("Gagal memuat data pengumuman");
+      setPengumumanData([]);
     }
   };
 
@@ -90,37 +91,44 @@ const PengumumanPage = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {pengumumanData.map((p) => (
-              <tr key={p.id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 font-medium">{p.judul}</td>
-                <td className="px-6 py-4 text-sm text-gray-500 truncate max-w-xs">{p.isi}</td>
-                <td className="px-6 py-4 text-center relative" ref={openMenuId === p.id ? menuRef : null}>
-                  <button onClick={() => setOpenMenuId(openMenuId === p.id ? null : p.id)} className="p-2 hover:bg-gray-100 rounded-full">⋮</button>
-                  {openMenuId === p.id && (
-                    <div className="absolute right-6 mt-1 w-36 bg-white border rounded-lg shadow-xl z-10 py-1">
-                      {/* OPSI DETAIL WARNA HIJAU */}
-                      <button onClick={() => handleDetail(p)} className="w-full text-left px-4 py-2 text-sm text-green-600 hover:bg-green-50 font-medium">
-                        Detail
-                      </button>
-                      <button onClick={() => handleEdit(p)} className="w-full text-left px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 border-t">
-                        Edit
-                      </button>
-                      <button onClick={() => handleDeleteClick(p)} className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 border-t">
-                        Hapus
-                      </button>
-                    </div>
-                  )}
+            {pengumumanData.length > 0 ? (
+              pengumumanData.map((p) => (
+                <tr key={p.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 font-medium">{p.judul}</td>
+                  <td className="px-6 py-4 text-sm text-gray-500 truncate max-w-xs">{p.isi}</td>
+                  <td className="px-6 py-4 text-center relative" ref={openMenuId === p.id ? menuRef : null}>
+                    <button onClick={() => setOpenMenuId(openMenuId === p.id ? null : p.id)} className="p-2 hover:bg-gray-100 rounded-full">⋮</button>
+                    {openMenuId === p.id && (
+                      <div className="absolute right-6 mt-1 w-36 bg-white border rounded-lg shadow-xl z-10 py-1">
+                        <button onClick={() => handleDetail(p)} className="w-full text-left px-4 py-2 text-sm text-green-600 hover:bg-green-50 font-medium">
+                          Detail
+                        </button>
+                        <button onClick={() => handleEdit(p)} className="w-full text-left px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 border-t">
+                          Edit
+                        </button>
+                        <button onClick={() => handleDeleteClick(p)} className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 border-t">
+                          Hapus
+                        </button>
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan="3" className="px-6 py-10 text-center text-gray-400">
+                  Belum ada data pengumuman.
                 </td>
               </tr>
-            ))}
+            )}
           </tbody>
         </table>
       </div>
 
       <PengumumanDialog isOpen={isDialogOpen} onClose={() => setIsDialogOpen(false)} onSuccess={fetchPengumuman} initialData={selectedPengumuman} />
       <PengumumanDetailDialog isOpen={isDetailOpen} onClose={() => setIsDetailOpen(false)} data={pengumumanDetail} />
-      
-      {/* Modal Hapus Samping tetap sama dengan sebelumnya */}
+
+      {/* Modal Hapus Samping */}
       {isDeleteDialogOpen && (
         <div className="fixed inset-0 z-50 flex justify-end bg-black/50 backdrop-blur-sm">
           <div className="bg-white w-full max-w-md h-full shadow-2xl flex flex-col animate-slide-right">
