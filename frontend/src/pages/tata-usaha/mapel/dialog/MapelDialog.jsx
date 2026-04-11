@@ -9,22 +9,27 @@ const MapelDialog = ({ isOpen, onClose, onSuccess, initialData }) => {
     kelas_id: "",
     guru_mapel_id: "",
   });
-  
+
   const [kelasList, setKelasList] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [suggestions, setSuggestions] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
 
-  // Ambil daftar kelas untuk dropdown
   useEffect(() => {
     if (isOpen) {
-      academicApi.getAllKelas().then((res) => {
-        setKelasList(Array.isArray(res.data) ? res.data : res.data.data || []);
-      }).catch(err => console.error("Gagal load kelas:", err));
+      academicApi
+        .getAllKelas()
+        .then((res) => {
+          const data = Array.isArray(res.data) ? res.data : res.data?.data || [];
+          setKelasList(data);
+        })
+        .catch((err) => {
+          console.error("Gagal load kelas:", err);
+          setKelasList([]);
+        });
     }
   }, [isOpen]);
 
-  // Set initial data
   useEffect(() => {
     if (initialData) {
       setFormData({
@@ -34,21 +39,27 @@ const MapelDialog = ({ isOpen, onClose, onSuccess, initialData }) => {
       });
       setSearchQuery(initialData.nama_guru || "");
     } else {
-      setFormData({ nama_mapel: "", kelas_id: "", guru_mapel_id: "" });
+      setFormData({
+        nama_mapel: "",
+        kelas_id: "",
+        guru_mapel_id: "",
+      });
       setSearchQuery("");
+      setSuggestions([]);
     }
   }, [initialData, isOpen]);
 
-  // Auto-suggest Guru Mapel
   useEffect(() => {
     const delayDebounceFn = setTimeout(async () => {
       if (searchQuery.length > 0 && !formData.guru_mapel_id) {
         setIsSearching(true);
         try {
           const res = await academicApi.searchGuru(searchQuery);
-          setSuggestions(res.data);
+          const data = Array.isArray(res.data) ? res.data : res.data?.data || [];
+          setSuggestions(data);
         } catch (err) {
           console.error(err);
+          setSuggestions([]);
         } finally {
           setIsSearching(false);
         }
@@ -56,11 +67,13 @@ const MapelDialog = ({ isOpen, onClose, onSuccess, initialData }) => {
         setSuggestions([]);
       }
     }, 300);
+
     return () => clearTimeout(delayDebounceFn);
   }, [searchQuery, formData.guru_mapel_id]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     const savePromise = initialData?.id
       ? academicApi.updateMapel(initialData.id, formData)
       : academicApi.createMapel(formData);
@@ -79,6 +92,9 @@ const MapelDialog = ({ isOpen, onClose, onSuccess, initialData }) => {
   };
 
   if (!isOpen) return null;
+
+  const safeKelasList = Array.isArray(kelasList) ? kelasList : [];
+  const safeSuggestions = Array.isArray(suggestions) ? suggestions : [];
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-black/50 backdrop-blur-sm">
@@ -103,7 +119,9 @@ const MapelDialog = ({ isOpen, onClose, onSuccess, initialData }) => {
                 required
                 className="w-full px-3 py-2 border rounded-lg focus:ring focus:ring-blue-200"
                 value={formData.nama_mapel}
-                onChange={(e) => setFormData({ ...formData, nama_mapel: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, nama_mapel: e.target.value })
+                }
                 placeholder="Contoh: Matematika Lanjut"
               />
             </div>
@@ -116,11 +134,17 @@ const MapelDialog = ({ isOpen, onClose, onSuccess, initialData }) => {
                 required
                 className="w-full px-3 py-2 border rounded-lg focus:ring focus:ring-blue-200"
                 value={formData.kelas_id}
-                onChange={(e) => setFormData({ ...formData, kelas_id: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, kelas_id: e.target.value })
+                }
               >
-                <option value="" disabled>Pilih Kelas</option>
-                {kelasList.map(k => (
-                    <option key={k.id} value={k.id}>{k.nama_kelas} - Tingkat {k.tingkat}</option>
+                <option value="" disabled>
+                  Pilih Kelas
+                </option>
+                {safeKelasList.map((k) => (
+                  <option key={k.id} value={k.id}>
+                    {k.nama_kelas} - Tingkat {k.tingkat}
+                  </option>
                 ))}
               </select>
             </div>
@@ -139,21 +163,23 @@ const MapelDialog = ({ isOpen, onClose, onSuccess, initialData }) => {
                 }}
                 placeholder="Ketik nama guru..."
               />
-              {isSearching && <p className="text-xs text-gray-500 mt-1">Mencari...</p>}
+              {isSearching && (
+                <p className="text-xs text-gray-500 mt-1">Mencari...</p>
+              )}
 
-              {suggestions.length > 0 && (
+              {safeSuggestions.length > 0 && (
                 <ul className="absolute z-10 w-full bg-white border mt-1 rounded-md shadow-lg max-h-40 overflow-auto">
-                  {suggestions.map((user) => (
+                  {safeSuggestions.map((user) => (
                     <li
                       key={user.id}
                       className="px-4 py-2 hover:bg-blue-50 cursor-pointer text-sm"
                       onClick={() => {
                         setFormData({ ...formData, guru_mapel_id: user.id });
-                        setSearchQuery(user.nama_lengkap || user.username);
+                        setSearchQuery(user.nama_lengkap || user.username || "");
                         setSuggestions([]);
                       }}
                     >
-                      {user.nama_lengkap || user.username}
+                      {user.nama_lengkap || user.username || "-"}
                     </li>
                   ))}
                 </ul>
@@ -163,7 +189,9 @@ const MapelDialog = ({ isOpen, onClose, onSuccess, initialData }) => {
         </div>
 
         <div className="px-6 py-4 border-t bg-gray-50 flex justify-end gap-3">
-          <Button variant="secondary" onClick={onClose} type="button">Batal</Button>
+          <Button variant="secondary" onClick={onClose} type="button">
+            Batal
+          </Button>
           <button
             type="submit"
             form="mapel-form"

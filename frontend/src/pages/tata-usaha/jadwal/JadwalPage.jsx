@@ -24,7 +24,7 @@ const JadwalPage = () => {
       const resJadwal = await academicApi.getAllJadwal();
       let users = [];
       try {
-        const resUsers = await axiosInstance.get("/api/auth");
+        const resUsers = await axiosInstance.get("/api/auth/");
         users = Array.isArray(resUsers.data) ? resUsers.data : (resUsers.data?.data || []);
       } catch { /* users gagal, data utama tetap tampil */ }
       const rawJadwal = Array.isArray(resJadwal.data) ? resJadwal.data : resJadwal.data.data || [];

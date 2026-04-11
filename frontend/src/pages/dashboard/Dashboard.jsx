@@ -38,10 +38,15 @@ const Dashboard = () => {
 
   // Fetch pengumuman
   useEffect(() => {
-    academicApi.getAllPengumuman()
-      .then((r) => setPengumumanList(r.data || []))
-      .catch(() => {});
-  }, []);
+  academicApi.getAllPengumuman()
+    .then((r) => {
+      const data = Array.isArray(r.data) ? r.data : r.data?.data || [];
+      setPengumumanList(data);
+    })
+    .catch(() => {
+      setPengumumanList([]);
+    });
+}, []);
 
   // Fetch statistik (kepala sekolah only)
   useEffect(() => {
@@ -73,10 +78,12 @@ const Dashboard = () => {
   const initial   = userName.charAt(0).toUpperCase();
 
   // Pagination
-  const indexOfLast  = currentPage * itemsPerPage;
-  const indexOfFirst = indexOfLast - itemsPerPage;
-  const currentItems = pengumumanList.slice(indexOfFirst, indexOfLast);
-  const totalPages   = Math.ceil(pengumumanList.length / itemsPerPage);
+ const safePengumumanList = Array.isArray(pengumumanList) ? pengumumanList : [];
+
+const indexOfLast  = currentPage * itemsPerPage;
+const indexOfFirst = indexOfLast - itemsPerPage;
+const currentItems = safePengumumanList.slice(indexOfFirst, indexOfLast);
+const totalPages   = Math.ceil(safePengumumanList.length / itemsPerPage);
 
   return (
     <div className="p-6 max-w-6xl mx-auto">

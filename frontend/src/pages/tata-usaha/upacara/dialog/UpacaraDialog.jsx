@@ -15,7 +15,7 @@ const UpacaraDialog = ({ isOpen, onClose, onSuccess, initialData }) => {
 
   useEffect(() => {
     if (initialData) {
-      const date = new Date(initialData.tanggal).toISOString().split('T')[0];
+      const date = new Date(initialData.tanggal).toISOString().split("T")[0];
       setFormData({
         tanggal: date,
         petugas: initialData.petugas || "",
@@ -24,19 +24,21 @@ const UpacaraDialog = ({ isOpen, onClose, onSuccess, initialData }) => {
     } else {
       setFormData({ tanggal: "", petugas: "" });
       setSearchQuery("");
+      setSuggestions([]);
     }
   }, [initialData, isOpen]);
 
-  // Logika Auto-Suggest API (Sama persis seperti Jadwal & Piket)
   useEffect(() => {
     const delayDebounceFn = setTimeout(async () => {
       if (searchQuery.length > 0 && !formData.petugas) {
         setIsSearching(true);
         try {
           const res = await academicApi.searchGuru(searchQuery);
-          setSuggestions(res.data);
+          const data = Array.isArray(res.data) ? res.data : res.data?.data || [];
+          setSuggestions(data);
         } catch (err) {
           console.error(err);
+          setSuggestions([]);
         } finally {
           setIsSearching(false);
         }
@@ -44,16 +46,16 @@ const UpacaraDialog = ({ isOpen, onClose, onSuccess, initialData }) => {
         setSuggestions([]);
       }
     }, 300);
+
     return () => clearTimeout(delayDebounceFn);
   }, [searchQuery, formData.petugas]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    // Jika user mengetik manual (tidak klik dropdown), simpan teks yang diketik
+
     const dataToSave = {
       ...formData,
-      petugas: formData.petugas || searchQuery 
+      petugas: formData.petugas || searchQuery,
     };
 
     const savePromise = initialData?.id
@@ -74,6 +76,8 @@ const UpacaraDialog = ({ isOpen, onClose, onSuccess, initialData }) => {
   };
 
   if (!isOpen) return null;
+
+  const safeSuggestions = Array.isArray(suggestions) ? suggestions : [];
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-black/50 backdrop-blur-sm">
@@ -98,7 +102,9 @@ const UpacaraDialog = ({ isOpen, onClose, onSuccess, initialData }) => {
                 required
                 className="w-full px-3 py-2 border rounded-lg focus:ring focus:ring-blue-200"
                 value={formData.tanggal}
-                onChange={(e) => setFormData({ ...formData, tanggal: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, tanggal: e.target.value })
+                }
               />
             </div>
 
@@ -118,33 +124,36 @@ const UpacaraDialog = ({ isOpen, onClose, onSuccess, initialData }) => {
                 placeholder="Ketik nama guru atau petugas..."
               />
 
-              {isSearching && <p className="text-xs text-gray-500 mt-1">Mencari...</p>}
+              {isSearching && (
+                <p className="text-xs text-gray-500 mt-1">Mencari...</p>
+              )}
 
-              {suggestions.length > 0 && (
+              {safeSuggestions.length > 0 && (
                 <ul className="absolute z-10 w-full bg-white border mt-1 rounded-md shadow-lg max-h-40 overflow-auto">
-                  {suggestions.map((u) => (
+                  {safeSuggestions.map((u) => (
                     <li
                       key={u.id}
                       className="px-4 py-2 hover:bg-blue-50 cursor-pointer text-sm"
                       onClick={() => {
-                        const nama = u.nama_lengkap || u.username;
+                        const nama = u.nama_lengkap || u.username || "";
                         setFormData({ ...formData, petugas: nama });
                         setSearchQuery(nama);
                         setSuggestions([]);
                       }}
                     >
-                      {u.nama_lengkap || u.username}
+                      {u.nama_lengkap || u.username || "-"}
                     </li>
                   ))}
                 </ul>
               )}
             </div>
-            
           </form>
         </div>
 
         <div className="px-6 py-4 border-t bg-gray-50 flex justify-end gap-3">
-          <Button variant="secondary" onClick={onClose} type="button">Batal</Button>
+          <Button variant="secondary" onClick={onClose} type="button">
+            Batal
+          </Button>
           <button
             type="submit"
             form="upacara-form"

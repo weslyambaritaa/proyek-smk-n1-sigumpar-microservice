@@ -24,7 +24,7 @@ const MapelPage = () => {
       const resMapel = await academicApi.getAllMapel();
       let users = [];
       try {
-        const resUsers = await axiosInstance.get("/api/auth");
+        const resUsers = await axiosInstance.get("/api/auth/");
         users = Array.isArray(resUsers.data) ? resUsers.data : (resUsers.data?.data || []);
       } catch { /* users gagal, data utama tetap tampil */ }
       const rawMapel = Array.isArray(resMapel.data) ? resMapel.data : resMapel.data.data || [];
