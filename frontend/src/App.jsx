@@ -38,8 +38,8 @@ import SilabusKegiatanPage from "./pages/pramuka/SilabusKegiatanPage";
 import LaporanKegiatanPage from "./pages/pramuka/LaporanKegiatanPage";
 
 // --- Vokasi ---
-import LokasiPKLPage from "./pages/vokasi/LokasiPklPage";
-import ProgresPKLPage from "./pages/vokasi/ProgresPklPage";
+import LokasiPKLPage from "./pages/vokasi/LokasiPKLPage";
+import ProgresPKLPage from "./pages/vokasi/ProgresPKLPage";
 import NilaiPKLPage from "./pages/vokasi/NilaiPKLPage";
 
 // --- Kepala Sekolah ---
