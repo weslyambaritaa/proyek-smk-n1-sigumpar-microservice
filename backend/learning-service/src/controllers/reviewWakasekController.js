@@ -1,65 +1,94 @@
-const pool = require("../config/db");
+const { Pool } = require("pg")
 
-// 🪄 Fungsi untuk memastikan tabel ada
-const ensureReviewTableExists = async () => {
+const pool = new Pool({
+  user: process.env.DB_USER,
+  host: "localhost",
+  database: process.env.DB_NAME,
+  password: process.env.DB_PASSWORD,
+  port: 5432
+})
+
+/*
+GET
+Melihat semua review wakasek
+*/
+const getAllReviewWakasek = async (req, res) => {
   try {
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS review_wakasek (
-        id SERIAL PRIMARY KEY, 
-        perangkat_id INTEGER, 
-        komentar TEXT
-      );
-    `);
-  } catch (err) {
-    console.error("Gagal sinkronisasi tabel review:", err.message);
+
+    const result = await pool.query(`
+      SELECT rw.id,
+             rw.perangkat_id,
+             pp.nama_perangkat,
+             rw.komentar
+      FROM review_wakasek rw
+      LEFT JOIN perangkat_pembelajaran pp
+      ON rw.perangkat_id = pp.id
+      ORDER BY rw.id DESC
+    `)
+
+    res.json({
+      success: true,
+      data: result.rows
+    })
+
+  } catch (error) {
+
+    console.error(error)
+
+    res.status(500).json({
+      success: false,
+      message: "Terjadi kesalahan server"
+    })
+
   }
-};
+}
 
+
+/*
+POST
+Menambahkan review wakasek
+*/
 const createReviewWakasek = async (req, res) => {
-  await ensureReviewTableExists();
-  try {
-    const { id_perangkatPembelajaran, komentarSilabus, komentarRPP, komentarModulAjar } = req.body;
 
-    // 🛡️ VALIDASI: Cek apakah ID adalah angka
-    const perangkatId = parseInt(id_perangkatPembelajaran);
-    if (isNaN(perangkatId)) {
-      return res.status(400).json({ 
-        success: false, 
-        message: "Gagal: ID Perangkat harus berupa ANGKA (Contoh: 1). Jangan masukkan huruf!" 
-      });
+  try {
+
+    const { perangkat_id, komentar } = req.body
+
+    if (!perangkat_id || !komentar) {
+      return res.status(400).json({
+        success: false,
+        message: "perangkat_id dan komentar wajib diisi"
+      })
     }
 
-    // Membungkus 3 input ke dalam 1 kolom text JSON (Sesuai skema lama)
-    const komentarJSON = JSON.stringify({
-      komentarSilabus: komentarSilabus || "",
-      komentarRPP: komentarRPP || "",
-      komentarModulAjar: komentarModulAjar || ""
-    });
-
     const result = await pool.query(
-      `INSERT INTO review_wakasek (perangkat_id, komentar) VALUES ($1, $2) RETURNING *`,
-      [perangkatId, komentarJSON]
-    );
+      `INSERT INTO review_wakasek (perangkat_id, komentar)
+       VALUES ($1,$2)
+       RETURNING *`,
+      [perangkat_id, komentar]
+    )
 
-    res.status(201).json({ 
-      success: true, 
-      message: "Berhasil mengirim review/instruksi!",
-      data: result.rows[0] 
-    });
+    res.status(201).json({
+      success: true,
+      message: "Review Wakasek berhasil ditambahkan",
+      data: result.rows[0]
+    })
 
-  } catch (err) {
-    res.status(500).json({ success: false, message: "Kesalahan Database: " + err.message });
+  } catch (error) {
+
+    console.error(error)
+
+    res.status(500).json({
+      success: false,
+      message: "Terjadi kesalahan server"
+    })
+
   }
-};
 
-const getAllReviewWakasek = async (req, res) => {
-  await ensureReviewTableExists();
-  try {
-    const result = await pool.query(`SELECT * FROM review_wakasek ORDER BY id DESC`);
-    res.json({ success: true, data: result.rows });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-};
+}
 
-module.exports = { createReviewWakasek, getAllReviewWakasek };
+
+module.exports = {
+  getAllReviewWakasek,
+  createReviewWakasek
+}
