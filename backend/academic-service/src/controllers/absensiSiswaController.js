@@ -1,76 +1,73 @@
+const { Op } = require('sequelize');
 const { AbsensiSiswa, Siswa, MataPelajaran, Kelas } = require('../models');
 const { createError } = require('../middleware/errorHandler');
 const asyncHandler = require('../utils/asyncHandler');
-const sequelize = require('../config/db');
 
-const VALID_STATUSES = ['hadir', 'sakit', 'izin', 'alpa', 'terlambat'];
-const isValidDate = (d) => /^\d{4}-\d{2}-\d{2}$/.test(d) && !isNaN(new Date(d).getTime());
+exports.getDataAbsensiSiswa = asyncHandler(async (req, res) => {
+  const { tanggal, kelas_id, status, siswa_id, mapel_id } = req.query;
 
-exports.createAbsensiSiswa = asyncHandler(async (req, res) => {
-  const { siswa_id, tanggal, status, keterangan, mapel_id = null } = req.body;
-  if (!siswa_id || !tanggal || !status) throw createError(400, 'Field siswa_id, tanggal, dan status wajib diisi');
-  if (!isValidDate(tanggal)) throw createError(400, 'Format tanggal harus YYYY-MM-DD');
-  if (!VALID_STATUSES.includes(status)) throw createError(400, `Status tidak valid. Pilihan: ${VALID_STATUSES.join(', ')}`);
-
-  // Upsert — gunakan raw query karena Sequelize belum support ON CONFLICT dengan COALESCE
-  const [result] = await sequelize.query(
-    `INSERT INTO absensi_siswa (siswa_id, tanggal, status, keterangan, mapel_id)
-     VALUES (:siswa_id, :tanggal, :status, :keterangan, :mapel_id)
-     ON CONFLICT (siswa_id, tanggal, COALESCE(mapel_id, 0))
-     DO UPDATE SET status = EXCLUDED.status, keterangan = EXCLUDED.keterangan, updated_at = NOW()
-     RETURNING *`,
-    { replacements: { siswa_id, tanggal, status, keterangan: keterangan || null, mapel_id }, type: 'SELECT' }
-  );
-  res.status(201).json({ success: true, data: result[0] });
-});
-
-exports.getAllAbsensiSiswa = asyncHandler(async (req, res) => {
-  const { siswa_id, tanggal, status, mapel_id, kelas_id } = req.query;
   const where = {};
+  if (tanggal) where.tanggal = tanggal;
+  if (status) where.status = status;
   if (siswa_id) where.siswa_id = siswa_id;
-  if (tanggal)  where.tanggal  = tanggal;
-  if (status)   where.status   = status;
   if (mapel_id) where.mapel_id = mapel_id;
 
-  const siswaWhere = {};
-  if (kelas_id) siswaWhere.kelas_id = kelas_id;
+  const siswaInclude = {
+    model: Siswa,
+    as: 'siswa',
+    attributes: ['id', 'nama', 'nis', 'kelas_id'],
+    include: [{ model: Kelas, as: 'kelas', attributes: ['id', 'nama_kelas'] }],
+  };
+
+  if (kelas_id) {
+    siswaInclude.where = { kelas_id };
+  }
 
   const data = await AbsensiSiswa.findAll({
     where,
-    include: [
-      {
-        model: Siswa, as: 'siswa', attributes: ['nisn', 'nama_lengkap', 'kelas_id'],
-        where: Object.keys(siswaWhere).length ? siswaWhere : undefined,
-        include: [{ model: Kelas, as: 'kelas', attributes: ['nama_kelas'] }],
-      },
-      { model: MataPelajaran, as: 'mapel', attributes: ['nama_mapel'] },
-    ],
-    order: [['tanggal', 'DESC']],
+    include: [siswaInclude, { model: MataPelajaran, as: 'mapel', attributes: ['id', 'nama_mapel'] }],
+    order: [['tanggal', 'DESC'], ['created_at', 'DESC']],
   });
-  res.json({ success: true, count: data.length, data });
+
+  res.json({ success: true, data });
 });
 
-exports.getAbsensiSiswaById = asyncHandler(async (req, res) => {
-  const absensi = await AbsensiSiswa.findByPk(req.params.id);
-  if (!absensi) throw createError(404, 'Absensi tidak ditemukan');
-  res.json({ success: true, data: absensi });
-});
+exports.simpanAbsensiSiswa = asyncHandler(async (req, res) => {
+  const { attendance, date, classId, subjectId } = req.body;
 
-exports.updateAbsensiSiswa = asyncHandler(async (req, res) => {
-  const { status, keterangan } = req.body;
-  if (!status) throw createError(400, 'Field status wajib diisi');
-  if (!VALID_STATUSES.includes(status)) throw createError(400, `Status tidak valid. Pilihan: ${VALID_STATUSES.join(', ')}`);
+  if (!date) throw createError(400, 'Field date wajib diisi');
+  if (!subjectId) throw createError(400, 'Field subjectId wajib diisi');
+  if (!Array.isArray(attendance) || attendance.length === 0) {
+    throw createError(400, 'Field attendance wajib diisi dengan minimal satu record');
+  }
 
-  const absensi = await AbsensiSiswa.findByPk(req.params.id);
-  if (!absensi) throw createError(404, 'Absensi tidak ditemukan');
+  const mapel_id = Number(subjectId) || null;
+  const tanggal = date;
 
-  await absensi.update({ status, keterangan: keterangan || null, updated_at: new Date() });
-  res.json({ success: true, data: absensi });
-});
+  const rows = attendance.map((item) => {
+    if (!item.id_siswa) throw createError(400, 'Setiap record absensi harus memiliki id_siswa');
+    if (!item.status) throw createError(400, `Status absensi untuk siswa ${item.id_siswa} wajib diisi`);
 
-exports.deleteAbsensiSiswa = asyncHandler(async (req, res) => {
-  const absensi = await AbsensiSiswa.findByPk(req.params.id);
-  if (!absensi) throw createError(404, 'Absensi tidak ditemukan');
-  await absensi.destroy();
-  res.json({ success: true, message: 'Absensi berhasil dihapus' });
+    return {
+      siswa_id: Number(item.id_siswa),
+      tanggal,
+      mapel_id,
+      status: item.status,
+      keterangan: item.keterangan || null,
+    };
+  });
+
+  const siswaIds = rows.map((row) => row.siswa_id);
+
+  await AbsensiSiswa.destroy({
+    where: {
+      siswa_id: { [Op.in]: siswaIds },
+      tanggal,
+      mapel_id,
+    },
+  });
+
+  const created = await AbsensiSiswa.bulkCreate(rows);
+
+  res.status(201).json({ success: true, data: created });
 });

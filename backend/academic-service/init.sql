@@ -198,6 +198,41 @@ CREATE TABLE IF NOT EXISTS konfirmasi_rekap_nilai (
   dikonfirmasi_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- ─── CUTI GURU ────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS cuti_guru (
+  id              SERIAL PRIMARY KEY,
+  guru_id         INTEGER NOT NULL REFERENCES guru(id) ON DELETE CASCADE,
+  jenis_cuti      VARCHAR(50) NOT NULL,
+  tanggal_mulai   DATE NOT NULL,
+  tanggal_selesai DATE NOT NULL,
+  alasan          TEXT,
+  status          VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending','approved','rejected')),
+  approved_by     UUID,
+  approved_at     TIMESTAMP,
+  created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ─── ANGGARAN ──────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS anggaran (
+  id              SERIAL PRIMARY KEY,
+  tahun           INTEGER NOT NULL,
+  kategori        VARCHAR(100) NOT NULL,
+  sub_kategori    VARCHAR(100),
+  jumlah_anggaran NUMERIC(15,2) NOT NULL,
+  jumlah_terpakai NUMERIC(15,2) DEFAULT 0,
+  deskripsi       TEXT,
+  created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Sample data for anggaran
+INSERT INTO anggaran (tahun, kategori, sub_kategori, jumlah_anggaran, deskripsi) VALUES
+(2026, 'Sarana Prasarana', 'Pemeliharaan Gedung', 50000000, 'Anggaran untuk perbaikan dan pemeliharaan gedung sekolah'),
+(2026, 'Sarana Prasarana', 'Pembelian Alat Tulis', 10000000, 'ATK untuk kegiatan belajar mengajar'),
+(2026, 'SDM', 'Pelatihan Guru', 25000000, 'Pelatihan dan pengembangan kompetensi guru'),
+(2026, 'Kegiatan', 'Kegiatan Ekstrakurikuler', 15000000, 'Dana untuk kegiatan ekstrakurikuler siswa');
+
 -- ─── GRANT PERMISSIONS ────────────────────────────────────────────────────
 GRANT ALL PRIVILEGES ON ALL TABLES    IN SCHEMA public TO academic_user;
 GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO academic_user;

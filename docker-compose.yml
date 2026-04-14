@@ -35,6 +35,8 @@ services:
       KC_DB_PASSWORD: keycloakpassword
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_CORS_ENABLED: true
+      KC_CORS_ALLOWED_ORIGINS: http://localhost:5173,http://localhost:3000
     ports:
       - "8080:8080"
     depends_on:
@@ -56,6 +58,13 @@ services:
       - DB_USER=auth_user
       - DB_HOST=localhost
       - DATABASE_URL=postgres://auth_user:password@localhost:5432/auth_db
+      # Service URLs untuk inter-service communication
+      - ACADEMIC_SERVICE_URL=http://academic-service:3003
+      - AUTH_SERVICE_URL=http://auth-service:3005
+      - LEARNING_SERVICE_URL=http://learning-service:3006
+      - STUDENT_SERVICE_URL=http://student-service:3004
+      - VOCATIONAL_SERVICE_URL=http://vocational-service:3007
+      - ASSET_SERVICE_URL=http://asset-service:3008
     depends_on: [keycloak]
 
   # ── ACADEMIC SERVICE ─────────────────────────────────────────────────────
@@ -70,6 +79,13 @@ services:
       - DB_HOST=localhost
       - DB_PASSWORD=password
       - DATABASE_URL=postgres://academic_user:password@localhost:5432/academic_db
+      # Service URLs untuk inter-service communication
+      - ACADEMIC_SERVICE_URL=http://academic-service:3003
+      - AUTH_SERVICE_URL=http://auth-service:3005
+      - LEARNING_SERVICE_URL=http://learning-service:3006
+      - STUDENT_SERVICE_URL=http://student-service:3004
+      - VOCATIONAL_SERVICE_URL=http://vocational-service:3007
+      - ASSET_SERVICE_URL=http://asset-service:3008
     depends_on: [keycloak]
 
   # ── ASSET SERVICE ────────────────────────────────────────────────────────
@@ -84,6 +100,13 @@ services:
       - DB_HOST=localhost
       - DB_PASSWORD=password
       - DATABASE_URL=postgres://asset_user:password@localhost:5432/asset_db
+      # Service URLs untuk inter-service communication
+      - ACADEMIC_SERVICE_URL=http://academic-service:3003
+      - AUTH_SERVICE_URL=http://auth-service:3005
+      - LEARNING_SERVICE_URL=http://learning-service:3006
+      - STUDENT_SERVICE_URL=http://student-service:3004
+      - VOCATIONAL_SERVICE_URL=http://vocational-service:3007
+      - ASSET_SERVICE_URL=http://asset-service:3008
     depends_on: [keycloak]
 
   # ── LEARNING SERVICE ─────────────────────────────────────────────────────
@@ -98,6 +121,13 @@ services:
       - DB_HOST=localhost
       - DB_PASSWORD=password
       - DATABASE_URL=postgres://learning_user:password@localhost:5432/learning_db
+      # Service URLs untuk inter-service communication
+      - ACADEMIC_SERVICE_URL=http://academic-service:3003
+      - AUTH_SERVICE_URL=http://auth-service:3005
+      - LEARNING_SERVICE_URL=http://learning-service:3006
+      - STUDENT_SERVICE_URL=http://student-service:3004
+      - VOCATIONAL_SERVICE_URL=http://vocational-service:3007
+      - ASSET_SERVICE_URL=http://asset-service:3008
     depends_on: [keycloak]
 
   # ── STUDENT SERVICE ──────────────────────────────────────────────────────
@@ -112,6 +142,13 @@ services:
       - DB_HOST=localhost
       - DB_PASSWORD=password
       - DATABASE_URL=postgres://student_user:password@localhost:5432/student_db
+      # Service URLs untuk inter-service communication
+      - ACADEMIC_SERVICE_URL=http://academic-service:3003
+      - AUTH_SERVICE_URL=http://auth-service:3005
+      - LEARNING_SERVICE_URL=http://learning-service:3006
+      - STUDENT_SERVICE_URL=http://student-service:3004
+      - VOCATIONAL_SERVICE_URL=http://vocational-service:3007
+      - ASSET_SERVICE_URL=http://asset-service:3008
     depends_on: [keycloak]
 
   # ── VOCATIONAL SERVICE ───────────────────────────────────────────────────
@@ -126,6 +163,13 @@ services:
       - DB_HOST=localhost
       - DB_PASSWORD=password
       - DATABASE_URL=postgres://vocational_user:password@localhost:5432/vocational_db
+      # Service URLs untuk inter-service communication
+      - ACADEMIC_SERVICE_URL=http://academic-service:3003
+      - AUTH_SERVICE_URL=http://auth-service:3005
+      - LEARNING_SERVICE_URL=http://learning-service:3006
+      - STUDENT_SERVICE_URL=http://student-service:3004
+      - VOCATIONAL_SERVICE_URL=http://vocational-service:3007
+      - ASSET_SERVICE_URL=http://asset-service:3008
     depends_on: [keycloak]
 
   # ── API GATEWAY (Nginx) ──────────────────────────────────────────────────

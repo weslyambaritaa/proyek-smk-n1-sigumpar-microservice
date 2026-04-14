@@ -20,8 +20,8 @@ export const academicApi = {
   deleteGuru: (id) => axiosInstance.delete(`/api/academic/guru/${id}`),
   searchGuru: (q) => axiosInstance.get('/api/academic/guru/search', { params: { q } }),
 
-  // searchWaliKelas — mencari guru yang bisa jadi wali kelas
-  searchWaliKelas: (q) => axiosInstance.get('/api/academic/guru/search', { params: { q } }),
+  // searchWaliKelas — mencari user dengan role wali-kelas
+  searchWaliKelas: (q) => axiosInstance.get('/api/auth/users/search', { params: { q } }),
 
   // ── PENGUMUMAN ─────────────────────────────────────────────────────────
   getAllPengumuman: () => axiosInstance.get('/api/academic/pengumuman'),
@@ -96,7 +96,10 @@ export const academicApi = {
   createAbsensiSiswa: (data) => axiosInstance.post('/api/academic/absensi-siswa', data),
 
   // ── KEPALA SEKOLAH ─────────────────────────────────────────────────────
-  getStatistikUmum: () => axiosInstance.get('/api/academic/kepsek/statistik'),
+  getStatistikUmum: () => axiosInstance.get('/api/learning/kepsek/statistik'),
   getRekapAbsensiSiswa: (params) => axiosInstance.get('/api/academic/kepsek/rekap-absensi-siswa', { params }),
+
+  // ── DASHBOARD ──────────────────────────────────────────────────────────
+  getDashboard: () => axiosInstance.get('/api/academic/dashboard'),
   getRekapNilai: (params) => axiosInstance.get('/api/academic/kepsek/rekap-nilai', { params }),
 };

@@ -31,7 +31,8 @@ export const learningApi = {
       .get(`/api/learning/perangkat/${id}/download`, { responseType: "blob" })
       .then((res) => {
         // Gunakan Content-Type dari server untuk menjaga format asli file
-        const mimeType = res.headers["content-type"] || "application/octet-stream";
+        const mimeType =
+          res.headers["content-type"] || "application/octet-stream";
         const blob = new Blob([res.data], { type: mimeType });
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement("a");
@@ -49,7 +50,8 @@ export const learningApi = {
       const res = await api.get(`/api/learning/perangkat/${id}/download`, {
         responseType: "blob",
       });
-      const mimeType = res.headers["content-type"] || "application/octet-stream";
+      const mimeType =
+        res.headers["content-type"] || "application/octet-stream";
       const blob = new Blob([res.data], { type: mimeType });
       const url = window.URL.createObjectURL(blob);
       window.open(url, "_blank");
@@ -64,5 +66,19 @@ export const learningApi = {
 
 // ── Kepsek Dashboard ─────────────────────────────────────────────────────
 export const kepsekApi = {
-  getKepsekDashboard: () => api.get("/api/academic/kepsek/statistik"),
+  getKepsekDashboard: () => api.get("/api/learning/kepsek/dashboard"),
+  getEvaluasiGuru: () => api.get("/api/learning/kepsek/evaluasi-guru"),
+  saveEvaluasiGuru: (data) =>
+    api.post("/api/learning/kepsek/evaluasi-guru", data),
+};
+
+// ── Wakil Kepsek Monitoring ───────────────────────────────────────────────
+export const wakilKepsekApi = {
+  getDaftarGuruPerangkat: () => api.get("/api/learning/wakil/perangkat-guru"),
+  getPerangkatByGuru: (guruId) =>
+    api.get(`/api/learning/wakil/perangkat-guru/${guruId}`),
+  createPerangkat: (data) => api.post("/api/learning/wakil/perangkat", data),
+  updatePerangkat: (id, data) =>
+    api.put(`/api/learning/wakil/perangkat/${id}`, data),
+  deletePerangkat: (id) => api.delete(`/api/learning/wakil/perangkat/${id}`),
 };

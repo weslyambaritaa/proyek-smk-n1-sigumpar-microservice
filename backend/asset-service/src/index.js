@@ -17,13 +17,14 @@ app.use(express.json());
 app.get("/health", (req, res) => {
   res.json({
     status: "OK",
-    service: "todos-service",
+    service: "asset-service",
     timestamp: new Date().toISOString(),
   });
 });
 
 // Mount routes
-app.use("/todos", todoRoutes);
+const assetRoutes = require("./routes/assetRoutes");
+app.use("/api/asset", assetRoutes);
 
 // 404 handler
 app.use((req, res) => {
@@ -37,5 +38,5 @@ app.use((req, res) => {
 app.use(errorHandler);
 
 app.listen(PORT, () => {
-    console.log(`Asset Service running on port ${PORT}`);
+  console.log(`Asset Service running on port ${PORT}`);
 });

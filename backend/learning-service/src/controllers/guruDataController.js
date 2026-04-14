@@ -1,7 +1,9 @@
 const { Op } = require("sequelize");
-const { Guru } = require("../models");
-const { createError } = require("../middleware/errorHandler");
-const asyncHandler = require("../utils/asyncHandler");
+const { Guru } = require("../../../academic-service/src/models");
+const {
+  createError,
+} = require("../../../academic-service/src/middleware/errorHandler");
+const asyncHandler = require("../../../academic-service/src/utils/asyncHandler");
 
 exports.getAllGuru = asyncHandler(async (req, res) => {
   const data = await Guru.findAll({ order: [["nama_lengkap", "ASC"]] });

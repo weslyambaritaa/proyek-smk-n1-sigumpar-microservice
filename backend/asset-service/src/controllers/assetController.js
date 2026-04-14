@@ -1,180 +1,208 @@
-const fs = require("fs");
-const path = require("path");
-const { v4: uuidv4 } = require("uuid");
-const { createError } = require("../middleware/errorHandler");
+const pool = require('../config/db');
 
-const DATA_FILE = path.join(__dirname, "../data/todos.json");
-
-// Helper untuk baca dan tulis file JSON
-const readTodos = () => JSON.parse(fs.readFileSync(DATA_FILE, "utf-8"));
-const writeTodos = (todos) =>
-  fs.writeFileSync(DATA_FILE, JSON.stringify(todos, null, 2), "utf-8");
-
-/**
- * GET /todos
- * Mengambil semua todo dengan filter opsional:
- * - ?userId=xxx     => filter milik user tertentu
- * - ?status=pending => filter berdasarkan status
- * - ?priority=high  => filter berdasarkan prioritas
- * - ?search=keyword => cari di title atau description
- */
-const getAllTodos = (req, res, next) => {
+// ─── INFORMASI PENGAJUAN ───────────────────────────────────────────────────
+exports.getInformasiPengajuan = async (req, res) => {
   try {
-    let todos = readTodos();
-    const { userId, status, priority, search } = req.query;
-
-    // Terapkan semua filter secara berantai
-    if (userId) todos = todos.filter((t) => t.userId === userId);
-    if (status) todos = todos.filter((t) => t.status === status);
-    if (priority) todos = todos.filter((t) => t.priority === priority);
-
-    if (search) {
-      const keyword = search.toLowerCase();
-      todos = todos.filter(
-        (t) =>
-          t.title.toLowerCase().includes(keyword) ||
-          t.description?.toLowerCase().includes(keyword)
-      );
-    }
-
-    res.json({ success: true, count: todos.length, data: todos });
+    const result = await pool.query('SELECT * FROM informasi_pengajuan ORDER BY created_at DESC');
+    res.json({ success: true, data: result.rows });
   } catch (err) {
-    next(err);
+    console.error(err);
+    res.status(500).json({ success: false, error: err.message });
   }
 };
 
-/**
- * GET /todos/:id
- * Mengambil satu todo berdasarkan ID.
- */
-const getTodoById = (req, res, next) => {
+exports.createInformasiPengajuan = async (req, res) => {
+  const { judul, deskripsi, pengaju_id } = req.body;
   try {
-    const todos = readTodos();
-    const todo = todos.find((t) => t.id === req.params.id);
-
-    if (!todo) {
-      throw createError(404, `Todo dengan ID '${req.params.id}' tidak ditemukan`);
-    }
-
-    res.json({ success: true, data: todo });
+    const result = await pool.query(
+      'INSERT INTO informasi_pengajuan (judul, deskripsi, pengaju_id) VALUES ($1, $2, $3) RETURNING *',
+      [judul, deskripsi, pengaju_id]
+    );
+    res.status(201).json({ success: true, data: result.rows[0] });
   } catch (err) {
-    next(err);
+    console.error(err);
+    res.status(500).json({ success: false, error: err.message });
   }
 };
 
-/**
- * POST /todos
- * Membuat todo baru.
- *
- * Body yang diharapkan:
- * {
- *   "userId": "string (wajib)",
- *   "title": "string (wajib)",
- *   "description": "string (opsional)",
- *   "priority": "low | medium | high (default: medium)"
- * }
- */
-const createTodo = (req, res, next) => {
+// ─── PEMINJAMAN BARANG ─────────────────────────────────────────────────────
+exports.getPeminjamanBarang = async (req, res) => {
   try {
-    const { userId, title, description = "", priority = "medium" } = req.body;
-
-    // Validasi field wajib
-    if (!userId || !title) {
-      throw createError(400, "Field 'userId' dan 'title' wajib diisi");
-    }
-
-    // Validasi nilai priority
-    const allowedPriorities = ["low", "medium", "high"];
-    if (!allowedPriorities.includes(priority)) {
-      throw createError(400, `Priority harus salah satu dari: ${allowedPriorities.join(", ")}`);
-    }
-
-    const todos = readTodos();
-
-    const newTodo = {
-      id: uuidv4(),
-      userId,
-      title: title.trim(),
-      description: description.trim(),
-      status: "pending",      // Status default selalu 'pending' saat dibuat
-      priority,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    todos.push(newTodo);
-    writeTodos(todos);
-
-    res.status(201).json({ success: true, data: newTodo });
+    const result = await pool.query('SELECT * FROM peminjaman_barang ORDER BY tanggal_pinjam DESC');
+    res.json({ success: true, data: result.rows });
   } catch (err) {
-    next(err);
+    console.error(err);
+    res.status(500).json({ success: false, error: err.message });
   }
 };
 
-/**
- * PUT /todos/:id
- * Mengupdate todo. Mendukung update status workflow:
- * pending => in-progress => done
- */
-const updateTodo = (req, res, next) => {
+exports.createPeminjamanBarang = async (req, res) => {
+  const { barang_id, peminjam_id, tanggal_pinjam, tanggal_kembali, jumlah } = req.body;
   try {
-    const { title, description, status, priority } = req.body;
-    const todos = readTodos();
-
-    const index = todos.findIndex((t) => t.id === req.params.id);
-    if (index === -1) {
-      throw createError(404, `Todo dengan ID '${req.params.id}' tidak ditemukan`);
-    }
-
-    // Validasi status jika dikirim
-    const allowedStatuses = ["pending", "in-progress", "done"];
-    if (status && !allowedStatuses.includes(status)) {
-      throw createError(400, `Status harus salah satu dari: ${allowedStatuses.join(", ")}`);
-    }
-
-    // Update hanya field yang dikirim
-    todos[index] = {
-      ...todos[index],
-      ...(title && { title: title.trim() }),
-      ...(description !== undefined && { description: description.trim() }),
-      ...(status && { status }),
-      ...(priority && { priority }),
-      updatedAt: new Date().toISOString(),
-    };
-
-    writeTodos(todos);
-    res.json({ success: true, data: todos[index] });
+    const result = await pool.query(
+      'INSERT INTO peminjaman_barang (barang_id, peminjam_id, tanggal_pinjam, tanggal_kembali, jumlah) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+      [barang_id, peminjam_id, tanggal_pinjam, tanggal_kembali, jumlah]
+    );
+    res.status(201).json({ success: true, data: result.rows[0] });
   } catch (err) {
-    next(err);
+    console.error(err);
+    res.status(500).json({ success: false, error: err.message });
   }
 };
 
-/**
- * DELETE /todos/:id
- * Menghapus todo berdasarkan ID.
- */
-const deleteTodo = (req, res, next) => {
+// ─── PENGAJUAN ALAT/BARANG ─────────────────────────────────────────────────
+exports.getPengajuanAlatBarang = async (req, res) => {
   try {
-    const todos = readTodos();
-    const index = todos.findIndex((t) => t.id === req.params.id);
-
-    if (index === -1) {
-      throw createError(404, `Todo dengan ID '${req.params.id}' tidak ditemukan`);
-    }
-
-    const deleted = todos.splice(index, 1)[0];
-    writeTodos(todos);
-
-    res.json({ success: true, message: "Todo berhasil dihapus", data: deleted });
+    const result = await pool.query('SELECT * FROM pengajuan_alat_barang ORDER BY tanggal_pengajuan DESC');
+    res.json({ success: true, data: result.rows });
   } catch (err) {
-    next(err);
+    console.error(err);
+    res.status(500).json({ success: false, error: err.message });
   }
 };
 
-module.exports = {
-  getAllTodos,
-  getTodoById,
-  createTodo,
-  updateTodo,
-  deleteTodo,
+exports.createPengajuanAlatBarang = async (req, res) => {
+  const { nama_barang, jumlah, alasan, pengaju_id } = req.body;
+  try {
+    const result = await pool.query(
+      'INSERT INTO pengajuan_alat_barang (nama_barang, jumlah, alasan, pengaju_id) VALUES ($1, $2, $3, $4) RETURNING *',
+      [nama_barang, jumlah, alasan, pengaju_id]
+    );
+    res.status(201).json({ success: true, data: result.rows[0] });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+// ─── RESPON PEMINJAMAN (Approval) ──────────────────────────────────────────
+exports.getResponPeminjaman = async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM respon_peminjaman ORDER BY created_at DESC');
+    res.json({ success: true, data: result.rows });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+exports.createResponPeminjaman = async (req, res) => {
+  const { peminjaman_id, approver_id, status, catatan } = req.body;
+  try {
+    const result = await pool.query(
+      'INSERT INTO respon_peminjaman (peminjaman_id, approver_id, status, catatan) VALUES ($1, $2, $3, $4) RETURNING *',
+      [peminjaman_id, approver_id, status, catatan]
+    );
+    res.status(201).json({ success: true, data: result.rows[0] });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+// ─── RESPON PENGAJUAN BENDAHARA ────────────────────────────────────────────
+exports.getResponPengajuanBendahara = async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM respon_pengajuan_bendahara ORDER BY created_at DESC');
+    res.json({ success: true, data: result.rows });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+exports.createResponPengajuanBendahara = async (req, res) => {
+  const { pengajuan_id, bendahara_id, status, catatan } = req.body;
+  try {
+    const result = await pool.query(
+      'INSERT INTO respon_pengajuan_bendahara (pengajuan_id, bendahara_id, status, catatan) VALUES ($1, $2, $3, $4) RETURNING *',
+      [pengajuan_id, bendahara_id, status, catatan]
+    );
+    res.status(201).json({ success: true, data: result.rows[0] });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+// ─── RESPON PENGAJUAN KEPSEK ───────────────────────────────────────────────
+exports.getResponPengajuanKepsek = async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM respon_pengajuan_kepsek ORDER BY created_at DESC');
+    res.json({ success: true, data: result.rows });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+exports.createResponPengajuanKepsek = async (req, res) => {
+  const { pengajuan_id, kepsek_id, status, catatan } = req.body;
+  try {
+    const result = await pool.query(
+      'INSERT INTO respon_pengajuan_kepsek (pengajuan_id, kepsek_id, status, catatan) VALUES ($1, $2, $3, $4) RETURNING *',
+      [pengajuan_id, kepsek_id, status, catatan]
+    );
+    res.status(201).json({ success: true, data: result.rows[0] });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+// ─── INVENTORY ─────────────────────────────────────────────────────────────
+exports.getInventory = async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM inventory ORDER BY created_at DESC');
+    res.json({ success: true, data: result.rows });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+exports.createInventory = async (req, res) => {
+  const { nama_barang, kategori, jumlah, kondisi, lokasi } = req.body;
+  try {
+    const result = await pool.query(
+      'INSERT INTO inventory (nama_barang, kategori, jumlah, kondisi, lokasi) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+      [nama_barang, kategori, jumlah, kondisi, lokasi]
+    );
+    res.status(201).json({ success: true, data: result.rows[0] });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+exports.updateInventory = async (req, res) => {
+  const { id } = req.params;
+  const { nama_barang, kategori, jumlah, kondisi, lokasi } = req.body;
+  try {
+    const result = await pool.query(
+      'UPDATE inventory SET nama_barang = $1, kategori = $2, jumlah = $3, kondisi = $4, lokasi = $5 WHERE id = $6 RETURNING *',
+      [nama_barang, kategori, jumlah, kondisi, lokasi, id]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Inventory item not found' });
+    }
+    res.json({ success: true, data: result.rows[0] });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+exports.deleteInventory = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await pool.query('DELETE FROM inventory WHERE id = $1 RETURNING *', [id]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Inventory item not found' });
+    }
+    res.json({ success: true, data: result.rows[0] });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, error: err.message });
+  }
 };

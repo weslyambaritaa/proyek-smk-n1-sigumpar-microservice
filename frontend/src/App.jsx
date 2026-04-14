@@ -38,8 +38,8 @@ import SilabusKegiatanPage from "./pages/pramuka/SilabusKegiatanPage";
 import LaporanKegiatanPage from "./pages/pramuka/LaporanKegiatanPage";
 
 // --- Vokasi ---
-import LokasiPKLPage from "./pages/vokasi/LokasiPKLPage";
-import ProgresPKLPage from "./pages/vokasi/ProgresPKLPage";
+import LokasiPKLPage from "./pages/vokasi/LokasiPklPage";
+import ProgresPKLPage from "./pages/vokasi/ProgresPklPage";
 import NilaiPKLPage from "./pages/vokasi/NilaiPKLPage";
 
 // --- Kepala Sekolah ---
@@ -49,16 +49,17 @@ import PemeriksaanPerangkatPage from "./pages/kepala-sekolah/PemeriksaanPerangka
 import EvaluasiKinerjaPage from "./pages/kepala-sekolah/EvaluasiKinerjaPage";
 import PKLKepsekPage from "./pages/kepala-sekolah/PKLKepsekPage";
 import RekapNilaiFinalPage from "./pages/kepala-sekolah/RekapNilaiFinalPage"; // ← TAMBAHAN BARU
+import LaporanTahunanPage from "./pages/kepala-sekolah/LaporanTahunanPage";
 
 // --- Waka Sekolah ---
 import KurikulumPage from "./pages/waka-sekolah/KurikulumPage";
 
 // --- Wakil Kepala Sekolah (Wakakur) ---
-import WakakurJadwalPage      from "./pages/wakil-kepala-sekolah/WakakurJadwalPage";
+import WakakurJadwalPage from "./pages/wakil-kepala-sekolah/WakakurJadwalPage";
 import WakakurAbsensiGuruPage from "./pages/wakil-kepala-sekolah/WakakurAbsensiGuruPage";
-import WakakurPerangkatPage   from "./pages/wakil-kepala-sekolah/WakakurPerangkatPage";
-import WakakurParentingPage   from "./pages/wakil-kepala-sekolah/WakakurParentingPage";
-import WakakurLaporanPage     from "./pages/wakil-kepala-sekolah/WakakurLaporanPage";
+import WakakurPerangkatPage from "./pages/wakil-kepala-sekolah/WakakurPerangkatPage";
+import WakakurParentingPage from "./pages/wakil-kepala-sekolah/WakakurParentingPage";
+import WakakurLaporanPage from "./pages/wakil-kepala-sekolah/WakakurLaporanPage";
 
 /**
  * Komponen reusable untuk grup menu per role (Dropdown)
@@ -149,14 +150,20 @@ const App = () => {
                   <NavLink to="/kepsek/perangkat-ajar" className={subNavClass}>
                     Pemeriksaan Perangkat
                   </NavLink>
-                  <NavLink to="/kepsek/evaluasi-kinerja" className={subNavClass}>
+                  <NavLink
+                    to="/kepsek/evaluasi-kinerja"
+                    className={subNavClass}
+                  >
                     Evaluasi Kinerja Guru
                   </NavLink>
                   <NavLink to="/kepsek/pkl" className={subNavClass}>
                     PKL
                   </NavLink>
                   {/* ↓ TAMBAHAN BARU */}
-                  <NavLink to="/kepsek/rekap-nilai-final" className={subNavClass}>
+                  <NavLink
+                    to="/kepsek/rekap-nilai-final"
+                    className={subNavClass}
+                  >
                     Rekap Nilai Final
                   </NavLink>
                 </NavDropdown>
@@ -345,56 +352,90 @@ const App = () => {
             <Route path="/pengumuman/:id" element={<DetailPengumuman />} />
 
             {/* Tata Usaha */}
-            <Route path="/academic/kelas"      element={<KelasPage />} />
-            <Route path="/academic/siswa"      element={<SiswaPage />} />
-            <Route path="/academic/guru"       element={<GuruPage />} />
+            <Route path="/academic/kelas" element={<KelasPage />} />
+            <Route path="/academic/siswa" element={<SiswaPage />} />
+            <Route path="/academic/guru" element={<GuruPage />} />
             <Route path="/academic/pengumuman" element={<PengumumanPage />} />
             <Route path="/academic/arsip-surat" element={<ArsipSuratPage />} />
-            <Route path="/academic/mapel"      element={<MapelPage />} />
-            <Route path="/academic/jadwal"     element={<JadwalPage />} />
-            <Route path="/academic/piket"      element={<PiketPage />} />
-            <Route path="/academic/upacara"    element={<UpacaraPage />} />
+            <Route path="/academic/mapel" element={<MapelPage />} />
+            <Route path="/academic/jadwal" element={<JadwalPage />} />
+            <Route path="/academic/piket" element={<PiketPage />} />
+            <Route path="/academic/upacara" element={<UpacaraPage />} />
+
+            {/* Alias routes for complete tata usaha */}
+            <Route path="/laporan-tahunan" element={<LaporanTahunanPage />} />
+            <Route path="/kurikulum" element={<KurikulumPage />} />
+            <Route path="/presensi-kelas" element={<PresensiKelasPage />} />
+            <Route path="/nilai-pramuka" element={<AbsensiPramukaPage />} />
+            <Route path="/proyek-vokasi" element={<LokasiPKLPage />} />
 
             {/* Guru Mapel */}
-            <Route path="/input-nilai"             element={<InputNilaiPage />} />
-            <Route path="/absensi-siswa"            element={<AbsensiSiswa />} />
-            <Route path="/absensi-guru"             element={<AbsensiGuruPage />} />
-            <Route path="/perangkat-pembelajaran"   element={<PerangkatPage />} />
+            <Route path="/input-nilai" element={<InputNilaiPage />} />
+            <Route path="/absensi-siswa" element={<AbsensiSiswa />} />
+            <Route path="/absensi-guru" element={<AbsensiGuruPage />} />
+            <Route path="/perangkat-pembelajaran" element={<PerangkatPage />} />
 
             {/* Wali Kelas */}
-            <Route path="/wali/absensi-siswa"   element={<PresensiKelasPage />} />
-            <Route path="/wali/rekap-kehadiran" element={<RekapKehadiranPage />} />
-            <Route path="/wali/rekap-nilai"     element={<RekapNilaiPage />} />
-            <Route path="/wali/parenting"       element={<ParentingPage />} />
-            <Route path="/wali/kebersihan-kelas" element={<KebersihanKelasPage />} />
-            <Route path="/wali/refleksi"        element={<RefleksiPage />} />
+            <Route path="/wali/absensi-siswa" element={<PresensiKelasPage />} />
+            <Route
+              path="/wali/rekap-kehadiran"
+              element={<RekapKehadiranPage />}
+            />
+            <Route path="/wali/rekap-nilai" element={<RekapNilaiPage />} />
+            <Route path="/wali/parenting" element={<ParentingPage />} />
+            <Route
+              path="/wali/kebersihan-kelas"
+              element={<KebersihanKelasPage />}
+            />
+            <Route path="/wali/refleksi" element={<RefleksiPage />} />
 
             {/* Pramuka */}
-            <Route path="/vocational/absensi" element={<AbsensiPramukaPage />} />
-            <Route path="/pramuka/silabus"    element={<SilabusKegiatanPage />} />
-            <Route path="/pramuka/laporan"    element={<LaporanKegiatanPage />} />
+            <Route
+              path="/vocational/absensi"
+              element={<AbsensiPramukaPage />}
+            />
+            <Route path="/pramuka/silabus" element={<SilabusKegiatanPage />} />
+            <Route path="/pramuka/laporan" element={<LaporanKegiatanPage />} />
 
             {/* Vokasi */}
-            <Route path="/vokasi/lokasi-pkl"  element={<LokasiPKLPage />} />
+            <Route path="/vokasi/lokasi-pkl" element={<LokasiPKLPage />} />
             <Route path="/vokasi/progres-pkl" element={<ProgresPKLPage />} />
-            <Route path="/vokasi/nilai-pkl"   element={<NilaiPKLPage />} />
+            <Route path="/vokasi/nilai-pkl" element={<NilaiPKLPage />} />
 
             {/* Kepala Sekolah */}
-            <Route path="/kepsek/absensi-guru"    element={<RekapAbsensiGuruPage />} />
-            <Route path="/kepsek/absensi-siswa"   element={<RekapAbsensiSiswaPage />} />
-            <Route path="/kepsek/perangkat-ajar"  element={<PemeriksaanPerangkatPage />} />
-            <Route path="/kepsek/evaluasi-kinerja" element={<EvaluasiKinerjaPage />} />
-            <Route path="/kepsek/pkl"             element={<PKLKepsekPage />} />
+            <Route
+              path="/kepsek/absensi-guru"
+              element={<RekapAbsensiGuruPage />}
+            />
+            <Route
+              path="/kepsek/absensi-siswa"
+              element={<RekapAbsensiSiswaPage />}
+            />
+            <Route
+              path="/kepsek/perangkat-ajar"
+              element={<PemeriksaanPerangkatPage />}
+            />
+            <Route
+              path="/kepsek/evaluasi-kinerja"
+              element={<EvaluasiKinerjaPage />}
+            />
+            <Route path="/kepsek/pkl" element={<PKLKepsekPage />} />
             {/* ↓ TAMBAHAN BARU */}
-            <Route path="/kepsek/rekap-nilai-final" element={<RekapNilaiFinalPage />} />
+            <Route
+              path="/kepsek/rekap-nilai-final"
+              element={<RekapNilaiFinalPage />}
+            />
 
             {/* Waka Sekolah */}
-            <Route path="/waka/kurikulum"    element={<KurikulumPage />} />
-            <Route path="/waka/jadwal"       element={<WakakurJadwalPage />} />
-            <Route path="/waka/absensi-guru" element={<WakakurAbsensiGuruPage />} />
-            <Route path="/waka/perangkat"    element={<WakakurPerangkatPage />} />
-            <Route path="/waka/parenting"    element={<WakakurParentingPage />} />
-            <Route path="/waka/laporan"      element={<WakakurLaporanPage />} />
+            <Route path="/waka/kurikulum" element={<KurikulumPage />} />
+            <Route path="/waka/jadwal" element={<WakakurJadwalPage />} />
+            <Route
+              path="/waka/absensi-guru"
+              element={<WakakurAbsensiGuruPage />}
+            />
+            <Route path="/waka/perangkat" element={<WakakurPerangkatPage />} />
+            <Route path="/waka/parenting" element={<WakakurParentingPage />} />
+            <Route path="/waka/laporan" element={<WakakurLaporanPage />} />
           </Routes>
         </main>
       </div>

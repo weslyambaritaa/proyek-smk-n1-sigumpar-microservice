@@ -6,23 +6,20 @@ import keycloak from './keycloak' // Import konfigurasi yang baru Anda buat
 
 // Inisialisasi Keycloak
 keycloak.init({ 
-  onLoad: 'login-required', // Memaksa login saat web dibuka
+  onLoad: 'login-required', // Selalu redirect ke login jika belum authenticated
   checkLoginIframe: false 
 }).then((authenticated) => {
   if (authenticated) {
-    
     console.log("✅ User terautentikasi");
-    // window.keycloak = keycloak;
-    
-    // Render aplikasi hanya setelah login berhasil
+    // Render aplikasi
     createRoot(document.getElementById('root')).render(
       <StrictMode>
         <App />
       </StrictMode>,
     )
   } else {
-    // Jika gagal autentikasi, refresh halaman
-    window.location.reload();
+    // Ini tidak akan tercapai karena login-required akan redirect otomatis
+    console.log("❌ User tidak terautentikasi");
   }
 }).catch((err) => {
   console.error("❌ Gagal inisialisasi Keycloak:", err);

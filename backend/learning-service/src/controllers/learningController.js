@@ -209,3 +209,35 @@ exports.getVersiDokumen = asyncHandler(async (req, res) => {
 
   res.json({ success: true, data });
 });
+
+// ── LAPORAN TAHUNAN ──────────────────────────────────────────────────────
+
+exports.getLaporanTahunan = asyncHandler(async (req, res) => {
+  const { tahun } = req.query;
+  const tahunAjar = tahun || '2026/2027';
+
+  // Placeholder data untuk laporan tahunan
+  // Dalam implementasi asli, ini bisa query dari database
+  const data = {
+    tahun_ajar: tahunAjar,
+    ringkasan: {
+      total_guru: 25,
+      total_siswa: 450,
+      total_kelas: 12,
+      total_mapel: 15,
+    },
+    prestasi: {
+      akademik: 'Rata-rata nilai kelas meningkat 10%',
+      non_akademik: 'Juara lomba pramuka tingkat kabupaten',
+    },
+    kegiatan: [
+      'Upacara bendera rutin',
+      'Pelatihan guru',
+      'Kegiatan pramuka',
+      'PKL siswa',
+    ],
+    rekomendasi: 'Perlu peningkatan fasilitas laboratorium',
+  };
+
+  res.json({ success: true, data });
+});
