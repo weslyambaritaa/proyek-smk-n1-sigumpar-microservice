@@ -34,7 +34,7 @@ const writeUsers = (users) => {
  * - ?search=keyword  => filter berdasarkan nama atau email
  * - ?role=admin      => filter berdasarkan role
  */
-exports.getAllUsers = async (req, res, next) => {
+const getAllUsers = async (req, res, next) => {
   try {
     const result = await pool.query('SELECT * FROM users ORDER BY created_at DESC');
     res.status(200).json({ status: 'success', data: result.rows });
@@ -76,7 +76,7 @@ const getUserById = (req, res, next) => {
  *   "role": "admin | user (opsional, default: user)"
  * }
  */
-exports.createUser = async (req, res, next) => {
+const createUser = async (req, res, next) => {
   const { id, username, email } = req.body; // id dikirim dari Keycloak/Frontend
   try {
     const result = await pool.query(

@@ -13,7 +13,6 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
-    "axios": "^1.14.0",
     "cors": "^2.8.6",
     "express": "^5.2.1",
     "helmet": "^8.1.0",
@@ -21,10 +20,12 @@
     "jwks-rsa": "^4.0.1",
     "mime-types": "^2.1.35",
     "morgan": "^1.10.1",
-    "multer": "^1.4.5-lts.1",
+    "multer": "^2.1.1",
     "pg": "^8.20.0",
+    "pg-hstore": "^2.3.4",
+    "sequelize": "^6.37.3",
     "uuid": "^13.0.0"
-  },
+},
   "devDependencies": {
     "nodemon": "^3.1.14"
   }
