@@ -1,18 +1,21 @@
-const { Pool } = require('pg');
+const { Sequelize } = require('sequelize');
 
-const pool = new Pool({
-  user: process.env.DB_USER || 'academic_user',
-  host: process.env.DB_HOST || 'localhost', 
-  database: process.env.DB_NAME || 'academic_db',
-  password: process.env.DB_PASSWORD || 'password',
-  port: 5432,
-});
-module.exports = pool;
-
-pool.query('SELECT NOW()', (err, res) => {
-  if (err) {
-    console.error('Koneksi Database Gagal:', err.stack);
-  } else {
-    console.log('Koneksi Database Berhasil pada:', res.rows[0].now);
+const sequelize = new Sequelize(
+  process.env.DB_NAME     || 'academic_db',
+  process.env.DB_USER     || 'academic_user',
+  process.env.DB_PASSWORD || 'password',
+  {
+    host:    process.env.DB_HOST || 'postgres',   // ✅ FIX: nama service docker, bukan localhost
+    port:    parseInt(process.env.DB_PORT) || 5432,
+    dialect: 'postgres',
+    logging: process.env.NODE_ENV === 'development' ? console.log : false,
+    pool: { max: 10, min: 0, acquire: 30000, idle: 10000 },
   }
-});
+);
+
+sequelize
+  .authenticate()
+  .then(() => console.log('Koneksi Database Berhasil (Sequelize) — academic-service'))
+  .catch((err) => console.error('Koneksi Database Gagal:', err));
+
+module.exports = sequelize;
