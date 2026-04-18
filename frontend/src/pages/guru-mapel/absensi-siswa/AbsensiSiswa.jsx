@@ -1,394 +1,467 @@
 import { useEffect, useState, useMemo } from "react";
 import toast from "react-hot-toast";
-import { useTeacherAttendance } from "../../../hooks/useTeacherAttendance";
+import { academicApi } from "../../../api/academicApi";
 
-// ── Helpers ─────────────────────────────────────────────────
-function statusBadge(status) {
-  switch (status) {
-    case "hadir":     return "bg-green-500 text-white";
-    case "izin":      return "bg-yellow-400 text-white";
-    case "sakit":     return "bg-blue-400 text-white";
-    case "alpa":      return "bg-red-500 text-white";
-    case "terlambat": return "bg-orange-400 text-white";
-    default:          return "bg-gray-300 text-gray-700";
-  }
-}
+const STATUS_OPTS = ["hadir", "izin", "sakit", "alpa", "terlambat"];
+const STATUS_COLOR = {
+  hadir:     "bg-green-500 text-white",
+  izin:      "bg-yellow-400 text-white",
+  sakit:     "bg-blue-500 text-white",
+  alpa:      "bg-red-500 text-white",
+  terlambat: "bg-orange-400 text-white",
+};
+const STATUS_BADGE = {
+  hadir:     "bg-green-100 text-green-700",
+  izin:      "bg-yellow-100 text-yellow-700",
+  sakit:     "bg-blue-100 text-blue-700",
+  alpa:      "bg-red-100 text-red-700",
+  terlambat: "bg-orange-100 text-orange-700",
+};
 
-const PAGE_SIZE = 10;
+const TABS = [
+  { key: "input",   label: "Input Absensi",  icon: "✏️" },
+  { key: "riwayat", label: "Riwayat",        icon: "📋" },
+  { key: "rekap",   label: "Rekap",          icon: "📊" },
+];
 
-// ── Komponen Utama ───────────────────────────────────────────
-const AbsensiSiswa = () => {
-  const {
-    classes, selectedClass, setSelectedClass,
-    subjects, selectedSubject, setSelectedSubject,
-    students, attendance, setAttendance,
-    loading, error,
-    fetchClasses, fetchSubjects, fetchStudents, fetchAttendance,
-    saveAttendance, computeStats,
-  } = useTeacherAttendance();
+export default function AbsensiSiswa() {
+  const [tab, setTab] = useState("input");
 
-  const [tanggal,    setTanggal]    = useState("");
-  const [searchNama, setSearchNama] = useState("");
-  const [saving,     setSaving]     = useState(false);
-  const [sudahCari,  setSudahCari]  = useState(false);
-  const [page,       setPage]       = useState(1);
+  // ── State Input ──
+  const [kelasList,     setKelasList]     = useState([]);
+  const [mapelList,     setMapelList]     = useState([]);
+  const [selectedKelas, setSelectedKelas] = useState("");
+  const [selectedMapel, setSelectedMapel] = useState("");
+  const [tanggal,       setTanggal]       = useState(new Date().toISOString().slice(0, 10));
+  const [siswaList,     setSiswaList]     = useState([]);
+  const [absensi,       setAbsensi]       = useState({});
+  const [loading,       setLoading]       = useState(false);
+  const [saving,        setSaving]        = useState(false);
+  const [sudahCari,     setSudahCari]     = useState(false);
 
-  useEffect(() => { fetchClasses(); }, [fetchClasses]);
+  // ── State Riwayat ──
+  const [riwayatKelas,   setRiwayatKelas]   = useState("");
+  const [riwayatTanggal, setRiwayatTanggal] = useState("");
+  const [riwayatData,    setRiwayatData]    = useState([]);
+  const [loadingRiwayat, setLoadingRiwayat] = useState(false);
 
-  // Ambil mapel & siswa saat kelas berubah
+  // ── State Rekap ──
+  const [rekapKelas,  setRekapKelas]  = useState("");
+  const [rekapMulai,  setRekapMulai]  = useState("");
+  const [rekapAkhir,  setRekapAkhir]  = useState("");
+  const [rekapData,   setRekapData]   = useState([]);
+  const [loadingRekap, setLoadingRekap] = useState(false);
+
   useEffect(() => {
-    if (selectedClass) {
-      fetchSubjects(selectedClass.id);
-      fetchStudents(selectedClass.id);
-      setSudahCari(false);
-      setAttendance({});
-      setPage(1);
-    }
-  }, [selectedClass]);
+    Promise.all([academicApi.getAllKelas(), academicApi.getAllMapel()])
+      .then(([kr, mr]) => {
+        setKelasList(Array.isArray(kr.data) ? kr.data : (kr.data?.data || []));
+        setMapelList(Array.isArray(mr.data) ? mr.data : (mr.data?.data || []));
+      })
+      .catch(() => toast.error("Gagal memuat data kelas/mapel"));
+  }, []);
 
-  // Ambil absensi yang sudah ada
+  // Load siswa saat kelas berubah
   useEffect(() => {
-    if (selectedClass && tanggal && selectedSubject) {
-      fetchAttendance(selectedClass.id, tanggal, selectedSubject.id);
-    }
-  }, [selectedClass, tanggal, selectedSubject]);
+    if (!selectedKelas) { setSiswaList([]); setAbsensi({}); return; }
+    academicApi.getAllSiswa({ kelas_id: selectedKelas })
+      .then(r => {
+        const list = Array.isArray(r.data?.data) ? r.data.data : (Array.isArray(r.data) ? r.data : []);
+        setSiswaList(list);
+        const map = {};
+        list.forEach(s => { map[s.id] = { status: "hadir", keterangan: "" }; });
+        setAbsensi(map);
+      })
+      .catch(() => toast.error("Gagal memuat data siswa"));
+  }, [selectedKelas]);
 
-  useEffect(() => { computeStats(); }, [students, attendance]);
+  // Load absensi yang sudah ada
+  useEffect(() => {
+    if (!selectedKelas || !tanggal) return;
+    academicApi.getAbsensiSiswa({ kelas_id: selectedKelas, tanggal, mapel_id: selectedMapel || undefined })
+      .then(r => {
+        const data = Array.isArray(r.data?.data) ? r.data.data : [];
+        if (data.length > 0) {
+          const map = {};
+          data.forEach(a => { map[a.siswa_id] = { status: a.status, keterangan: a.keterangan || "" }; });
+          setAbsensi(prev => ({ ...prev, ...map }));
+        }
+      })
+      .catch(() => {});
+  }, [selectedKelas, tanggal, selectedMapel]);
 
-  // ── Statistik ────────────────────────────────────────────
   const stats = useMemo(() => {
     const s = { hadir: 0, izin: 0, sakit: 0, alpa: 0, terlambat: 0 };
-    Object.values(attendance).forEach((v) => {
-      if (v?.status && s.hasOwnProperty(v.status)) s[v.status]++;
-    });
+    Object.values(absensi).forEach(v => { if (v?.status && s.hasOwnProperty(v.status)) s[v.status]++; });
     return s;
-  }, [attendance]);
+  }, [absensi]);
 
-  // ── Filter siswa ─────────────────────────────────────────
-  const filtered = useMemo(() =>
-    students.filter((s) =>
-      !searchNama ||
-      (s.namasiswa || "").toLowerCase().includes(searchNama.toLowerCase()) ||
-      (s.nis || "").toLowerCase().includes(searchNama.toLowerCase())
-    ), [students, searchNama]);
+  const setStatus = (id, status) =>
+    setAbsensi(prev => ({ ...prev, [id]: { ...prev[id], status } }));
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const pagedStudents = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-
-  // ── Handlers ─────────────────────────────────────────────
-  const handleCari = () => {
-    if (!selectedClass)  { toast.error("Pilih kelas terlebih dahulu");   return; }
-    if (!tanggal)        { toast.error("Pilih tanggal terlebih dahulu"); return; }
-    setSudahCari(true);
-    setPage(1);
-  };
-
-  const handleStatusChange = (id, field, val) => {
-    setAttendance((prev) => ({
-      ...prev,
-      [id]: { ...prev[id], [field]: val },
-    }));
-  };
-
-  const handleTandaiSemua = (s) => {
-    const all = {};
-    students.forEach((st) => {
-      all[st.id_siswa] = { status: s, keterangan: attendance[st.id_siswa]?.keterangan || "" };
-    });
-    setAttendance(all);
+  const tandaiSemua = (status) => {
+    const map = {};
+    siswaList.forEach(s => { map[s.id] = { status, keterangan: "" }; });
+    setAbsensi(map);
   };
 
   const handleSimpan = async () => {
-    if (!selectedClass)   { toast.error("Pilih kelas dulu");           return; }
-    if (!tanggal)         { toast.error("Pilih tanggal dulu");         return; }
-    if (!selectedSubject) { toast.error("Pilih mata pelajaran dulu");  return; }
-    const hasAny = Object.values(attendance).some((v) => v?.status);
-    if (!hasAny) { toast.error("Belum ada status absensi yang diisi"); return; }
-
+    if (!selectedKelas) { toast.error("Pilih kelas terlebih dahulu"); return; }
+    if (!tanggal)       { toast.error("Pilih tanggal terlebih dahulu"); return; }
     setSaving(true);
     try {
-      await saveAttendance(selectedClass.id, tanggal, selectedSubject.id, attendance);
-    } catch (e) {
-      console.error(e);
+      const payload = {
+        kelas_id:  selectedKelas,
+        mapel_id:  selectedMapel || null,
+        tanggal,
+        data_absensi: siswaList.map(s => ({
+          siswa_id:   s.id,
+          status:     absensi[s.id]?.status || "hadir",
+          keterangan: absensi[s.id]?.keterangan || "",
+        })),
+      };
+      await academicApi.createAbsensiSiswa(payload);
+      toast.success("Absensi berhasil disimpan!");
+    } catch (err) {
+      toast.error(err?.response?.data?.message || "Gagal menyimpan absensi");
     } finally {
       setSaving(false);
     }
   };
 
-  // ── RENDER ───────────────────────────────────────────────
-  return (
-    <div className="min-h-screen bg-gray-100">
+  const handleLoadRiwayat = async () => {
+    if (!riwayatKelas && !riwayatTanggal) {
+      toast.error("Pilih kelas atau tanggal untuk melihat riwayat");
+      return;
+    }
+    setLoadingRiwayat(true);
+    try {
+      const res = await academicApi.getAbsensiSiswa({
+        kelas_id: riwayatKelas || undefined,
+        tanggal:  riwayatTanggal || undefined,
+      });
+      setRiwayatData(Array.isArray(res.data?.data) ? res.data.data : []);
+    } catch {
+      toast.error("Gagal memuat riwayat absensi");
+      setRiwayatData([]);
+    } finally {
+      setLoadingRiwayat(false);
+    }
+  };
 
-      {/* ─── HEADER ──────────────────────────────────────── */}
-      <div className="bg-white border-b px-8 py-5 mb-6">
-        <h1 className="text-2xl font-bold text-gray-800 tracking-tight">ABSENSI SISWA</h1>
-        <p className="text-sm text-gray-500 mt-0.5">Laporan kehadiran seluruh siswa SMK N 1 Sigumpar</p>
+  const handleLoadRekap = async () => {
+    if (!rekapKelas) { toast.error("Pilih kelas untuk melihat rekap"); return; }
+    setLoadingRekap(true);
+    try {
+      const res = await academicApi.getRekapAbsensiWali({
+        kelas_id:      rekapKelas,
+        tanggal_mulai: rekapMulai || undefined,
+        tanggal_akhir: rekapAkhir || undefined,
+      });
+      setRekapData(Array.isArray(res.data?.data) ? res.data.data : []);
+    } catch {
+      toast.error("Gagal memuat rekap absensi");
+      setRekapData([]);
+    } finally {
+      setLoadingRekap(false);
+    }
+  };
+
+  const namaKelas = kelasList.find(k => String(k.id) === String(selectedKelas))?.nama_kelas || "";
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-white border-b border-gray-200 px-8 py-5">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-1 h-7 bg-blue-600 rounded-full" />
+          <h1 className="text-xl font-bold text-gray-800">Absensi Siswa</h1>
+        </div>
+        {/* Tabs */}
+        <div className="flex gap-2">
+          {TABS.map(t => (
+            <button key={t.key} onClick={() => setTab(t.key)}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                tab === t.key
+                  ? "bg-blue-600 text-white shadow-sm"
+                  : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+              }`}>
+              <span>{t.icon}</span> {t.label}
+            </button>
+          ))}
+        </div>
       </div>
 
-      <div className="px-8 pb-10 max-w-6xl mx-auto space-y-6">
+      <div className="px-8 py-6 max-w-5xl mx-auto space-y-5">
 
-        {/* ─── PANEL FILTER ────────────────────────────── */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5">
-          <div className="flex flex-col md:flex-row gap-4 items-end">
-
-            {/* Pilih Kelas */}
-            <div className="flex-1">
-              <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">
-                Pilih Kelas <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <select
-                  value={selectedClass?.id || ""}
-                  onChange={(e) => {
-                    const cls = classes.find((c) => String(c.id) === e.target.value);
-                    setSelectedClass(cls || null);
-                    setSelectedSubject(null);
-                    setSudahCari(false);
-                  }}
-                  className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm bg-white appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">-- Pilih Kelas --</option>
-                  {classes.map((c) => (
-                    <option key={c.id} value={c.id}>{c.nama_kelas}</option>
+        {/* ── TAB INPUT ── */}
+        {tab === "input" && (
+          <>
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Kelas</label>
+                  <select value={selectedKelas} onChange={e => setSelectedKelas(e.target.value)}
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="">-- Pilih Kelas --</option>
+                    {kelasList.map(k => <option key={k.id} value={k.id}>{k.nama_kelas}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Mata Pelajaran</label>
+                  <select value={selectedMapel} onChange={e => setSelectedMapel(e.target.value)}
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="">-- Pilih Mapel --</option>
+                    {mapelList.map(m => <option key={m.id} value={m.id}>{m.nama_mapel}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Tanggal</label>
+                  <input type="date" value={tanggal} onChange={e => setTanggal(e.target.value)}
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div className="flex gap-2">
+                  {STATUS_OPTS.slice(0, 2).map(s => (
+                    <button key={s} onClick={() => tandaiSemua(s)}
+                      className={`flex-1 px-2 py-2.5 rounded-xl text-xs font-bold ${STATUS_COLOR[s]} opacity-80 hover:opacity-100 transition-opacity`}>
+                      Semua {s}
+                    </button>
                   ))}
-                </select>
-                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">▼</span>
+                </div>
               </div>
             </div>
 
-            {/* Pilih Tanggal */}
-            <div className="flex-1">
-              <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">
-                Pilih Tanggal <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="date"
-                value={tanggal}
-                onChange={(e) => setTanggal(e.target.value)}
-                className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
+            {selectedKelas && siswaList.length > 0 && (
+              <>
+                {/* Statistik */}
+                <div className="grid grid-cols-5 gap-3">
+                  {[
+                    { label: "Total",     val: siswaList.length, cls: "bg-white border border-gray-200 text-gray-800" },
+                    { label: "Hadir",     val: stats.hadir,     cls: "bg-green-50 border border-green-200 text-green-700" },
+                    { label: "Izin",      val: stats.izin,      cls: "bg-yellow-50 border border-yellow-200 text-yellow-700" },
+                    { label: "Sakit",     val: stats.sakit,     cls: "bg-blue-50 border border-blue-200 text-blue-700" },
+                    { label: "Alpa",      val: stats.alpa,      cls: "bg-red-50 border border-red-200 text-red-700" },
+                  ].map(({ label, val, cls }) => (
+                    <div key={label} className={`rounded-xl p-3 text-center ${cls}`}>
+                      <p className="text-xs font-semibold opacity-70 mb-1">{label}</p>
+                      <p className="text-2xl font-bold">{val}</p>
+                    </div>
+                  ))}
+                </div>
 
-            {/* Nama Siswa (opsional) */}
-            <div className="flex-1">
-              <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">
-                Nama Siswa <span className="text-gray-300 font-normal normal-case">(opsional)</span>
-              </label>
-              <input
-                type="text"
-                value={searchNama}
-                onChange={(e) => setSearchNama(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleCari()}
-                placeholder="Masukkan nama siswa..."
-                className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
+                {/* Tabel */}
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                  <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+                    <div>
+                      <h2 className="font-bold text-gray-800">Daftar Siswa — {namaKelas}</h2>
+                      <p className="text-xs text-gray-400">{tanggal}</p>
+                    </div>
+                    <div className="flex gap-2">
+                      {STATUS_OPTS.map(s => (
+                        <button key={s} onClick={() => tandaiSemua(s)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold ${STATUS_COLOR[s]} opacity-75 hover:opacity-100 transition-opacity`}>
+                          {s}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50 text-xs font-bold text-gray-500 uppercase tracking-wider">
+                      <tr>
+                        <th className="px-5 py-3 text-left">No</th>
+                        <th className="px-5 py-3 text-left">Nama Siswa</th>
+                        <th className="px-5 py-3 text-left">NISN</th>
+                        <th className="px-5 py-3 text-center">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {siswaList.map((s, i) => (
+                        <tr key={s.id} className="hover:bg-gray-50/70">
+                          <td className="px-5 py-3 text-gray-400">{i + 1}</td>
+                          <td className="px-5 py-3 font-semibold text-gray-800">{s.nama_lengkap}</td>
+                          <td className="px-5 py-3 text-gray-500 text-xs">{s.nisn}</td>
+                          <td className="px-5 py-3">
+                            <div className="flex items-center justify-center gap-1.5 flex-wrap">
+                              {STATUS_OPTS.map(status => (
+                                <button key={status} onClick={() => setStatus(s.id, status)}
+                                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                                    absensi[s.id]?.status === status
+                                      ? STATUS_COLOR[status] + " ring-2 ring-offset-1 ring-current shadow"
+                                      : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                                  }`}>
+                                  {status}
+                                </button>
+                              ))}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  <div className="px-6 py-4 border-t border-gray-100 flex justify-end">
+                    <button onClick={handleSimpan} disabled={saving}
+                      className="px-10 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-bold text-sm rounded-xl shadow transition-all">
+                      {saving ? "Menyimpan..." : "💾 Simpan Absensi"}
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
 
-            {/* Tombol Cari */}
-            <button
-              onClick={handleCari}
-              disabled={loading}
-              className="px-8 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-bold text-sm rounded-xl shadow-sm shadow-blue-200 transition-all active:scale-95 whitespace-nowrap"
-            >
-              {loading ? "..." : "Cari"}
-            </button>
-          </div>
-        </div>
-
-        {/* ─── STATISTIK KEHADIRAN ─────────────────────── */}
-        {sudahCari && students.length > 0 && (
-          <div className="grid grid-cols-3 md:grid-cols-5 gap-3">
-            {[
-              { label: "Hadir",     val: stats.hadir,     color: "text-green-600",  border: "border-green-400",  bg: "bg-white" },
-              { label: "Ijin",      val: stats.izin,      color: "text-yellow-500", border: "border-yellow-400", bg: "bg-white" },
-              { label: "Sakit",     val: stats.sakit,     color: "text-blue-500",   border: "border-blue-400",   bg: "bg-white" },
-              { label: "Alpha",     val: stats.alpa,      color: "text-red-500",    border: "border-red-400",    bg: "bg-white" },
-              { label: "Terlambat", val: stats.terlambat, color: "text-orange-500", border: "border-orange-400", bg: "bg-white" },
-            ].map(({ label, val, color, border, bg }) => (
-              <div key={label} className={`${bg} border-b-4 ${border} rounded-xl p-4 text-center shadow-sm`}>
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-1">{label}</p>
-                <p className={`text-4xl font-bold ${color}`}>{val}</p>
+            {selectedKelas && siswaList.length === 0 && (
+              <div className="bg-white rounded-2xl border border-gray-100 py-16 text-center text-gray-400">
+                <p className="text-4xl mb-2">👤</p>
+                <p>Tidak ada siswa di kelas ini</p>
               </div>
-            ))}
-          </div>
+            )}
+          </>
         )}
 
-        {/* ─── TABEL DAFTAR SISWA ──────────────────────── */}
-        {sudahCari && (
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-
-            {/* Sub-header: mapel + tandai semua */}
-            <div className="flex flex-col md:flex-row items-start md:items-center justify-between px-6 py-4 border-b border-gray-100 gap-3">
-              <div className="flex items-center gap-3 flex-wrap">
-                <h2 className="font-bold text-gray-800">Daftar Kehadiran Siswa</h2>
-                {filtered.length > 0 && (
-                  <span className="text-xs bg-gray-100 text-gray-500 font-semibold px-2.5 py-1 rounded-full">
-                    {filtered.length} Total Data
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center gap-3 flex-wrap">
-                {/* Pilih Mapel */}
-                <div className="relative">
-                  <select
-                    value={selectedSubject?.id || ""}
-                    onChange={(e) => {
-                      const sub = subjects.find((s) => String(s.id) === e.target.value);
-                      setSelectedSubject(sub || null);
-                    }}
-                    className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm bg-white appearance-none pr-7 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                  >
-                    <option value="">-- Pilih Mapel --</option>
-                    {subjects.map((s) => (
-                      <option key={s.id} value={s.id}>{s.nama_mapel}</option>
-                    ))}
+        {/* ── TAB RIWAYAT ── */}
+        {tab === "riwayat" && (
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-100">
+              <h2 className="font-bold text-gray-800 mb-3">Filter Riwayat Absensi</h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">Kelas</label>
+                  <select value={riwayatKelas} onChange={e => setRiwayatKelas(e.target.value)}
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="">Semua Kelas</option>
+                    {kelasList.map(k => <option key={k.id} value={k.id}>{k.nama_kelas}</option>)}
                   </select>
-                  <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 text-xs">▼</span>
                 </div>
-                {/* Tandai Semua */}
-                <button
-                  type="button"
-                  onClick={() => handleTandaiSemua("hadir")}
-                  className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-bold transition-all"
-                >
-                  ✓ Semua Hadir
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">Tanggal</label>
+                  <input type="date" value={riwayatTanggal} onChange={e => setRiwayatTanggal(e.target.value)}
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <button onClick={handleLoadRiwayat} disabled={loadingRiwayat}
+                  className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-bold text-sm rounded-xl transition-all">
+                  {loadingRiwayat ? "Memuat..." : "🔍 Tampilkan Riwayat"}
                 </button>
               </div>
             </div>
-
-            {/* Error state */}
-            {error && (
-              <div className="mx-6 mt-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm">
-                ⚠️ {error}
-              </div>
-            )}
-
-            {/* Tabel */}
-            {loading ? (
-              <div className="py-16 text-center text-gray-400">
-                <div className="inline-block w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mb-3" />
-                <p>Memuat data siswa...</p>
-              </div>
-            ) : filtered.length === 0 ? (
-              <div className="py-16 text-center text-gray-400">
-                <p className="text-4xl mb-3">👥</p>
-                <p className="font-medium">Tidak ada siswa ditemukan</p>
-                <p className="text-sm mt-1">Coba ubah filter pencarian</p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
+            <div className="overflow-x-auto">
+              {loadingRiwayat ? (
+                <div className="py-12 text-center text-gray-400">Memuat data...</div>
+              ) : riwayatData.length === 0 ? (
+                <div className="py-16 text-center text-gray-400">
+                  <p className="text-4xl mb-2">📋</p>
+                  <p>Pilih filter dan klik Tampilkan Riwayat</p>
+                </div>
+              ) : (
                 <table className="w-full text-sm">
                   <thead className="bg-gray-50 text-xs font-bold text-gray-500 uppercase tracking-wider">
                     <tr>
-                      <th className="px-5 py-3 text-left w-12">No</th>
+                      <th className="px-5 py-3 text-left">No</th>
+                      <th className="px-5 py-3 text-left">Tanggal</th>
                       <th className="px-5 py-3 text-left">Nama Siswa</th>
                       <th className="px-5 py-3 text-left">Kelas</th>
-                      <th className="px-5 py-3 text-left">Status</th>
-                      <th className="px-5 py-3 text-left">Keterangan</th>
+                      <th className="px-5 py-3 text-center">Status</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
-                    {pagedStudents.map((student, idx) => {
-                      const currStatus = attendance[student.id_siswa]?.status || "";
+                    {riwayatData.map((r, i) => (
+                      <tr key={i} className="hover:bg-gray-50/70">
+                        <td className="px-5 py-3 text-gray-400">{i + 1}</td>
+                        <td className="px-5 py-3 text-gray-600">{r.tanggal}</td>
+                        <td className="px-5 py-3 font-semibold text-gray-800">{r.nama_lengkap || r.nama_siswa || "-"}</td>
+                        <td className="px-5 py-3 text-gray-500 text-xs">{r.nama_kelas || "-"}</td>
+                        <td className="px-5 py-3 text-center">
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${STATUS_BADGE[r.status] || "bg-gray-100 text-gray-600"}`}>
+                            {r.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── TAB REKAP ── */}
+        {tab === "rekap" && (
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-100">
+              <h2 className="font-bold text-gray-800 mb-3">Rekap Absensi Siswa</h2>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">Kelas</label>
+                  <select value={rekapKelas} onChange={e => setRekapKelas(e.target.value)}
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="">-- Pilih Kelas --</option>
+                    {kelasList.map(k => <option key={k.id} value={k.id}>{k.nama_kelas}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">Tanggal Mulai</label>
+                  <input type="date" value={rekapMulai} onChange={e => setRekapMulai(e.target.value)}
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">Tanggal Akhir</label>
+                  <input type="date" value={rekapAkhir} onChange={e => setRekapAkhir(e.target.value)}
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <button onClick={handleLoadRekap} disabled={loadingRekap}
+                  className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-bold text-sm rounded-xl transition-all">
+                  {loadingRekap ? "Memuat..." : "📊 Tampilkan Rekap"}
+                </button>
+              </div>
+            </div>
+            <div className="overflow-x-auto">
+              {loadingRekap ? (
+                <div className="py-12 text-center text-gray-400">Memuat data...</div>
+              ) : rekapData.length === 0 ? (
+                <div className="py-16 text-center text-gray-400">
+                  <p className="text-4xl mb-2">📊</p>
+                  <p>Pilih kelas dan klik Tampilkan Rekap</p>
+                </div>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50 text-xs font-bold text-gray-500 uppercase tracking-wider">
+                    <tr>
+                      <th className="px-5 py-3 text-left">No</th>
+                      <th className="px-5 py-3 text-left">Nama Siswa</th>
+                      <th className="px-5 py-3 text-center">Hadir</th>
+                      <th className="px-5 py-3 text-center">Izin</th>
+                      <th className="px-5 py-3 text-center">Sakit</th>
+                      <th className="px-5 py-3 text-center">Alpa</th>
+                      <th className="px-5 py-3 text-center">Total</th>
+                      <th className="px-5 py-3 text-center">% Hadir</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {rekapData.map((r, i) => {
+                      const total = (r.hadir||0)+(r.izin||0)+(r.sakit||0)+(r.alpa||0);
+                      const pct = total ? Math.round((r.hadir||0)/total*100) : 0;
                       return (
-                        <tr key={student.id_siswa} className="hover:bg-gray-50/70 transition-colors">
-                          <td className="px-5 py-3 text-gray-400 font-medium">
-                            {(page - 1) * PAGE_SIZE + idx + 1}
-                          </td>
-                          <td className="px-5 py-3 font-semibold text-gray-800">
-                            {student.namasiswa}
-                          </td>
-                          <td className="px-5 py-3 text-gray-500">
-                            {selectedClass?.nama_kelas || "-"}
-                          </td>
-                          <td className="px-5 py-3">
-                            {currStatus ? (
-                              <div className="flex items-center gap-2">
-                                <span className={`px-4 py-1 rounded-full text-xs font-bold uppercase tracking-wider cursor-pointer ${statusBadge(currStatus)}`}
-                                  onClick={() => {
-                                    const opts = ["hadir","izin","sakit","alpa","terlambat",""];
-                                    const next = opts[(opts.indexOf(currStatus) + 1) % opts.length];
-                                    handleStatusChange(student.id_siswa, "status", next);
-                                  }}
-                                >
-                                  {currStatus}
-                                </span>
-                                <span className="text-gray-300 text-xs">klik ganti</span>
-                              </div>
-                            ) : (
-                              <div className="flex flex-wrap gap-1.5">
-                                {["hadir","izin","sakit","alpa","terlambat"].map((s) => (
-                                  <button
-                                    key={s}
-                                    type="button"
-                                    onClick={() => handleStatusChange(student.id_siswa, "status", s)}
-                                    className={`px-3 py-0.5 rounded-full text-xs font-bold uppercase tracking-wide border transition-all hover:opacity-80 ${
-                                      s === "hadir"     ? "border-green-400 text-green-600 hover:bg-green-50" :
-                                      s === "izin"      ? "border-yellow-400 text-yellow-600 hover:bg-yellow-50" :
-                                      s === "sakit"     ? "border-blue-400 text-blue-600 hover:bg-blue-50" :
-                                      s === "alpa"      ? "border-red-400 text-red-600 hover:bg-red-50" :
-                                                          "border-orange-400 text-orange-600 hover:bg-orange-50"
-                                    }`}
-                                  >
-                                    {s}
-                                  </button>
-                                ))}
-                              </div>
-                            )}
-                          </td>
-                          <td className="px-5 py-3">
-                            <input
-                              type="text"
-                              value={attendance[student.id_siswa]?.keterangan || ""}
-                              onChange={(e) => handleStatusChange(student.id_siswa, "keterangan", e.target.value)}
-                              placeholder="Catatan..."
-                              className="border border-gray-200 rounded-lg px-3 py-1 text-sm w-44 focus:outline-none focus:ring-2 focus:ring-blue-300"
-                            />
+                        <tr key={i} className="hover:bg-gray-50/70">
+                          <td className="px-5 py-3 text-gray-400">{i + 1}</td>
+                          <td className="px-5 py-3 font-semibold text-gray-800">{r.nama_lengkap || r.nama_siswa || "-"}</td>
+                          <td className="px-5 py-3 text-center text-green-600 font-bold">{r.hadir || 0}</td>
+                          <td className="px-5 py-3 text-center text-yellow-600 font-bold">{r.izin || 0}</td>
+                          <td className="px-5 py-3 text-center text-blue-600 font-bold">{r.sakit || 0}</td>
+                          <td className="px-5 py-3 text-center text-red-600 font-bold">{r.alpa || 0}</td>
+                          <td className="px-5 py-3 text-center text-gray-600 font-bold">{total}</td>
+                          <td className="px-5 py-3 text-center">
+                            <span className={`text-xs font-bold px-2 py-1 rounded-full ${pct >= 75 ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                              {pct}%
+                            </span>
                           </td>
                         </tr>
                       );
                     })}
                   </tbody>
                 </table>
-              </div>
-            )}
-
-            {/* Pagination */}
-            {!loading && filtered.length > PAGE_SIZE && (
-              <div className="px-6 py-3 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500">
-                <span>Halaman {page} dari {totalPages}</span>
-                <div className="flex gap-2">
-                  <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1}
-                    className="px-3 py-1.5 border rounded-lg font-semibold disabled:opacity-40 hover:bg-gray-50">
-                    Sebelumnya
-                  </button>
-                  <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages}
-                    className="px-3 py-1.5 border rounded-lg font-semibold disabled:opacity-40 hover:bg-gray-50">
-                    Selanjutnya
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Tombol Simpan */}
-            {!loading && students.length > 0 && (
-              <div className="px-6 py-4 border-t border-gray-100 flex justify-end bg-gray-50/50">
-                <button
-                  type="button"
-                  onClick={handleSimpan}
-                  disabled={saving || !selectedSubject}
-                  className="px-10 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold text-sm rounded-xl shadow-sm shadow-blue-200 transition-all active:scale-95"
-                >
-                  {saving ? "Menyimpan..." : "Simpan Absensi"}
-                </button>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         )}
-
       </div>
     </div>
   );
-};
-
-export default AbsensiSiswa;
+}
