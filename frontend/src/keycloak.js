@@ -18,3 +18,4 @@ export const hasRole = (roleName) => {
 };
 
 export default keycloak;
+
