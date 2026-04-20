@@ -106,28 +106,28 @@ export default function AbsensiSiswa() {
   };
 
   const handleSimpan = async () => {
-    if (!selectedKelas) { toast.error("Pilih kelas terlebih dahulu"); return; }
-    if (!tanggal)       { toast.error("Pilih tanggal terlebih dahulu"); return; }
-    setSaving(true);
-    try {
-      const payload = {
-        kelas_id:  selectedKelas,
-        mapel_id:  selectedMapel || null,
-        tanggal,
-        data_absensi: siswaList.map(s => ({
-          siswa_id:   s.id,
-          status:     absensi[s.id]?.status || "hadir",
-          keterangan: absensi[s.id]?.keterangan || "",
-        })),
-      };
-      await academicApi.createAbsensiSiswa(payload);
-      toast.success("Absensi berhasil disimpan!");
-    } catch (err) {
-      toast.error(err?.response?.data?.message || "Gagal menyimpan absensi");
-    } finally {
-      setSaving(false);
-    }
-  };
+  if (!selectedKelas) { toast.error("Pilih kelas terlebih dahulu"); return; }
+  if (!tanggal)       { toast.error("Pilih tanggal terlebih dahulu"); return; }
+  setSaving(true);
+  try {
+    const payload = {
+      classId:    selectedKelas,
+      date:       tanggal,
+      subjectId:  selectedMapel || null,
+      attendance: siswaList.map(s => ({
+        id_siswa:   s.id,
+        status:     absensi[s.id]?.status || "hadir",
+        keterangan: absensi[s.id]?.keterangan || "",
+      })),
+    };
+    await academicApi.createAbsensiSiswa(payload);
+    toast.success("Absensi berhasil disimpan!");
+  } catch (err) {
+    toast.error(err?.response?.data?.message || "Gagal menyimpan absensi");
+  } finally {
+    setSaving(false);
+  }
+};
 
   const handleLoadRiwayat = async () => {
     if (!riwayatKelas && !riwayatTanggal) {

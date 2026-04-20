@@ -16,10 +16,21 @@ sequelize.authenticate()
   .catch(err => console.error('Koneksi Database Gagal:', err));
 
 const runQuery = async (text, params, t) => {
-  const trimmed = text.trim();
-  if (trimmed === 'BEGIN' || trimmed === 'COMMIT' || trimmed === 'ROLLBACK') return;
-  const isSelect = trimmed.toUpperCase().startsWith('SELECT');
-  const opts = { bind: params, transaction: t };
+  const trimmed = text.trim().toUpperCase();
+  if (trimmed === 'BEGIN') {
+    return;
+  }
+  if (trimmed === 'COMMIT') {
+    if (t) await t.commit();
+    return;
+  }
+  if (trimmed === 'ROLLBACK') {
+    if (t) await t.rollback();
+    return;
+  }
+  const isSelect = trimmed.startsWith('SELECT');
+  const hasParams = Array.isArray(params) && params.length > 0;
+  const opts = hasParams ? { bind: params, transaction: t } : { transaction: t };
   if (isSelect) {
     const rows = await sequelize.query(text, { ...opts, type: QueryTypes.SELECT });
     return { rows, rowCount: rows.length };
