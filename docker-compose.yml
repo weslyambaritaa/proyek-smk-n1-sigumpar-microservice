@@ -54,9 +54,9 @@ services:
       - PORT=3005
       - DB_NAME=auth_db
       - DB_USER=auth_user
+      - DB_HOST=localhost     
+      - DB_PASSWORD=password
       - DATABASE_URL=postgres://auth_user:password@localhost:5432/auth_db
-    depends_on:
-      - keycloak
 
   # ACADEMIC SERVICE
   academic-service:
