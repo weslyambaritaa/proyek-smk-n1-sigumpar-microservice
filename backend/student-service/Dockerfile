@@ -14,6 +14,6 @@ RUN rm -rf node_modules && npm install
 
 RUN chmod +x start.sh
 
-EXPOSE 3005
+EXPOSE 3008
 
 CMD ["./start.sh"]
