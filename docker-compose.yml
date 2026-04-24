@@ -120,18 +120,20 @@ services:
 
   # VOCATIONAL SERVICE
   vocational-service:
-    <<: *service-template
-    build: ./backend/vocational-service
-    container_name: vocational-service
-    environment:
-      - PORT=3007
-      - DB_NAME=vocational_db
-      - DB_USER=vocational_user
-      - DB_HOST=localhost
-      - DB_PASSWORD=password
-      - DATABASE_URL=postgres://vocational_user:password@localhost:5432/vocational_db
-    depends_on:
-      - keycloak
+  <<: *service-template
+  build: ./backend/vocational-service
+  container_name: vocational-service
+  environment:
+    - PORT=3007
+    - DB_NAME=vocational_db
+    - DB_USER=vocational_user
+    - DB_HOST=localhost
+    - DB_PASSWORD=password
+    - DATABASE_URL=postgres://vocational_user:password@localhost:5432/vocational_db
+  volumes:
+    - vocational_db_data:/var/lib/postgresql/15/main
+  depends_on:
+    - keycloak
 
   # API GATEWAY (Nginx)
   api-gateway:
