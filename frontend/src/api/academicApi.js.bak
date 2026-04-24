@@ -49,36 +49,6 @@ export const academicApi = {
   deleteArsipSurat: (id) =>
     axiosInstance.delete(`/api/academic/arsip-surat/${id}`),
   // URL preview langsung (buka di tab baru)
-  // Download arsip surat lewat ID (token otomatis ikut, seperti perangkat pembelajaran)
-  downloadArsipSurat: (id, nomorSurat) =>
-    axiosInstance
-      .get(`/api/academic/arsip-surat/${id}/preview`, { responseType: "blob" })
-      .then((res) => {
-        const mimeType = res.headers["content-type"] || "application/octet-stream";
-        const blob = new Blob([res.data], { type: mimeType });
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        const ext = mimeType.includes("pdf") ? ".pdf" : mimeType.includes("word") ? ".docx" : "";
-        const safeName = `Arsip_${(nomorSurat || "surat").replace(/\//g, "-")}${ext}`;
-        link.setAttribute("download", safeName);
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        window.URL.revokeObjectURL(url);
-      }),
-
-  // Preview arsip surat di tab baru (token otomatis ikut)
-  previewArsipSurat2: async (id) => {
-    const res = await axiosInstance.get(`/api/academic/arsip-surat/${id}/preview`, { responseType: "blob" });
-    const mimeType = res.headers["content-type"] || "application/octet-stream";
-    const blob = new Blob([res.data], { type: mimeType });
-    const url = window.URL.createObjectURL(blob);
-    window.open(url, "_blank");
-    setTimeout(() => window.URL.revokeObjectURL(url), 10000);
-  },
-
-  // URL preview langsung (buka di tab baru)
   getArsipSuratPreviewUrl: (id) =>
     `${axiosInstance.defaults.baseURL || "http://localhost:8001"}/api/academic/arsip-surat/${id}/preview`,
 

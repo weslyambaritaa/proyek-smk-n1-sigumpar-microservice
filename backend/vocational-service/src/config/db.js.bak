@@ -12,13 +12,13 @@ const sequelize = new Sequelize(
   }
 );
 sequelize.authenticate()
-  .then(() => console.log('Koneksi Database Berhasil (Sequelize) - vocational-service'))
+  .then(() => console.log('Koneksi Database Berhasil (Sequelize) — vocational-service'))
   .catch(err => console.error('Koneksi Database Gagal:', err));
 
 const runQuery = async (text, params, t) => {
   const trimmed = text.trim();
-  const upper = trimmed.toUpperCase();
-  const isSelect = upper.startsWith('SELECT');
+  if (trimmed === 'BEGIN' || trimmed === 'COMMIT' || trimmed === 'ROLLBACK') return;
+  const isSelect = trimmed.toUpperCase().startsWith('SELECT');
   const opts = { bind: params, transaction: t };
   if (isSelect) {
     const rows = await sequelize.query(text, { ...opts, type: QueryTypes.SELECT });
@@ -33,13 +33,7 @@ const pool = {
   connect: async () => {
     const t = await sequelize.transaction();
     return {
-      query: async (text, params) => {
-        const trimmed = text.trim().toUpperCase();
-        if (trimmed === 'BEGIN') return;
-        if (trimmed === 'COMMIT') { await t.commit(); return; }
-        if (trimmed === 'ROLLBACK') { await t.rollback(); return; }
-        return runQuery(text, params, t);
-      },
+      query: (text, params) => runQuery(text, params, t),
       release: () => {},
     };
   },

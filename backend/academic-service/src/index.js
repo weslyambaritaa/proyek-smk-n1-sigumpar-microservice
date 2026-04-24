@@ -19,7 +19,7 @@ app.use(express.urlencoded({ extended: true, limit: "20mb" }));
 // Menggantikan express.static yang tidak selalu mengirim Content-Type benar
 app.get("/uploads/:filename", (req, res) => {
   const safeName = path.basename(req.params.filename);
-  const filePath = path.join(__dirname, "../uploads", safeName);
+  const filePath = path.join(__dirname, "../../uploads", safeName);
 
   if (!fs.existsSync(filePath)) {
     return res.status(404).json({ error: "File tidak ditemukan" });

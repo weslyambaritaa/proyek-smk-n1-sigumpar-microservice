@@ -74,8 +74,6 @@ services:
     depends_on: [keycloak]
     ports:
       - "3003:3003"
-    volumes:
-      - academic_uploads:/app/uploads
 
   # ASSET SERVICE
   asset-service:
@@ -121,7 +119,7 @@ services:
     ports:
       - "3008:3008"
 
- # VOCATIONAL SERVICE
+  # VOCATIONAL SERVICE
   vocational-service:
     <<: *service-template
     build: ./backend/vocational-service
@@ -135,8 +133,6 @@ services:
     depends_on: [keycloak]
     ports:
       - "3007:3007"
-    volumes:
-      - vocational_uploads:/app/uploads
 
   # API GATEWAY (Nginx)
   # API GATEWAY (Nginx)
@@ -178,5 +174,3 @@ networks:
 
 volumes:
   keycloak_db_data:
-  academic_uploads:
-  vocational_uploads:

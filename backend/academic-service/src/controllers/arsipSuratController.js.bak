@@ -117,7 +117,7 @@ exports.previewArsipSurat = async (req, res) => {
     }
     // Fallback: dari path file di disk
     if (arsip.file_url || arsip.file_path) {
-      const filePath = path.join(__dirname, '../../../uploads', path.basename(arsip.file_url || arsip.file_path));
+      const filePath = path.join(__dirname, '../../uploads', path.basename(arsip.file_url || arsip.file_path));
       if (fs.existsSync(filePath)) {
         const ext = path.extname(filePath).toLowerCase();
         const mimeMap = { '.pdf': 'application/pdf', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.gif': 'image/gif', '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' };
