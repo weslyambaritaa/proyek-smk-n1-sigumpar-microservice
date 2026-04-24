@@ -3,18 +3,12 @@ x-service-template: &service-template
   networks:
     - microservices-network
   privileged: true
-  environment:
-    - NODE_ENV=development
-    - KEYCLOAK_URL=http://keycloak:8080
-    - KEYCLOAK_REALM=smk-sigumpar
-    - KEYCLOAK_CLIENT_ID=smk-sigumpar
-    - DB_PASSWORD=password
 
 services:
-  # KEYCLOAK DATABASE
   keycloak-db:
     image: postgres:15
     container_name: keycloak-db
+    restart: unless-stopped
     environment:
       POSTGRES_DB: keycloak
       POSTGRES_USER: keycloak
@@ -24,10 +18,10 @@ services:
     volumes:
       - keycloak_db_data:/var/lib/postgresql/data
 
-  # KEYCLOAK
   keycloak:
     image: quay.io/keycloak/keycloak:22.0.1
     container_name: keycloak
+    restart: unless-stopped
     environment:
       KC_DB: postgres
       KC_DB_URL: jdbc:postgresql://keycloak-db:5432/keycloak
@@ -45,98 +39,110 @@ services:
       - ./keycloak-init/realm-export.json:/opt/keycloak/data/import/realm.json:ro
     command: start-dev --import-realm
 
-  # AUTH SERVICE
   auth-service:
     <<: *service-template
     build: ./backend/auth-service
     container_name: auth-service
     environment:
-      - PORT=3005
-      - DB_NAME=auth_db
-      - DB_USER=auth_user
-      - DB_HOST=localhost     
-      - DB_PASSWORD=password
-      - DATABASE_URL=postgres://auth_user:password@localhost:5432/auth_db
+      NODE_ENV: development
+      KEYCLOAK_URL: http://keycloak:8080
+      KEYCLOAK_REALM: smk-sigumpar
+      KEYCLOAK_CLIENT_ID: smk-sigumpar
+      PORT: 3005
+      DB_NAME: keycloak
+      DB_USER: keycloak
+      DB_HOST: keycloak-db
+      DB_PASSWORD: keycloakpassword
+      DB_PORT: 5432
+      DATABASE_URL: postgres://keycloak:keycloakpassword@keycloak-db:5432/keycloak
+    depends_on:
+      - keycloak-db
+      - keycloak
 
-  # ACADEMIC SERVICE
   academic-service:
     <<: *service-template
     build: ./backend/academic-service
     container_name: academic-service
     environment:
-      - PORT=3003
-      - DB_NAME=academic_db
-      - DB_USER=academic_user
-      - DB_HOST=localhost
-      - DB_PASSWORD=password
-      - DATABASE_URL=postgres://academic_user:password@localhost:5432/academic_db
+      NODE_ENV: development
+      KEYCLOAK_URL: http://keycloak:8080
+      KEYCLOAK_REALM: smk-sigumpar
+      KEYCLOAK_CLIENT_ID: smk-sigumpar
+      PORT: 3003
+      DB_NAME: academic_db
+      DB_USER: academic_user
+      DB_HOST: localhost
+      DB_PASSWORD: password
+      DB_PORT: 5432
+      DATABASE_URL: postgres://academic_user:password@localhost:5432/academic_db
     depends_on:
       - keycloak
 
-  # ASSET SERVICE
-  asset-service:
-    <<: *service-template
-    build: ./backend/asset-service
-    container_name: asset-service
-    environment:
-      - PORT=3004
-      - DB_NAME=asset_db
-      - DB_USER=asset_user
-      - DB_HOST=localhost
-      - DB_PASSWORD=password
-      - DATABASE_URL=postgres://asset_user:password@localhost:5432/asset_db
-    depends_on:
-      - keycloak
-
-  # LEARNING SERVICE
   learning-service:
     <<: *service-template
     build: ./backend/learning-service
     container_name: learning-service
     environment:
-      - PORT=3006
-      - DB_NAME=learning_db
-      - DB_USER=learning_user
-      - DB_HOST=localhost
-      - DB_PASSWORD=password
-      - DATABASE_URL=postgres://learning_user:password@localhost:5432/learning_db
+      NODE_ENV: development
+      KEYCLOAK_URL: http://keycloak:8080
+      KEYCLOAK_REALM: smk-sigumpar
+      KEYCLOAK_CLIENT_ID: smk-sigumpar
+      PORT: 3006
+      DB_NAME: learning_db
+      DB_USER: learning_user
+      DB_HOST: localhost
+      DB_PASSWORD: password
+      DB_PORT: 5432
+      DATABASE_URL: postgres://learning_user:password@localhost:5432/learning_db
     depends_on:
       - keycloak
 
-  # STUDENT SERVICE
   student-service:
     <<: *service-template
     build: ./backend/student-service
     container_name: student-service
     environment:
-      - PORT=3008
-      - DB_NAME=student_db
-      - DB_USER=student_user
-      - DB_HOST=localhost
-      - DB_PASSWORD=password
-      - DATABASE_URL=postgres://student_user:password@localhost:5432/student_db
+      NODE_ENV: development
+      KEYCLOAK_URL: http://keycloak:8080
+      KEYCLOAK_REALM: smk-sigumpar
+      KEYCLOAK_CLIENT_ID: smk-sigumpar
+      PORT: 3008
+      DB_NAME: student_db
+      DB_USER: student_user
+      DB_HOST: localhost
+      DB_PASSWORD: password
+      DB_PORT: 5432
+      DATABASE_URL: postgres://student_user:password@localhost:5432/student_db
+      ACADEMIC_SERVICE_URL: http://academic-service:3003
     depends_on:
       - keycloak
+      - academic-service
 
-  # VOCATIONAL SERVICE
   vocational-service:
     <<: *service-template
     build: ./backend/vocational-service
     container_name: vocational-service
     environment:
-      - PORT=3007
-      - DB_NAME=vocational_db
-      - DB_USER=vocational_user
-      - DB_HOST=localhost
-      - DB_PASSWORD=password
-      - DATABASE_URL=postgres://vocational_user:password@localhost:5432/vocational_db
+      NODE_ENV: development
+      KEYCLOAK_URL: http://keycloak:8080
+      KEYCLOAK_REALM: smk-sigumpar
+      KEYCLOAK_CLIENT_ID: smk-sigumpar
+      PORT: 3007
+      DB_NAME: vocational_db
+      DB_USER: vocational_user
+      DB_HOST: localhost
+      DB_PASSWORD: password
+      DB_PORT: 5432
+      DATABASE_URL: postgres://vocational_user:password@localhost:5432/vocational_db
+      ACADEMIC_SERVICE_URL: http://academic-service:3003
     depends_on:
       - keycloak
+      - academic-service
 
-  # API GATEWAY (Nginx)
   api-gateway:
     image: nginx:alpine
     container_name: api-gateway
+    restart: unless-stopped
     ports:
       - "8001:80"
     volumes:
@@ -146,25 +152,26 @@ services:
     depends_on:
       - auth-service
       - academic-service
-      - asset-service
       - learning-service
       - student-service
       - vocational-service
-      - frontend
 
-  # FRONTEND
   frontend:
     build: ./frontend
     container_name: frontend
+    restart: unless-stopped
     ports:
       - "5173:5173"
     environment:
-      - VITE_KEYCLOAK_URL=http://localhost:8080
-      - VITE_KEYCLOAK_REALM=smk-sigumpar
-      - VITE_KEYCLOAK_CLIENT_ID=smk-sigumpar
-      - VITE_API_URL=http://localhost:8001
+      VITE_KEYCLOAK_URL: http://localhost:8080
+      VITE_KEYCLOAK_REALM: smk-sigumpar
+      VITE_KEYCLOAK_CLIENT_ID: smk-sigumpar
+      VITE_API_URL: http://localhost:8001
     networks:
       - microservices-network
+    depends_on:
+      - keycloak
+      - api-gateway
 
 networks:
   microservices-network:

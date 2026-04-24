@@ -9,7 +9,6 @@ RUN npm install
 
 COPY . .
 
-# Hapus node_modules yang ikut ter-copy dari Windows, pakai yang di-install tadi
 RUN rm -rf node_modules && npm install
 
 RUN chmod +x start.sh

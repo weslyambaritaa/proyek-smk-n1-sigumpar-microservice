@@ -1,35 +1,36 @@
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import './index.css'
-import App from './App.jsx'
-import keycloak from './keycloak' // Import konfigurasi yang baru Anda buat
+import React from "react";
+import ReactDOM from "react-dom/client";
+import App from "./App";
+import keycloak from "./keycloak";
+import "./index.css";
 
-// Inisialisasi Keycloak
-keycloak.init({ 
-  onLoad: 'login-required', // Memaksa login saat web dibuka
-  checkLoginIframe: false 
-}).then((authenticated) => {
-  if (authenticated) {
-    
-    console.log("✅ User terautentikasi");
-    // window.keycloak = keycloak;
-    
-    // Render aplikasi hanya setelah login berhasil
-    createRoot(document.getElementById('root')).render(
-      <StrictMode>
-        <App />
-      </StrictMode>,
-    )
-  } else {
-    // Jika gagal autentikasi, refresh halaman
-    window.location.reload();
+function AppWrapper() {
+  const [ready, setReady] = React.useState(false);
+
+  React.useEffect(() => {
+    keycloak
+      .init({
+        onLoad: "login-required",
+        checkLoginIframe: false,
+        pkceMethod: "S256",
+      })
+      .then(() => {
+        setReady(true);
+      })
+      .catch((err) => {
+        console.error("Keycloak init failed", err);
+      });
+  }, []);
+
+  if (!ready) {
+    return <div>Loading authentication...</div>;
   }
-}).catch((err) => {
-  console.error("❌ Gagal inisialisasi Keycloak:", err);
-  document.getElementById('root').innerHTML = `
-    <div style="color: red; text-align: center; margin-top: 50px;">
-      <h1>Gagal Terhubung ke Keycloak</h1>
-      <p>Pastikan container Keycloak sudah jalan di http://localhost:8080</p>
-    </div>
-  `;
-});
+
+  return <App />;
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(
+  <React.StrictMode>
+    <AppWrapper />
+  </React.StrictMode>,
+);

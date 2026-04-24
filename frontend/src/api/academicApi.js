@@ -1,12 +1,30 @@
-import axiosInstance from "./axiosInstance";
+import axios from "axios";
+import keycloak from "../keycloak";
+
+const api = axios.create({
+  baseURL: `${import.meta.env.VITE_API_URL}/api`,
+});
+
+api.interceptors.request.use((config) => {
+  if (keycloak?.token) {
+    config.headers.Authorization = `Bearer ${keycloak.token}`;
+  }
+  return config;
+});
 
 export const academicApi = {
-  // ── KELAS ──────────────────────────────────────────────────────────────
-  getAllKelas: () => axiosInstance.get("/api/academic/kelas"),
-  createKelas: (data) => axiosInstance.post("/api/academic/kelas", data),
-  updateKelas: (id, data) =>
-    axiosInstance.put(`/api/academic/kelas/${id}`, data),
-  deleteKelas: (id) => axiosInstance.delete(`/api/academic/kelas/${id}`),
+  searchWaliKelas: (query) =>
+    api.get(
+      `/auth/users/search?q=${encodeURIComponent(query)}&role=wali-kelas`,
+    ),
+  getKelas: () => api.get("/academic/kelas"),
+  createKelas: (payload) => api.post("/academic/kelas", payload),
+  updateKelas: (id, payload) => api.put(`/academic/kelas/${id}`, payload),
+  deleteKelas: (id) => api.delete(`/academic/kelas/${id}`),
+
+  // auth-service tetap general, tapi dipakai untuk kebutuhan wali kelas
+  searchWaliKelas: (query) =>
+    api.get(`/auth/search?q=${encodeURIComponent(query)}&role=wali-kelas`),
 
   // ── SISWA ──────────────────────────────────────────────────────────────
   getAllSiswa: (params) => axiosInstance.get("/api/academic/siswa", { params }),
@@ -22,8 +40,6 @@ export const academicApi = {
   deleteGuru: (id) => axiosInstance.delete(`/api/academic/guru/${id}`),
   searchGuru: (q) =>
     axiosInstance.get("/api/academic/guru/search", { params: { q } }),
-
-  // searchWaliKelas — mencari guru yang bisa jadi wali kelas
   searchWaliKelas: (q) =>
     axiosInstance.get("/api/academic/guru/search", { params: { q } }),
 
@@ -48,7 +64,6 @@ export const academicApi = {
     }),
   deleteArsipSurat: (id) =>
     axiosInstance.delete(`/api/academic/arsip-surat/${id}`),
-  // URL preview langsung (buka di tab baru)
   getArsipSuratPreviewUrl: (id) =>
     `${axiosInstance.defaults.baseURL || "http://localhost:8001"}/api/academic/arsip-surat/${id}/preview`,
 
@@ -107,11 +122,52 @@ export const academicApi = {
     window.URL.revokeObjectURL(url);
   },
 
-  // ── NILAI WALI KELAS (terintegrasi dari guru mapel) ───────────────────
+  // ── FITUR STUDENT SERVICE / WALI KELAS ────────────────────────────────
+  getParenting: (params) =>
+    axiosInstance.get("/api/student/parenting", { params }),
+  createParenting: (formData) =>
+    axiosInstance.post("/api/student/parenting", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    }),
+  updateParenting: (id, formData) =>
+    axiosInstance.put(`/api/student/parenting/${id}`, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    }),
+  deleteParenting: (id) => axiosInstance.delete(`/api/student/parenting/${id}`),
+
+  getKebersihan: (params) =>
+    axiosInstance.get("/api/student/kebersihan", { params }),
+  createKebersihan: (formData) =>
+    axiosInstance.post("/api/student/kebersihan", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    }),
+  updateKebersihan: (id, formData) =>
+    axiosInstance.put(`/api/student/kebersihan/${id}`, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    }),
+  deleteKebersihan: (id) =>
+    axiosInstance.delete(`/api/student/kebersihan/${id}`),
+
+  getRefleksi: (params) =>
+    axiosInstance.get("/api/student/refleksi", { params }),
+  createRefleksi: (data) => axiosInstance.post("/api/student/refleksi", data),
+  updateRefleksi: (id, data) =>
+    axiosInstance.put(`/api/student/refleksi/${id}`, data),
+  deleteRefleksi: (id) => axiosInstance.delete(`/api/student/refleksi/${id}`),
+
+  getSuratPanggilan: (params) =>
+    axiosInstance.get("/api/student/surat-panggilan", { params }),
+  createSuratPanggilan: (data) =>
+    axiosInstance.post("/api/student/surat-panggilan", data),
+  updateSuratPanggilan: (id, data) =>
+    axiosInstance.put(`/api/student/surat-panggilan/${id}`, data),
+  deleteSuratPanggilan: (id) =>
+    axiosInstance.delete(`/api/student/surat-panggilan/${id}`),
+
   getRekapNilaiWali: (params) =>
-    axiosInstance.get("/api/academic/wali/rekap-nilai", { params }),
+    axiosInstance.get("/api/student/rekap-nilai", { params }),
   getRekapAbsensiWali: (params) =>
-    axiosInstance.get("/api/academic/wali/rekap-absensi", { params }),
+    axiosInstance.get("/api/student/rekap-kehadiran", { params }),
 
   // ── ABSENSI SISWA ──────────────────────────────────────────────────────
   getAbsensiSiswa: (params) =>

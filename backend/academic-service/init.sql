@@ -3,8 +3,14 @@ CREATE TABLE IF NOT EXISTS kelas (
     id SERIAL PRIMARY KEY,
     nama_kelas VARCHAR(50) NOT NULL,
     tingkat VARCHAR(10),
-    wali_kelas_id UUID  -- TAMBAHKAN BARIS INI
+    wali_kelas_id UUID,
+    wali_kelas_nama VARCHAR(150)
 );
+ALTER TABLE kelas
+ADD COLUMN IF NOT EXISTS wali_kelas_id UUID;
+
+ALTER TABLE kelas
+ADD COLUMN IF NOT EXISTS wali_kelas_nama VARCHAR(150);
 
 CREATE TABLE IF NOT EXISTS siswa (
     id SERIAL PRIMARY KEY,

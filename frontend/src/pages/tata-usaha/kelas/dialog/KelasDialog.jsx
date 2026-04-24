@@ -8,7 +8,9 @@ const KelasDialog = ({ isOpen, onClose, onSuccess, initialData }) => {
     nama_kelas: "",
     tingkat: "",
     wali_kelas_id: "",
+    wali_kelas_nama: "",
   });
+
   const [searchQuery, setSearchQuery] = useState("");
   const [suggestions, setSuggestions] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -19,24 +21,32 @@ const KelasDialog = ({ isOpen, onClose, onSuccess, initialData }) => {
         nama_kelas: initialData.nama_kelas || "",
         tingkat: initialData.tingkat || "",
         wali_kelas_id: initialData.wali_kelas_id || "",
+        wali_kelas_nama: initialData.wali_kelas_nama || "",
       });
-      setSearchQuery(initialData.nama_wali || "");
+      setSearchQuery(initialData.wali_kelas_nama || "");
     } else {
-      setFormData({ nama_kelas: "", tingkat: "", wali_kelas_id: "" });
+      setFormData({
+        nama_kelas: "",
+        tingkat: "",
+        wali_kelas_id: "",
+        wali_kelas_nama: "",
+      });
       setSearchQuery("");
     }
+
+    setSuggestions([]);
   }, [initialData, isOpen]);
 
-  // Auto-suggest Wali Kelas (Ketik 1 huruf langsung mencari)
   useEffect(() => {
     const delayDebounceFn = setTimeout(async () => {
       if (searchQuery.length > 0 && !formData.wali_kelas_id) {
         setIsSearching(true);
         try {
           const res = await academicApi.searchWaliKelas(searchQuery);
-          setSuggestions(res.data);
+          setSuggestions(res.data?.data || []);
         } catch (err) {
-          console.error(err);
+          console.error("Gagal mencari wali kelas:", err);
+          setSuggestions([]);
         } finally {
           setIsSearching(false);
         }
@@ -44,16 +54,19 @@ const KelasDialog = ({ isOpen, onClose, onSuccess, initialData }) => {
         setSuggestions([]);
       }
     }, 300);
+
     return () => clearTimeout(delayDebounceFn);
   }, [searchQuery, formData.wali_kelas_id]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    // Pastikan wali_kelas_id null bukan string kosong (PostgreSQL UUID tidak terima "")
+
     const payload = {
       ...formData,
       wali_kelas_id: formData.wali_kelas_id || null,
+      wali_kelas_nama: formData.wali_kelas_nama || null,
     };
+
     const savePromise = initialData?.id
       ? academicApi.updateKelas(initialData.id, payload)
       : academicApi.createKelas(payload);
@@ -74,11 +87,8 @@ const KelasDialog = ({ isOpen, onClose, onSuccess, initialData }) => {
   if (!isOpen) return null;
 
   return (
-    // Background Overlay & Posisi Kanan (justify-end)
     <div className="fixed inset-0 z-50 flex justify-end bg-black/50 backdrop-blur-sm">
-      {/* Container Sheet (h-full, max-w-md, animasi dari kanan) */}
       <div className="bg-white w-full max-w-md h-full shadow-2xl flex flex-col animate-slide-right">
-        {/* Header */}
         <div className="px-6 py-4 border-b">
           <h2 className="text-xl font-bold text-gray-800">
             {initialData ? "Edit Kelas" : "Tambah Kelas"}
@@ -88,7 +98,6 @@ const KelasDialog = ({ isOpen, onClose, onSuccess, initialData }) => {
           </p>
         </div>
 
-        {/* Body Form (Bisa di-scroll jika konten panjang) */}
         <div className="flex-1 overflow-y-auto px-6 py-4">
           <form id="kelas-form" onSubmit={handleSubmit} className="space-y-5">
             <div>
@@ -138,10 +147,15 @@ const KelasDialog = ({ isOpen, onClose, onSuccess, initialData }) => {
                 value={searchQuery}
                 onChange={(e) => {
                   setSearchQuery(e.target.value);
-                  setFormData({ ...formData, wali_kelas_id: "" });
+                  setFormData({
+                    ...formData,
+                    wali_kelas_id: "",
+                    wali_kelas_nama: "",
+                  });
                 }}
                 placeholder="Ketik nama wali kelas..."
               />
+
               {isSearching && (
                 <p className="text-xs text-gray-500 mt-1">Mencari...</p>
               )}
@@ -153,21 +167,37 @@ const KelasDialog = ({ isOpen, onClose, onSuccess, initialData }) => {
                       key={user.id}
                       className="px-4 py-2 hover:bg-blue-50 cursor-pointer"
                       onClick={() => {
-                        setFormData({ ...formData, wali_kelas_id: user.id });
+                        setFormData({
+                          ...formData,
+                          wali_kelas_id: user.id,
+                          wali_kelas_nama: user.nama_lengkap,
+                        });
                         setSearchQuery(user.nama_lengkap);
                         setSuggestions([]);
                       }}
                     >
-                      {user.nama_lengkap}
+                      <div className="font-medium text-sm">
+                        {user.nama_lengkap}
+                      </div>
+                      {user.username && (
+                        <div className="text-xs text-gray-500">
+                          @{user.username}
+                        </div>
+                      )}
                     </li>
                   ))}
                 </ul>
+              )}
+
+              {formData.wali_kelas_id && formData.wali_kelas_nama && (
+                <p className="text-xs text-green-600 mt-2">
+                  Wali kelas terpilih: {formData.wali_kelas_nama}
+                </p>
               )}
             </div>
           </form>
         </div>
 
-        {/* Footer (Tombol Aksi) */}
         <div className="px-6 py-4 border-t bg-gray-50 flex justify-end gap-3">
           <Button variant="secondary" onClick={onClose} type="button">
             Batal
