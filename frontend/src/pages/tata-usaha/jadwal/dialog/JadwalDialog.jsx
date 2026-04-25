@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { academicApi } from "../../../../api/academicApi";
 import Button from "../../../../components/ui/Button";
 import toast from "react-hot-toast";
@@ -6,103 +6,153 @@ import toast from "react-hot-toast";
 const JadwalDialog = ({ isOpen, onClose, onSuccess, initialData }) => {
   const [formData, setFormData] = useState({
     guru_id: "",
+    guru_nama: "",
     kelas_id: "",
+    mapel_id: "",
     mata_pelajaran: "",
     hari: "",
     waktu_mulai: "",
     waktu_berakhir: "",
   });
-  
-  const [kelasList, setKelasList] = useState([]);
-  const [mapelList, setMapelList] = useState([]); // State untuk daftar mapel dari DB
 
-  // --- State Auto-Suggest Guru ---
-  const [searchQuery, setSearchQuery] = useState("");
-  const [suggestions, setSuggestions] = useState([]);
-  const [isSearching, setIsSearching] = useState(false);
+  const [guruQuery, setGuruQuery] = useState("");
+  const [guruSuggestions, setGuruSuggestions] = useState([]);
+  const [isSearchingGuru, setIsSearchingGuru] = useState(false);
 
-  // --- State Auto-Suggest Mapel ---
-  const [searchMapel, setSearchMapel] = useState("");
-  const [mapelSuggestions, setMapelSuggestions] = useState([]);
+  const [assignments, setAssignments] = useState([]);
+  const [isLoadingAssignments, setIsLoadingAssignments] = useState(false);
 
-  // Ambil daftar kelas & mapel saat dialog dibuka
   useEffect(() => {
-    if (isOpen) {
-      academicApi.getAllKelas()
-        .then((res) => setKelasList(Array.isArray(res.data) ? res.data : res.data.data || []))
-        .catch(err => console.error("Gagal load kelas:", err));
+    if (!isOpen) return;
 
-      academicApi.getAllMapel()
-        .then((res) => setMapelList(Array.isArray(res.data) ? res.data : res.data.data || []))
-        .catch(err => console.error("Gagal load mapel:", err));
-    }
-  }, [isOpen]);
-
-  // Set initial data untuk mode Edit
-  useEffect(() => {
     if (initialData) {
       setFormData({
         guru_id: initialData.guru_id || "",
+        guru_nama: initialData.guru_nama || "",
         kelas_id: initialData.kelas_id || "",
-        mata_pelajaran: initialData.mata_pelajaran || "",
+        mapel_id: initialData.mapel_id || "",
+        mata_pelajaran:
+          initialData.mata_pelajaran || initialData.nama_mapel || "",
         hari: initialData.hari || "",
         waktu_mulai: initialData.waktu_mulai || "",
         waktu_berakhir: initialData.waktu_berakhir || "",
       });
-      setSearchQuery(initialData.nama_guru || "");
-      setSearchMapel(initialData.mata_pelajaran || "");
-    } else {
-      setFormData({ guru_id: "", kelas_id: "", mata_pelajaran: "", hari: "", waktu_mulai: "", waktu_berakhir: "" });
-      setSearchQuery("");
-      setSearchMapel("");
-    }
-  }, [initialData, isOpen]);
 
-  // Auto-suggest Guru Mengajar (Panggil API Auth)
+      setGuruQuery(initialData.guru_nama || "");
+
+      if (initialData.guru_id) {
+        fetchAssignmentsByGuru(initialData.guru_id);
+      }
+    } else {
+      setFormData({
+        guru_id: "",
+        guru_nama: "",
+        kelas_id: "",
+        mapel_id: "",
+        mata_pelajaran: "",
+        hari: "",
+        waktu_mulai: "",
+        waktu_berakhir: "",
+      });
+
+      setGuruQuery("");
+      setAssignments([]);
+    }
+
+    setGuruSuggestions([]);
+  }, [isOpen, initialData]);
+
   useEffect(() => {
-    const delayDebounceFn = setTimeout(async () => {
-      if (searchQuery.length > 0 && !formData.guru_id) {
-        setIsSearching(true);
+    const timer = setTimeout(async () => {
+      if (guruQuery.length > 0 && !formData.guru_id) {
+        setIsSearchingGuru(true);
+
         try {
-          const res = await academicApi.searchGuru(searchQuery);
-          setSuggestions(res.data);
+          const res = await academicApi.searchGuruMapel(guruQuery);
+          setGuruSuggestions(res.data?.data || []);
         } catch (err) {
-          console.error(err);
+          console.error("Gagal mencari guru mapel:", err);
+          setGuruSuggestions([]);
         } finally {
-          setIsSearching(false);
+          setIsSearchingGuru(false);
         }
       } else {
-        setSuggestions([]);
+        setGuruSuggestions([]);
       }
     }, 300);
-    return () => clearTimeout(delayDebounceFn);
-  }, [searchQuery, formData.guru_id]);
 
-  // Auto-suggest Mata Pelajaran (Filter Lokal dari mapelList DB)
-  useEffect(() => {
-    if (searchMapel.length > 0 && !formData.mata_pelajaran) {
-      const filtered = mapelList.filter((m) =>
-        m.nama_mapel.toLowerCase().includes(searchMapel.toLowerCase())
-      );
-      setMapelSuggestions(filtered);
-    } else {
-      setMapelSuggestions([]);
+    return () => clearTimeout(timer);
+  }, [guruQuery, formData.guru_id]);
+
+  const fetchAssignmentsByGuru = async (guruId) => {
+    try {
+      setIsLoadingAssignments(true);
+      const res = await academicApi.getMapelByGuru(guruId);
+      setAssignments(res.data?.data || []);
+    } catch (err) {
+      console.error("Gagal mengambil assignment guru mapel:", err);
+      setAssignments([]);
+    } finally {
+      setIsLoadingAssignments(false);
     }
-  }, [searchMapel, formData.mata_pelajaran, mapelList]);
+  };
+
+  const handleSelectGuru = async (guru) => {
+    setFormData((prev) => ({
+      ...prev,
+      guru_id: guru.id,
+      guru_nama: guru.nama_lengkap,
+      kelas_id: "",
+      mapel_id: "",
+      mata_pelajaran: "",
+    }));
+
+    setGuruQuery(guru.nama_lengkap);
+    setGuruSuggestions([]);
+
+    await fetchAssignmentsByGuru(guru.id);
+  };
+
+  const handleSelectAssignment = (assignmentId) => {
+    const selected = assignments.find(
+      (item) => String(item.mapel_id) === String(assignmentId),
+    );
+
+    if (!selected) {
+      setFormData((prev) => ({
+        ...prev,
+        kelas_id: "",
+        mapel_id: "",
+        mata_pelajaran: "",
+      }));
+      return;
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      kelas_id: selected.kelas_id,
+      mapel_id: selected.mapel_id,
+      mata_pelajaran: selected.nama_mapel,
+    }));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Data final untuk dikirim
-    const dataToSave = {
-      ...formData,
-      // Jika user mengetik manual tapi tidak klik sugesti, kita tetap simpan teksnya
-      mata_pelajaran: formData.mata_pelajaran || searchMapel 
+    const payload = {
+      guru_id: formData.guru_id || null,
+      guru_nama: formData.guru_nama || null,
+      kelas_id: formData.kelas_id || null,
+      mapel_id: formData.mapel_id || null,
+      mata_pelajaran: formData.mata_pelajaran || null,
+      hari: formData.hari,
+      waktu_mulai: formData.waktu_mulai || null,
+      waktu_berakhir: formData.waktu_berakhir || null,
     };
 
     const savePromise = initialData?.id
-      ? academicApi.updateJadwal(initialData.id, dataToSave)
-      : academicApi.createJadwal(dataToSave);
+      ? academicApi.updateJadwal(initialData.id, payload)
+      : academicApi.createJadwal(payload);
 
     toast
       .promise(savePromise, {
@@ -121,20 +171,18 @@ const JadwalDialog = ({ isOpen, onClose, onSuccess, initialData }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-black/50 backdrop-blur-sm">
-      <div className="bg-white w-full max-w-md h-full shadow-2xl flex flex-col animate-slide-right">
+      <div className="bg-white w-full max-w-md h-full shadow-2xl flex flex-col">
         <div className="px-6 py-4 border-b">
           <h2 className="text-xl font-bold text-gray-800">
             {initialData ? "Edit Jadwal Mengajar" : "Tambah Jadwal Mengajar"}
           </h2>
           <p className="text-sm text-gray-500 mt-1">
-            Silakan isi detail jadwal pada form di bawah ini.
+            Pilih guru mapel, lalu pilih mapel dan kelas yang sudah di-assign.
           </p>
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 py-4">
           <form id="jadwal-form" onSubmit={handleSubmit} className="space-y-5">
-            
-            {/* INPUT GURU (AUTO-SUGGEST API) */}
             <div className="relative">
               <label className="block text-sm font-semibold text-gray-700 mb-1">
                 Guru Pengajar <span className="text-red-500">*</span>
@@ -142,144 +190,153 @@ const JadwalDialog = ({ isOpen, onClose, onSuccess, initialData }) => {
               <input
                 type="text"
                 required
-                className="w-full px-3 py-2 border rounded-lg focus:ring focus:ring-blue-200"
-                value={searchQuery}
+                value={guruQuery}
                 onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setFormData({ ...formData, guru_id: "" });
+                  setGuruQuery(e.target.value);
+                  setFormData((prev) => ({
+                    ...prev,
+                    guru_id: "",
+                    guru_nama: "",
+                    kelas_id: "",
+                    mapel_id: "",
+                    mata_pelajaran: "",
+                  }));
+                  setAssignments([]);
                 }}
-                placeholder="Ketik nama guru..."
+                className="w-full px-3 py-2 border rounded-lg focus:ring focus:ring-blue-200"
+                placeholder="Ketik nama guru mapel..."
               />
-              {isSearching && <p className="text-xs text-gray-500 mt-1">Mencari...</p>}
 
-              {suggestions.length > 0 && (
-                <ul className="absolute z-10 w-full bg-white border mt-1 rounded-md shadow-lg max-h-40 overflow-auto">
-                  {suggestions.map((user) => (
+              {isSearchingGuru && (
+                <p className="text-xs text-gray-500 mt-1">Mencari guru...</p>
+              )}
+
+              {guruSuggestions.length > 0 && (
+                <ul className="absolute z-20 w-full bg-white border mt-1 rounded-md shadow-lg max-h-40 overflow-auto">
+                  {guruSuggestions.map((guru) => (
                     <li
-                      key={user.id}
-                      className="px-4 py-2 hover:bg-blue-50 cursor-pointer text-sm"
-                      onClick={() => {
-                        setFormData({ ...formData, guru_id: user.id });
-                        setSearchQuery(user.nama_lengkap || user.username);
-                        setSuggestions([]);
-                      }}
+                      key={guru.id}
+                      className="px-4 py-2 hover:bg-blue-50 cursor-pointer"
+                      onClick={() => handleSelectGuru(guru)}
                     >
-                      {user.nama_lengkap || user.username}
+                      <div className="font-medium text-sm">
+                        {guru.nama_lengkap}
+                      </div>
+                      {guru.username && (
+                        <div className="text-xs text-gray-500">
+                          @{guru.username}
+                        </div>
+                      )}
                     </li>
                   ))}
                 </ul>
               )}
+
+              {formData.guru_id && (
+                <p className="text-xs text-green-600 mt-2">
+                  Guru terpilih: {formData.guru_nama}
+                </p>
+              )}
             </div>
 
-            {/* INPUT KELAS (DROPDOWN) */}
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1">
-                Kelas <span className="text-red-500">*</span>
+                Mata Pelajaran & Kelas <span className="text-red-500">*</span>
               </label>
+
               <select
                 required
-                className="w-full px-3 py-2 border rounded-lg focus:ring focus:ring-blue-200 bg-white"
-                value={formData.kelas_id}
-                onChange={(e) => setFormData({ ...formData, kelas_id: e.target.value })}
+                disabled={!formData.guru_id || isLoadingAssignments}
+                value={formData.mapel_id}
+                onChange={(e) => handleSelectAssignment(e.target.value)}
+                className="w-full px-3 py-2 border rounded-lg focus:ring focus:ring-blue-200 disabled:bg-gray-100 disabled:text-gray-500"
               >
-                <option value="" disabled>Pilih Kelas</option>
-                {kelasList.map(k => (
-                    <option key={k.id} value={k.id}>{k.nama_kelas} - Tingkat {k.tingkat}</option>
+                <option value="">
+                  {!formData.guru_id
+                    ? "Pilih guru terlebih dahulu"
+                    : isLoadingAssignments
+                      ? "Memuat assignment..."
+                      : "Pilih mapel dan kelas"}
+                </option>
+
+                {assignments.map((item) => (
+                  <option key={item.mapel_id} value={item.mapel_id}>
+                    {item.nama_mapel} - {item.tingkat} {item.nama_kelas}
+                  </option>
                 ))}
               </select>
+
+              {formData.guru_id &&
+                !isLoadingAssignments &&
+                assignments.length === 0 && (
+                  <p className="text-xs text-red-500 mt-1">
+                    Guru ini belum di-assign ke mata pelajaran dan kelas mana
+                    pun.
+                  </p>
+                )}
             </div>
 
-            {/* INPUT MAPEL (AUTO-SUGGEST LOKAL DATABASE) */}
-            <div className="relative">
-              <label className="block text-sm font-semibold text-gray-700 mb-1">
-                Mata Pelajaran <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                required
-                className="w-full px-3 py-2 border rounded-lg focus:ring focus:ring-blue-200"
-                value={searchMapel}
-                onChange={(e) => {
-                  setSearchMapel(e.target.value);
-                  setFormData({ ...formData, mata_pelajaran: "" });
-                }}
-                placeholder="Ketik mata pelajaran"
-              />
-
-              {mapelSuggestions.length > 0 && (
-                <ul className="absolute z-10 w-full bg-white border mt-1 rounded-md shadow-lg max-h-40 overflow-auto">
-                  {mapelSuggestions.map((m) => (
-                    <li
-                      key={m.id}
-                      className="px-4 py-2 hover:bg-blue-50 cursor-pointer text-sm"
-                      onClick={() => {
-                        setFormData({ ...formData, mata_pelajaran: m.nama_mapel });
-                        setSearchMapel(m.nama_mapel); // Ubah text input saat dipilih
-                        setMapelSuggestions([]);      // Tutup dropdown sugesti
-                      }}
-                    >
-                      {m.nama_mapel}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-
-            {/* INPUT HARI (DROPDOWN) */}
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1">
                 Hari <span className="text-red-500">*</span>
               </label>
               <select
                 required
-                className="w-full px-3 py-2 border rounded-lg focus:ring focus:ring-blue-200 bg-white"
                 value={formData.hari}
-                onChange={(e) => setFormData({ ...formData, hari: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, hari: e.target.value })
+                }
+                className="w-full px-3 py-2 border rounded-lg focus:ring focus:ring-blue-200"
               >
-                <option value="" disabled>Pilih Hari</option>
+                <option value="">Pilih hari</option>
                 <option value="Senin">Senin</option>
                 <option value="Selasa">Selasa</option>
                 <option value="Rabu">Rabu</option>
                 <option value="Kamis">Kamis</option>
                 <option value="Jumat">Jumat</option>
                 <option value="Sabtu">Sabtu</option>
-                <option value="Minggu">Minggu</option>
               </select>
             </div>
 
-            {/* INPUT WAKTU */}
-            <div className="flex gap-4">
-                <div className="flex-1">
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">
-                        Waktu Mulai <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                        type="time"
-                        required
-                        className="w-full px-3 py-2 border rounded-lg focus:ring focus:ring-blue-200"
-                        value={formData.waktu_mulai}
-                        onChange={(e) => setFormData({ ...formData, waktu_mulai: e.target.value })}
-                    />
-                </div>
-                <div className="flex-1">
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">
-                        Waktu Berakhir <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                        type="time"
-                        required
-                        className="w-full px-3 py-2 border rounded-lg focus:ring focus:ring-blue-200"
-                        value={formData.waktu_berakhir}
-                        onChange={(e) => setFormData({ ...formData, waktu_berakhir: e.target.value })}
-                    />
-                </div>
-            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">
+                  Mulai
+                </label>
+                <input
+                  type="time"
+                  value={formData.waktu_mulai}
+                  onChange={(e) =>
+                    setFormData({ ...formData, waktu_mulai: e.target.value })
+                  }
+                  className="w-full px-3 py-2 border rounded-lg focus:ring focus:ring-blue-200"
+                />
+              </div>
 
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">
+                  Selesai
+                </label>
+                <input
+                  type="time"
+                  value={formData.waktu_berakhir}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      waktu_berakhir: e.target.value,
+                    })
+                  }
+                  className="w-full px-3 py-2 border rounded-lg focus:ring focus:ring-blue-200"
+                />
+              </div>
+            </div>
           </form>
         </div>
 
         <div className="px-6 py-4 border-t bg-gray-50 flex justify-end gap-3">
-          <Button variant="secondary" onClick={onClose} type="button">Batal</Button>
+          <Button variant="secondary" onClick={onClose} type="button">
+            Batal
+          </Button>
           <button
             type="submit"
             form="jadwal-form"

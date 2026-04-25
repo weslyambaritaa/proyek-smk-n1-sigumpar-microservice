@@ -15,8 +15,11 @@ const displayNameSql = `
 
 const normalizeUserRows = (rows) =>
   rows.map((row) => ({
-    ...row,
+    id: row.id,
+    username: row.username,
+    email: row.email,
     nama_lengkap: row.nama_lengkap || row.username,
+    roles: row.roles || [],
   }));
 
 const getAll = async (req, res, next) => {
@@ -24,16 +27,18 @@ const getAll = async (req, res, next) => {
 
   try {
     const values = [];
-    let roleFilter = "";
 
+    let roleFilter = "";
     if (role) {
       values.push(role);
-      roleFilter = `WHERE kr.name = $1`;
+      roleFilter = `
+        HAVING $1 = ANY(array_remove(array_agg(DISTINCT kr.name), NULL))
+      `;
     }
 
     const result = await pool.query(
       `
-      SELECT DISTINCT
+      SELECT
         ue.id,
         ue.username,
         ue.email,
@@ -41,10 +46,16 @@ const getAll = async (req, res, next) => {
           WHEN ${displayNameSql} = '' THEN ue.username
           ELSE ${displayNameSql}
         END AS nama_lengkap,
-        kr.name AS role
+        array_remove(array_agg(DISTINCT kr.name), NULL) AS roles
       FROM user_entity ue
       LEFT JOIN user_role_mapping urm ON urm.user_id = ue.id
       LEFT JOIN keycloak_role kr ON kr.id = urm.role_id
+      GROUP BY
+        ue.id,
+        ue.username,
+        ue.email,
+        ue.first_name,
+        ue.last_name
       ${roleFilter}
       ORDER BY nama_lengkap ASC
       `,
@@ -70,12 +81,14 @@ const searchUsers = async (req, res, next) => {
     let roleFilter = "";
     if (role) {
       values.push(role);
-      roleFilter = `AND kr.name = $3`;
+      roleFilter = `
+        HAVING $3 = ANY(array_remove(array_agg(DISTINCT kr.name), NULL))
+      `;
     }
 
     const result = await pool.query(
       `
-      SELECT DISTINCT
+      SELECT
         ue.id,
         ue.username,
         ue.email,
@@ -83,7 +96,7 @@ const searchUsers = async (req, res, next) => {
           WHEN ${displayNameSql} = '' THEN ue.username
           ELSE ${displayNameSql}
         END AS nama_lengkap,
-        kr.name AS role
+        array_remove(array_agg(DISTINCT kr.name), NULL) AS roles
       FROM user_entity ue
       LEFT JOIN user_role_mapping urm ON urm.user_id = ue.id
       LEFT JOIN keycloak_role kr ON kr.id = urm.role_id
@@ -93,6 +106,12 @@ const searchUsers = async (req, res, next) => {
         ue.email ILIKE $2 OR
         ${displayNameSql} ILIKE $2
       )
+      GROUP BY
+        ue.id,
+        ue.username,
+        ue.email,
+        ue.first_name,
+        ue.last_name
       ${roleFilter}
       ORDER BY nama_lengkap ASC
       LIMIT 20

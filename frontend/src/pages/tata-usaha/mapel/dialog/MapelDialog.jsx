@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { academicApi } from "../../../../api/academicApi";
 import Button from "../../../../components/ui/Button";
 import toast from "react-hot-toast";
@@ -8,68 +8,91 @@ const MapelDialog = ({ isOpen, onClose, onSuccess, initialData }) => {
     nama_mapel: "",
     kelas_id: "",
     guru_mapel_id: "",
+    guru_mapel_nama: "",
   });
-  
-  const [kelasList, setKelasList] = useState([]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [suggestions, setSuggestions] = useState([]);
-  const [isSearching, setIsSearching] = useState(false);
 
-  // Ambil daftar kelas untuk dropdown
-  useEffect(() => {
-    if (isOpen) {
-      academicApi.getAllKelas().then((res) => {
-        setKelasList(Array.isArray(res.data) ? res.data : res.data.data || []);
-      }).catch(err => console.error("Gagal load kelas:", err));
-    }
-  }, [isOpen]);
+  const [kelasOptions, setKelasOptions] = useState([]);
+  const [guruQuery, setGuruQuery] = useState("");
+  const [guruSuggestions, setGuruSuggestions] = useState([]);
+  const [isSearchingGuru, setIsSearchingGuru] = useState(false);
 
-  // Set initial data
   useEffect(() => {
+    if (!isOpen) return;
+
+    fetchKelas();
+
     if (initialData) {
       setFormData({
         nama_mapel: initialData.nama_mapel || "",
         kelas_id: initialData.kelas_id || "",
         guru_mapel_id: initialData.guru_mapel_id || "",
+        guru_mapel_nama: initialData.guru_mapel_nama || "",
       });
-      setSearchQuery(initialData.nama_guru || "");
+      setGuruQuery(initialData.guru_mapel_nama || "");
     } else {
-      setFormData({ nama_mapel: "", kelas_id: "", guru_mapel_id: "" });
-      setSearchQuery("");
+      setFormData({
+        nama_mapel: "",
+        kelas_id: "",
+        guru_mapel_id: "",
+        guru_mapel_nama: "",
+      });
+      setGuruQuery("");
     }
-  }, [initialData, isOpen]);
 
-  // Auto-suggest Guru Mapel
+    setGuruSuggestions([]);
+  }, [isOpen, initialData]);
+
+  const fetchKelas = async () => {
+    try {
+      const res = await academicApi.getAllKelas();
+      setKelasOptions(res.data || []);
+    } catch (err) {
+      console.error("Gagal mengambil kelas:", err);
+      setKelasOptions([]);
+    }
+  };
+
   useEffect(() => {
-    const delayDebounceFn = setTimeout(async () => {
-      if (searchQuery.length > 0 && !formData.guru_mapel_id) {
-        setIsSearching(true);
+    const timer = setTimeout(async () => {
+      if (guruQuery.length > 0 && !formData.guru_mapel_id) {
+        setIsSearchingGuru(true);
+
         try {
-          const res = await academicApi.searchGuru(searchQuery);
-          setSuggestions(res.data);
+          const res = await academicApi.searchGuruMapel(guruQuery);
+          setGuruSuggestions(res.data?.data || []);
         } catch (err) {
-          console.error(err);
+          console.error("Gagal mencari guru mapel:", err);
+          setGuruSuggestions([]);
         } finally {
-          setIsSearching(false);
+          setIsSearchingGuru(false);
         }
       } else {
-        setSuggestions([]);
+        setGuruSuggestions([]);
       }
     }, 300);
-    return () => clearTimeout(delayDebounceFn);
-  }, [searchQuery, formData.guru_mapel_id]);
+
+    return () => clearTimeout(timer);
+  }, [guruQuery, formData.guru_mapel_id]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    const payload = {
+      nama_mapel: formData.nama_mapel,
+      kelas_id: formData.kelas_id || null,
+      guru_mapel_id: formData.guru_mapel_id || null,
+      guru_mapel_nama: formData.guru_mapel_nama || null,
+    };
+
     const savePromise = initialData?.id
-      ? academicApi.updateMapel(initialData.id, formData)
-      : academicApi.createMapel(formData);
+      ? academicApi.updateMapel(initialData.id, payload)
+      : academicApi.createMapel(payload);
 
     toast
       .promise(savePromise, {
-        loading: "Menyimpan data...",
-        success: "Data mapel berhasil disimpan!",
-        error: "Gagal menyimpan data mapel.",
+        loading: "Menyimpan mata pelajaran...",
+        success: "Mata pelajaran berhasil disimpan!",
+        error: "Gagal menyimpan mata pelajaran.",
       })
       .then(() => {
         onSuccess();
@@ -82,13 +105,13 @@ const MapelDialog = ({ isOpen, onClose, onSuccess, initialData }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-black/50 backdrop-blur-sm">
-      <div className="bg-white w-full max-w-md h-full shadow-2xl flex flex-col animate-slide-right">
+      <div className="bg-white w-full max-w-md h-full shadow-2xl flex flex-col">
         <div className="px-6 py-4 border-b">
           <h2 className="text-xl font-bold text-gray-800">
             {initialData ? "Edit Mata Pelajaran" : "Tambah Mata Pelajaran"}
           </h2>
           <p className="text-sm text-gray-500 mt-1">
-            Silakan isi detail mata pelajaran pada form di bawah ini.
+            Isi nama mata pelajaran, kelas, dan guru mapel.
           </p>
         </div>
 
@@ -96,31 +119,36 @@ const MapelDialog = ({ isOpen, onClose, onSuccess, initialData }) => {
           <form id="mapel-form" onSubmit={handleSubmit} className="space-y-5">
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1">
-                Nama Mapel <span className="text-red-500">*</span>
+                Nama Mata Pelajaran <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
                 required
-                className="w-full px-3 py-2 border rounded-lg focus:ring focus:ring-blue-200"
                 value={formData.nama_mapel}
-                onChange={(e) => setFormData({ ...formData, nama_mapel: e.target.value })}
-                placeholder="Contoh: Matematika Lanjut"
+                onChange={(e) =>
+                  setFormData({ ...formData, nama_mapel: e.target.value })
+                }
+                className="w-full px-3 py-2 border rounded-lg focus:ring focus:ring-blue-200"
+                placeholder="Contoh: Matematika"
               />
             </div>
 
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1">
-                Kelas <span className="text-red-500">*</span>
+                Kelas
               </label>
               <select
-                required
-                className="w-full px-3 py-2 border rounded-lg focus:ring focus:ring-blue-200"
                 value={formData.kelas_id}
-                onChange={(e) => setFormData({ ...formData, kelas_id: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, kelas_id: e.target.value })
+                }
+                className="w-full px-3 py-2 border rounded-lg focus:ring focus:ring-blue-200"
               >
-                <option value="" disabled>Pilih Kelas</option>
-                {kelasList.map(k => (
-                    <option key={k.id} value={k.id}>{k.nama_kelas} - Tingkat {k.tingkat}</option>
+                <option value="">Pilih kelas</option>
+                {kelasOptions.map((kelas) => (
+                  <option key={kelas.id} value={kelas.id}>
+                    {kelas.tingkat} - {kelas.nama_kelas}
+                  </option>
                 ))}
               </select>
             </div>
@@ -131,39 +159,65 @@ const MapelDialog = ({ isOpen, onClose, onSuccess, initialData }) => {
               </label>
               <input
                 type="text"
-                className="w-full px-3 py-2 border rounded-lg focus:ring focus:ring-blue-200"
-                value={searchQuery}
+                value={guruQuery}
                 onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setFormData({ ...formData, guru_mapel_id: "" });
+                  setGuruQuery(e.target.value);
+                  setFormData({
+                    ...formData,
+                    guru_mapel_id: "",
+                    guru_mapel_nama: "",
+                  });
                 }}
-                placeholder="Ketik nama guru..."
+                className="w-full px-3 py-2 border rounded-lg focus:ring focus:ring-blue-200"
+                placeholder="Ketik nama guru mapel..."
               />
-              {isSearching && <p className="text-xs text-gray-500 mt-1">Mencari...</p>}
 
-              {suggestions.length > 0 && (
+              {isSearchingGuru && (
+                <p className="text-xs text-gray-500 mt-1">Mencari...</p>
+              )}
+
+              {guruSuggestions.length > 0 && (
                 <ul className="absolute z-10 w-full bg-white border mt-1 rounded-md shadow-lg max-h-40 overflow-auto">
-                  {suggestions.map((user) => (
+                  {guruSuggestions.map((user) => (
                     <li
                       key={user.id}
-                      className="px-4 py-2 hover:bg-blue-50 cursor-pointer text-sm"
+                      className="px-4 py-2 hover:bg-blue-50 cursor-pointer"
                       onClick={() => {
-                        setFormData({ ...formData, guru_mapel_id: user.id });
-                        setSearchQuery(user.nama_lengkap || user.username);
-                        setSuggestions([]);
+                        setFormData({
+                          ...formData,
+                          guru_mapel_id: user.id,
+                          guru_mapel_nama: user.nama_lengkap,
+                        });
+                        setGuruQuery(user.nama_lengkap);
+                        setGuruSuggestions([]);
                       }}
                     >
-                      {user.nama_lengkap || user.username}
+                      <div className="font-medium text-sm">
+                        {user.nama_lengkap}
+                      </div>
+                      {user.username && (
+                        <div className="text-xs text-gray-500">
+                          @{user.username}
+                        </div>
+                      )}
                     </li>
                   ))}
                 </ul>
+              )}
+
+              {formData.guru_mapel_id && formData.guru_mapel_nama && (
+                <p className="text-xs text-green-600 mt-2">
+                  Guru mapel terpilih: {formData.guru_mapel_nama}
+                </p>
               )}
             </div>
           </form>
         </div>
 
         <div className="px-6 py-4 border-t bg-gray-50 flex justify-end gap-3">
-          <Button variant="secondary" onClick={onClose} type="button">Batal</Button>
+          <Button variant="secondary" onClick={onClose} type="button">
+            Batal
+          </Button>
           <button
             type="submit"
             form="mapel-form"

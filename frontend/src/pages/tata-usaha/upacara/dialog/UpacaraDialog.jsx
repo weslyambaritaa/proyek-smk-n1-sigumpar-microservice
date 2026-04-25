@@ -6,7 +6,10 @@ import toast from "react-hot-toast";
 const UpacaraDialog = ({ isOpen, onClose, onSuccess, initialData }) => {
   const [formData, setFormData] = useState({
     tanggal: "",
-    petugas: "",
+    user_id: "",
+    user_nama: "",
+    tugas: "",
+    keterangan: "",
   });
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -15,28 +18,44 @@ const UpacaraDialog = ({ isOpen, onClose, onSuccess, initialData }) => {
 
   useEffect(() => {
     if (initialData) {
-      const date = new Date(initialData.tanggal).toISOString().split('T')[0];
+      const date = initialData.tanggal
+        ? new Date(initialData.tanggal).toISOString().split("T")[0]
+        : "";
+
       setFormData({
         tanggal: date,
-        petugas: initialData.petugas || "",
+        user_id: initialData.user_id || "",
+        user_nama: initialData.user_nama || "",
+        tugas: initialData.tugas || initialData.petugas || "",
+        keterangan: initialData.keterangan || "",
       });
-      setSearchQuery(initialData.petugas || "");
+
+      setSearchQuery(initialData.user_nama || "");
     } else {
-      setFormData({ tanggal: "", petugas: "" });
+      setFormData({
+        tanggal: "",
+        user_id: "",
+        user_nama: "",
+        tugas: "",
+        keterangan: "",
+      });
       setSearchQuery("");
     }
+
+    setSuggestions([]);
   }, [initialData, isOpen]);
 
-  // Logika Auto-Suggest API (Sama persis seperti Jadwal & Piket)
   useEffect(() => {
-    const delayDebounceFn = setTimeout(async () => {
-      if (searchQuery.length > 0 && !formData.petugas) {
+    const timer = setTimeout(async () => {
+      if (searchQuery.length > 0 && !formData.user_id) {
         setIsSearching(true);
+
         try {
-          const res = await academicApi.searchGuru(searchQuery);
-          setSuggestions(res.data);
+          const res = await academicApi.searchAllUsers(searchQuery);
+          setSuggestions(res.data?.data || res.data || []);
         } catch (err) {
-          console.error(err);
+          console.error("Gagal mencari user:", err);
+          setSuggestions([]);
         } finally {
           setIsSearching(false);
         }
@@ -44,27 +63,30 @@ const UpacaraDialog = ({ isOpen, onClose, onSuccess, initialData }) => {
         setSuggestions([]);
       }
     }, 300);
-    return () => clearTimeout(delayDebounceFn);
-  }, [searchQuery, formData.petugas]);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery, formData.user_id]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    // Jika user mengetik manual (tidak klik dropdown), simpan teks yang diketik
-    const dataToSave = {
-      ...formData,
-      petugas: formData.petugas || searchQuery 
+
+    const payload = {
+      tanggal: formData.tanggal,
+      user_id: formData.user_id || null,
+      user_nama: formData.user_nama || null,
+      tugas: formData.tugas || null,
+      keterangan: formData.keterangan || null,
     };
 
     const savePromise = initialData?.id
-      ? academicApi.updateUpacara(initialData.id, dataToSave)
-      : academicApi.createUpacara(dataToSave);
+      ? academicApi.updateUpacara(initialData.id, payload)
+      : academicApi.createUpacara(payload);
 
     toast
       .promise(savePromise, {
-        loading: "Menyimpan data...",
-        success: "Jadwal upacara berhasil disimpan!",
-        error: "Gagal menyimpan jadwal upacara.",
+        loading: "Menyimpan...",
+        success: "Jadwal upacara disimpan!",
+        error: "Gagal menyimpan.",
       })
       .then(() => {
         onSuccess();
@@ -80,10 +102,10 @@ const UpacaraDialog = ({ isOpen, onClose, onSuccess, initialData }) => {
       <div className="bg-white w-full max-w-md h-full shadow-2xl flex flex-col animate-slide-right">
         <div className="px-6 py-4 border-b">
           <h2 className="text-xl font-bold text-gray-800">
-            {initialData ? "Edit Jadwal Upacara" : "Tambah Jadwal Upacara"}
+            {initialData ? "Edit" : "Tambah"} Jadwal Upacara
           </h2>
           <p className="text-sm text-gray-500 mt-1">
-            Silakan isi tanggal dan petugas upacara.
+            Pilih tanggal, petugas, dan tugas upacara.
           </p>
         </div>
 
@@ -98,14 +120,17 @@ const UpacaraDialog = ({ isOpen, onClose, onSuccess, initialData }) => {
                 required
                 className="w-full px-3 py-2 border rounded-lg focus:ring focus:ring-blue-200"
                 value={formData.tanggal}
-                onChange={(e) => setFormData({ ...formData, tanggal: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, tanggal: e.target.value })
+                }
               />
             </div>
 
             <div className="relative">
               <label className="block text-sm font-semibold text-gray-700 mb-1">
-                Petugas / Pembina Upacara <span className="text-red-500">*</span>
+                Petugas Upacara <span className="text-red-500">*</span>
               </label>
+
               <input
                 type="text"
                 required
@@ -113,42 +138,97 @@ const UpacaraDialog = ({ isOpen, onClose, onSuccess, initialData }) => {
                 value={searchQuery}
                 onChange={(e) => {
                   setSearchQuery(e.target.value);
-                  setFormData({ ...formData, petugas: "" });
+                  setFormData({
+                    ...formData,
+                    user_id: "",
+                    user_nama: "",
+                  });
                 }}
-                placeholder="Ketik nama guru atau petugas..."
+                placeholder="Cari nama user..."
               />
 
-              {isSearching && <p className="text-xs text-gray-500 mt-1">Mencari...</p>}
+              {isSearching && (
+                <p className="text-xs text-gray-500 mt-1">Mencari...</p>
+              )}
 
               {suggestions.length > 0 && (
                 <ul className="absolute z-10 w-full bg-white border mt-1 rounded-md shadow-lg max-h-40 overflow-auto">
-                  {suggestions.map((u) => (
-                    <li
-                      key={u.id}
-                      className="px-4 py-2 hover:bg-blue-50 cursor-pointer text-sm"
-                      onClick={() => {
-                        const nama = u.nama_lengkap || u.username;
-                        setFormData({ ...formData, petugas: nama });
-                        setSearchQuery(nama);
-                        setSuggestions([]);
-                      }}
-                    >
-                      {u.nama_lengkap || u.username}
-                    </li>
-                  ))}
+                  {suggestions.map((u) => {
+                    const nama = u.nama_lengkap || u.name || u.username;
+
+                    return (
+                      <li
+                        key={u.id}
+                        className="px-4 py-2 hover:bg-blue-50 cursor-pointer text-sm"
+                        onClick={() => {
+                          setFormData({
+                            ...formData,
+                            user_id: u.id,
+                            user_nama: nama,
+                          });
+                          setSearchQuery(nama);
+                          setSuggestions([]);
+                        }}
+                      >
+                        <div className="font-medium">{nama}</div>
+                        {u.username && (
+                          <div className="text-xs text-gray-500">
+                            @{u.username}
+                          </div>
+                        )}
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
+
+              {formData.user_id && formData.user_nama && (
+                <p className="text-xs text-green-600 mt-2">
+                  Petugas terpilih: {formData.user_nama}
+                </p>
+              )}
             </div>
-            
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">
+                Tugas
+              </label>
+              <input
+                type="text"
+                className="w-full px-3 py-2 border rounded-lg focus:ring focus:ring-blue-200"
+                value={formData.tugas}
+                onChange={(e) =>
+                  setFormData({ ...formData, tugas: e.target.value })
+                }
+                placeholder="Contoh: Pembina, Pemimpin, MC, Doa"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">
+                Keterangan
+              </label>
+              <textarea
+                rows={3}
+                className="w-full px-3 py-2 border rounded-lg focus:ring focus:ring-blue-200"
+                value={formData.keterangan}
+                onChange={(e) =>
+                  setFormData({ ...formData, keterangan: e.target.value })
+                }
+                placeholder="Opsional"
+              />
+            </div>
           </form>
         </div>
 
         <div className="px-6 py-4 border-t bg-gray-50 flex justify-end gap-3">
-          <Button variant="secondary" onClick={onClose} type="button">Batal</Button>
+          <Button variant="secondary" onClick={onClose} type="button">
+            Batal
+          </Button>
           <button
             type="submit"
             form="upacara-form"
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors min-w-24"
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors"
           >
             Simpan
           </button>

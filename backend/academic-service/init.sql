@@ -21,26 +21,49 @@ CREATE TABLE IF NOT EXISTS siswa (
 
 CREATE TABLE IF NOT EXISTS mata_pelajaran (
     id SERIAL PRIMARY KEY,
-    nama_mapel VARCHAR(20) UNIQUE NOT NULL,
+    nama_mapel VARCHAR(100) NOT NULL,
     kelas_id INTEGER REFERENCES kelas(id),
-    guru_mapel_id UUID
+    guru_mapel_id UUID,
+    guru_mapel_nama VARCHAR(150)
 );
 
 CREATE TABLE IF NOT EXISTS pengumuman (id SERIAL PRIMARY KEY, judul VARCHAR(255), isi TEXT);
 CREATE TABLE IF NOT EXISTS arsip_surat (id SERIAL PRIMARY KEY, nomor_surat VARCHAR(100), file_url TEXT);
+
 CREATE TABLE IF NOT EXISTS jadwal_mengajar (
-    id SERIAL PRIMARY KEY, 
-    guru_id UUID, 
-    kelas_id INTEGER, 
+    id SERIAL PRIMARY KEY,
+    guru_id UUID,
+    guru_nama VARCHAR(150),
+    kelas_id INTEGER REFERENCES kelas(id) ON DELETE SET NULL,
+    mapel_id INTEGER REFERENCES mata_pelajaran(id) ON DELETE SET NULL,
     mata_pelajaran VARCHAR(100),
     hari VARCHAR(20),
     waktu_mulai TIME,
-    waktu_berakhir TIME
+    waktu_berakhir TIME,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-CREATE TABLE IF NOT EXISTS jadwal_piket (id SERIAL PRIMARY KEY, tanggal DATE, guru_id UUID);
-CREATE TABLE IF NOT EXISTS jadwal_upacara (id SERIAL PRIMARY KEY, tanggal DATE, petugas TEXT);
 
+CREATE TABLE IF NOT EXISTS jadwal_piket (
+    id SERIAL PRIMARY KEY,
+    tanggal DATE NOT NULL,
+    user_id UUID,
+    user_nama VARCHAR(150),
+    keterangan TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
+CREATE TABLE IF NOT EXISTS jadwal_upacara (
+    id SERIAL PRIMARY KEY,
+    tanggal DATE NOT NULL,
+    user_id UUID,
+    user_nama VARCHAR(150),
+    tugas VARCHAR(150),
+    keterangan TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
 CREATE TABLE IF NOT EXISTS nilai_siswa (
     id SERIAL PRIMARY KEY,
