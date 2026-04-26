@@ -21,7 +21,6 @@ const {
 const guruController = require("../controllers/guruController");
 const guruDataController = require("../controllers/guruDataController");
 const kepsekController = require("../controllers/kepsekController");
-const waliKelasController = require("../controllers/waliKelasController");
 const wakilMonitoringController = require("../controllers/wakilKepsekMonitoringController");
 
 // ─── KELAS ──────────────────────────────────────────────────────────────────
@@ -35,6 +34,7 @@ router.get("/siswa", extractIdentity, siswaController.getAllSiswa);
 router.post("/siswa", extractIdentity, siswaController.createSiswa);
 router.put("/siswa/:id", extractIdentity, siswaController.updateSiswa);
 router.delete("/siswa/:id", extractIdentity, siswaController.deleteSiswa);
+router.get("/kelas/wali/:waliId", kelasController.getKelasByWali);
 
 // ─── GURU (Tata Usaha kelola data guru) ─────────────────────────────────────
 router.get("/guru", extractIdentity, guruDataController.getAllGuru);
@@ -181,47 +181,6 @@ router.post("/mapel", extractIdentity, mapelController.createMapel);
 router.put("/mapel/:id", extractIdentity, mapelController.updateMapel);
 router.delete("/mapel/:id", extractIdentity, mapelController.deleteMapel);
 
-// ─── WALI KELAS ──────────────────────────────────────────────────────────────
-router.get(
-  "/wali/parenting",
-  extractIdentity,
-  waliKelasController.getParenting,
-);
-router.post(
-  "/wali/parenting",
-  extractIdentity,
-  upload.single("foto"),
-  waliKelasController.createParenting,
-);
-router.get(
-  "/wali/kebersihan",
-  extractIdentity,
-  waliKelasController.getKebersihan,
-);
-router.post(
-  "/wali/kebersihan",
-  extractIdentity,
-  upload.single("foto"),
-  waliKelasController.createKebersihan,
-);
-router.get("/wali/refleksi", extractIdentity, waliKelasController.getRefleksi);
-router.post(
-  "/wali/refleksi",
-  extractIdentity,
-  waliKelasController.createRefleksi,
-);
-// Rekap wali kelas (nilai & absensi terintegrasi)
-router.get(
-  "/wali/rekap-nilai",
-  extractIdentity,
-  waliKelasController.getRekapNilaiWali,
-);
-router.get(
-  "/wali/rekap-absensi",
-  extractIdentity,
-  waliKelasController.getRekapAbsensiWali,
-);
-
 // ─── KEPALA SEKOLAH ──────────────────────────────────────────────────────────
 router.get(
   "/kepsek/rekap-absensi-siswa",
@@ -238,7 +197,7 @@ router.get(
   extractIdentity,
   kepsekController.getStatistikUmum,
 );
-// Rekap Nilai Final — status konfirmasi dari Wali Kelas
+
 // PENTING: route spesifik harus didaftarkan SEBELUM route dengan parameter (:siswa_id)
 router.get(
   "/kepsek/rekap-nilai-final",

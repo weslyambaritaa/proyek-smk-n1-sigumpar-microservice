@@ -1,602 +1,693 @@
-const axios = require("axios");
 const pool = require("../config/db");
-const { createError } = require("../middleware/errorHandler");
 
-const ACADEMIC_SERVICE_URL =
-  process.env.ACADEMIC_SERVICE_URL || "http://academic-service:3003";
+const getUserId = (req) => req.user?.sub || req.user?.id || null;
 
-const getAuthHeaders = (req) => ({
-  Authorization: req.headers.authorization || "",
-});
+const ensureSchema = async () => {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS kebersihan_kelas (
+      id SERIAL PRIMARY KEY,
+      kelas_id INTEGER,
+      tanggal DATE NOT NULL DEFAULT CURRENT_DATE,
+      penilaian JSONB DEFAULT '{}',
+      catatan TEXT,
+      foto_url TEXT,
+      created_by UUID,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
 
-const getAcademicData = async (req, endpoint, params = {}) => {
-  const response = await axios.get(`${ACADEMIC_SERVICE_URL}${endpoint}`, {
-    headers: getAuthHeaders(req),
-    params,
-    timeout: 10000,
-  });
-  const body = response.data;
-  return Array.isArray(body) ? body : body?.data || [];
+    CREATE TABLE IF NOT EXISTS catatan_parenting (
+      id SERIAL PRIMARY KEY,
+      siswa_id INTEGER,
+      kelas_id INTEGER,
+      wali_id UUID,
+      tanggal DATE NOT NULL DEFAULT CURRENT_DATE,
+      kehadiran_ortu INTEGER DEFAULT 0,
+      agenda VARCHAR(255),
+      ringkasan TEXT,
+      foto_url TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS refleksi_wali_kelas (
+      id SERIAL PRIMARY KEY,
+      kelas_id INTEGER,
+      wali_id UUID,
+      tanggal DATE NOT NULL DEFAULT CURRENT_DATE,
+      capaian TEXT,
+      tantangan TEXT,
+      rencana TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS surat_panggilan_siswa (
+      id SERIAL PRIMARY KEY,
+      siswa_id INTEGER,
+      kelas_id INTEGER,
+      wali_id UUID,
+      tanggal DATE NOT NULL DEFAULT CURRENT_DATE,
+      alasan TEXT,
+      tindak_lanjut TEXT,
+      status VARCHAR(30) DEFAULT 'draft',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
 };
 
-const getAcademicById = async (req, endpoint, id) => {
-  const response = await axios.get(`${ACADEMIC_SERVICE_URL}${endpoint}/${id}`, {
-    headers: getAuthHeaders(req),
-    timeout: 10000,
-  });
-  return response.data?.data || response.data;
-};
+// ─── KEBERSIHAN KELAS ─────────────────────────────────────────────
 
-// ===== LOOKUP UNTUK STUDENT SERVICE =====
-
-exports.getKelasLookup = async (req, res, next) => {
+exports.getKebersihan = async (req, res) => {
   try {
-    const data = await getAcademicData(req, "/api/academic/kelas", req.query);
-    res.json({ success: true, data });
-  } catch (err) {
-    next(err);
-  }
-};
+    await ensureSchema();
 
-exports.getSiswaLookup = async (req, res, next) => {
-  try {
-    const data = await getAcademicData(req, "/api/academic/siswa", req.query);
-    res.json({ success: true, data });
-  } catch (err) {
-    next(err);
-  }
-};
-
-// ===== PARENTING =====
-
-exports.getParenting = async (req, res, next) => {
-  try {
-    const { kelas_id, wali_id } = req.query;
-    let query = `SELECT * FROM parenting WHERE 1=1`;
+    const { kelas_id } = req.query;
     const params = [];
-    let idx = 1;
+    let where = "";
 
     if (kelas_id) {
-      query += ` AND kelas_id = $${idx++}`;
       params.push(kelas_id);
-    }
-    if (wali_id) {
-      query += ` AND wali_id = $${idx++}`;
-      params.push(wali_id);
+      where = "WHERE kelas_id = $1";
     }
 
-    query += ` ORDER BY tanggal DESC, id DESC`;
-    const result = await pool.query(query, params);
+    const result = await pool.query(
+      `
+      SELECT *
+      FROM kebersihan_kelas
+      ${where}
+      ORDER BY tanggal DESC, id DESC
+      `,
+      params,
+    );
+
     res.json({ success: true, data: result.rows });
   } catch (err) {
-    next(err);
+    console.error("getKebersihan error:", err);
+    res.status(500).json({ error: err.message });
   }
 };
 
-exports.createParenting = async (req, res, next) => {
+exports.createKebersihan = async (req, res) => {
   try {
-    const { kelas_id, wali_id, tanggal, kehadiran_ortu, agenda, ringkasan } =
-      req.body;
-    if (!kelas_id) throw createError(400, "kelas_id wajib diisi");
-    if (!agenda) throw createError(400, "agenda wajib diisi");
+    await ensureSchema();
 
-    const foto_url = req.file
-      ? `/api/student/uploads/${req.file.filename}`
-      : null;
+    const { kelas_id, tanggal, penilaian, catatan, foto_url } = req.body;
 
     const result = await pool.query(
-      `INSERT INTO parenting
-       (kelas_id, wali_id, tanggal, kehadiran_ortu, agenda, ringkasan, foto_url)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
-       RETURNING *`,
+      `
+      INSERT INTO kebersihan_kelas (
+        kelas_id, tanggal, penilaian, catatan, foto_url, created_by
+      )
+      VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING *
+      `,
       [
-        kelas_id,
-        wali_id || null,
-        tanggal || new Date().toISOString().slice(0, 10),
-        kehadiran_ortu || 0,
-        agenda,
-        ringkasan || "",
-        foto_url,
+        kelas_id || null,
+        tanggal || new Date(),
+        penilaian || {},
+        catatan || null,
+        foto_url || null,
+        getUserId(req),
       ],
     );
 
     res.status(201).json({ success: true, data: result.rows[0] });
   } catch (err) {
-    next(err);
+    console.error("createKebersihan error:", err);
+    res.status(500).json({ error: err.message });
   }
 };
 
-exports.updateParenting = async (req, res, next) => {
+exports.updateKebersihan = async (req, res) => {
   try {
+    await ensureSchema();
+
     const { id } = req.params;
-    const { kelas_id, wali_id, tanggal, kehadiran_ortu, agenda, ringkasan } =
-      req.body;
-    const foto_url = req.file
-      ? `/api/student/uploads/${req.file.filename}`
-      : req.body.foto_url || null;
+    const { kelas_id, tanggal, penilaian, catatan, foto_url } = req.body;
 
     const result = await pool.query(
-      `UPDATE parenting SET
-         kelas_id = $1,
-         wali_id = $2,
-         tanggal = $3,
-         kehadiran_ortu = $4,
-         agenda = $5,
-         ringkasan = $6,
-         foto_url = COALESCE($7, foto_url),
-         updated_at = CURRENT_TIMESTAMP
-       WHERE id = $8
-       RETURNING *`,
+      `
+      UPDATE kebersihan_kelas
+      SET
+        kelas_id = $1,
+        tanggal = $2,
+        penilaian = $3,
+        catatan = $4,
+        foto_url = $5,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = $6
+      RETURNING *
+      `,
       [
-        kelas_id,
-        wali_id || null,
-        tanggal,
-        kehadiran_ortu || 0,
-        agenda,
-        ringkasan || "",
-        foto_url,
+        kelas_id || null,
+        tanggal || new Date(),
+        penilaian || {},
+        catatan || null,
+        foto_url || null,
         id,
       ],
     );
 
-    if (result.rowCount === 0)
-      throw createError(404, "Data parenting tidak ditemukan");
     res.json({ success: true, data: result.rows[0] });
   } catch (err) {
-    next(err);
+    console.error("updateKebersihan error:", err);
+    res.status(500).json({ error: err.message });
   }
 };
 
-exports.deleteParenting = async (req, res, next) => {
+exports.deleteKebersihan = async (req, res) => {
   try {
-    const result = await pool.query(
-      `DELETE FROM parenting WHERE id = $1 RETURNING *`,
-      [req.params.id],
-    );
-    if (result.rowCount === 0)
-      throw createError(404, "Data parenting tidak ditemukan");
-    res.json({ success: true, message: "Data parenting berhasil dihapus" });
+    await ensureSchema();
+    await pool.query("DELETE FROM kebersihan_kelas WHERE id = $1", [
+      req.params.id,
+    ]);
+    res.json({ success: true });
   } catch (err) {
-    next(err);
+    console.error("deleteKebersihan error:", err);
+    res.status(500).json({ error: err.message });
   }
 };
 
-// ===== KEBERSIHAN KELAS =====
+// ─── PARENTING ───────────────────────────────────────────────────
 
-exports.getKebersihan = async (req, res, next) => {
+exports.getParenting = async (req, res) => {
   try {
-    const { kelas_id, wali_id } = req.query;
-    let query = `SELECT * FROM kebersihan_kelas WHERE 1=1`;
+    await ensureSchema();
+
+    const { kelas_id, siswa_id } = req.query;
     const params = [];
-    let idx = 1;
+    const filters = [];
 
     if (kelas_id) {
-      query += ` AND kelas_id = $${idx++}`;
       params.push(kelas_id);
+      filters.push(`kelas_id = $${params.length}`);
     }
-    if (wali_id) {
-      query += ` AND wali_id = $${idx++}`;
-      params.push(wali_id);
-    }
-
-    query += ` ORDER BY tanggal DESC, id DESC`;
-    const result = await pool.query(query, params);
-    res.json({ success: true, data: result.rows });
-  } catch (err) {
-    next(err);
-  }
-};
-
-exports.createKebersihan = async (req, res, next) => {
-  try {
-    const { kelas_id, wali_id, tanggal, penilaian, catatan } = req.body;
-    if (!kelas_id) throw createError(400, "kelas_id wajib diisi");
-
-    const foto_url = req.file
-      ? `/api/student/uploads/${req.file.filename}`
-      : null;
-    let parsedPenilaian = {};
-
-    try {
-      parsedPenilaian =
-        typeof penilaian === "string"
-          ? JSON.parse(penilaian || "{}")
-          : penilaian || {};
-    } catch {
-      throw createError(400, "Format penilaian tidak valid");
-    }
-
-    const result = await pool.query(
-      `INSERT INTO kebersihan_kelas
-       (kelas_id, wali_id, tanggal, penilaian, catatan, foto_url)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING *`,
-      [
-        kelas_id,
-        wali_id || null,
-        tanggal || new Date().toISOString().slice(0, 10),
-        JSON.stringify(parsedPenilaian),
-        catatan || "",
-        foto_url,
-      ],
-    );
-
-    res.status(201).json({ success: true, data: result.rows[0] });
-  } catch (err) {
-    next(err);
-  }
-};
-
-exports.updateKebersihan = async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    const { kelas_id, wali_id, tanggal, penilaian, catatan } = req.body;
-    const foto_url = req.file
-      ? `/api/student/uploads/${req.file.filename}`
-      : req.body.foto_url || null;
-
-    let parsedPenilaian = {};
-    try {
-      parsedPenilaian =
-        typeof penilaian === "string"
-          ? JSON.parse(penilaian || "{}")
-          : penilaian || {};
-    } catch {
-      throw createError(400, "Format penilaian tidak valid");
-    }
-
-    const result = await pool.query(
-      `UPDATE kebersihan_kelas SET
-         kelas_id = $1,
-         wali_id = $2,
-         tanggal = $3,
-         penilaian = $4,
-         catatan = $5,
-         foto_url = COALESCE($6, foto_url),
-         updated_at = CURRENT_TIMESTAMP
-       WHERE id = $7
-       RETURNING *`,
-      [
-        kelas_id,
-        wali_id || null,
-        tanggal,
-        JSON.stringify(parsedPenilaian),
-        catatan || "",
-        foto_url,
-        id,
-      ],
-    );
-
-    if (result.rowCount === 0)
-      throw createError(404, "Data kebersihan tidak ditemukan");
-    res.json({ success: true, data: result.rows[0] });
-  } catch (err) {
-    next(err);
-  }
-};
-
-exports.deleteKebersihan = async (req, res, next) => {
-  try {
-    const result = await pool.query(
-      `DELETE FROM kebersihan_kelas WHERE id = $1 RETURNING *`,
-      [req.params.id],
-    );
-    if (result.rowCount === 0)
-      throw createError(404, "Data kebersihan tidak ditemukan");
-    res.json({ success: true, message: "Data kebersihan berhasil dihapus" });
-  } catch (err) {
-    next(err);
-  }
-};
-
-// ===== REFLEKSI =====
-
-exports.getRefleksi = async (req, res, next) => {
-  try {
-    const { kelas_id, wali_id } = req.query;
-    let query = `SELECT * FROM refleksi_wali_kelas WHERE 1=1`;
-    const params = [];
-    let idx = 1;
-
-    if (kelas_id) {
-      query += ` AND kelas_id = $${idx++}`;
-      params.push(kelas_id);
-    }
-    if (wali_id) {
-      query += ` AND wali_id = $${idx++}`;
-      params.push(wali_id);
-    }
-
-    query += ` ORDER BY tanggal DESC, id DESC`;
-    const result = await pool.query(query, params);
-    res.json({ success: true, data: result.rows });
-  } catch (err) {
-    next(err);
-  }
-};
-
-exports.createRefleksi = async (req, res, next) => {
-  try {
-    const { kelas_id, wali_id, tanggal, capaian, tantangan, rencana } =
-      req.body;
-    if (!kelas_id) throw createError(400, "kelas_id wajib diisi");
-
-    const result = await pool.query(
-      `INSERT INTO refleksi_wali_kelas
-       (kelas_id, wali_id, tanggal, capaian, tantangan, rencana)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING *`,
-      [
-        kelas_id,
-        wali_id || null,
-        tanggal || new Date().toISOString().slice(0, 10),
-        capaian || "",
-        tantangan || "",
-        rencana || "",
-      ],
-    );
-
-    res.status(201).json({ success: true, data: result.rows[0] });
-  } catch (err) {
-    next(err);
-  }
-};
-
-exports.updateRefleksi = async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    const { kelas_id, wali_id, tanggal, capaian, tantangan, rencana } =
-      req.body;
-
-    const result = await pool.query(
-      `UPDATE refleksi_wali_kelas SET
-         kelas_id = $1,
-         wali_id = $2,
-         tanggal = $3,
-         capaian = $4,
-         tantangan = $5,
-         rencana = $6,
-         updated_at = CURRENT_TIMESTAMP
-       WHERE id = $7
-       RETURNING *`,
-      [
-        kelas_id,
-        wali_id || null,
-        tanggal,
-        capaian || "",
-        tantangan || "",
-        rencana || "",
-        id,
-      ],
-    );
-
-    if (result.rowCount === 0)
-      throw createError(404, "Data refleksi tidak ditemukan");
-    res.json({ success: true, data: result.rows[0] });
-  } catch (err) {
-    next(err);
-  }
-};
-
-exports.deleteRefleksi = async (req, res, next) => {
-  try {
-    const result = await pool.query(
-      `DELETE FROM refleksi_wali_kelas WHERE id = $1 RETURNING *`,
-      [req.params.id],
-    );
-    if (result.rowCount === 0)
-      throw createError(404, "Data refleksi tidak ditemukan");
-    res.json({ success: true, message: "Data refleksi berhasil dihapus" });
-  } catch (err) {
-    next(err);
-  }
-};
-
-// ===== SURAT PANGGILAN SISWA =====
-
-exports.getSuratPanggilan = async (req, res, next) => {
-  try {
-    const { siswa_id, kelas_id, status } = req.query;
-
-    let query = `SELECT * FROM surat_panggilan_siswa WHERE 1=1`;
-    const params = [];
-    let idx = 1;
 
     if (siswa_id) {
-      query += ` AND siswa_id = $${idx++}`;
       params.push(siswa_id);
-    }
-    if (kelas_id) {
-      query += ` AND kelas_id = $${idx++}`;
-      params.push(kelas_id);
-    }
-    if (status) {
-      query += ` AND status = $${idx++}`;
-      params.push(status);
+      filters.push(`siswa_id = $${params.length}`);
     }
 
-    query += ` ORDER BY tanggal DESC, id DESC`;
-    const result = await pool.query(query, params);
+    const where = filters.length ? `WHERE ${filters.join(" AND ")}` : "";
 
-    const siswaList = await getAcademicData(req, "/api/academic/siswa");
-    const siswaMap = new Map(siswaList.map((item) => [String(item.id), item]));
+    const result = await pool.query(
+      `
+      SELECT *
+      FROM catatan_parenting
+      ${where}
+      ORDER BY tanggal DESC, id DESC
+      `,
+      params,
+    );
 
-    const data = result.rows.map((row) => {
-      const siswa = siswaMap.get(String(row.siswa_id));
-      return {
-        ...row,
-        nama_siswa: siswa?.nama_lengkap || null,
-        nisn: siswa?.nisn || null,
-      };
-    });
-
-    res.json({ success: true, data });
+    res.json({ success: true, data: result.rows });
   } catch (err) {
-    next(err);
+    console.error("getParenting error:", err);
+    res.status(500).json({ error: err.message });
   }
 };
 
-exports.createSuratPanggilan = async (req, res, next) => {
+exports.createParenting = async (req, res) => {
   try {
+    await ensureSchema();
+
     const {
       siswa_id,
       kelas_id,
-      wali_id,
-      nomor_surat,
       tanggal,
-      alasan,
-      tindak_lanjut,
-      status,
+      kehadiran_ortu,
+      agenda,
+      ringkasan,
+      foto_url,
     } = req.body;
-    if (!siswa_id) throw createError(400, "siswa_id wajib diisi");
-    if (!alasan) throw createError(400, "alasan wajib diisi");
-
-    await getAcademicById(req, "/api/academic/siswa", siswa_id);
 
     const result = await pool.query(
-      `INSERT INTO surat_panggilan_siswa
-       (siswa_id, kelas_id, wali_id, nomor_surat, tanggal, alasan, tindak_lanjut, status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-       RETURNING *`,
+      `
+      INSERT INTO catatan_parenting (
+        siswa_id, kelas_id, wali_id, tanggal, kehadiran_ortu, agenda, ringkasan, foto_url
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      RETURNING *
+      `,
       [
-        siswa_id,
+        siswa_id || null,
         kelas_id || null,
-        wali_id || null,
-        nomor_surat || null,
-        tanggal || new Date().toISOString().slice(0, 10),
-        alasan,
-        tindak_lanjut || "",
+        getUserId(req),
+        tanggal || new Date(),
+        kehadiran_ortu || 0,
+        agenda || null,
+        ringkasan || null,
+        foto_url || null,
+      ],
+    );
+
+    res.status(201).json({ success: true, data: result.rows[0] });
+  } catch (err) {
+    console.error("createParenting error:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.updateParenting = async (req, res) => {
+  try {
+    await ensureSchema();
+
+    const {
+      siswa_id,
+      kelas_id,
+      tanggal,
+      kehadiran_ortu,
+      agenda,
+      ringkasan,
+      foto_url,
+    } = req.body;
+
+    const result = await pool.query(
+      `
+      UPDATE catatan_parenting
+      SET
+        siswa_id = $1,
+        kelas_id = $2,
+        tanggal = $3,
+        kehadiran_ortu = $4,
+        agenda = $5,
+        ringkasan = $6,
+        foto_url = $7,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = $8
+      RETURNING *
+      `,
+      [
+        siswa_id || null,
+        kelas_id || null,
+        tanggal || new Date(),
+        kehadiran_ortu || 0,
+        agenda || null,
+        ringkasan || null,
+        foto_url || null,
+        req.params.id,
+      ],
+    );
+
+    res.json({ success: true, data: result.rows[0] });
+  } catch (err) {
+    console.error("updateParenting error:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.deleteParenting = async (req, res) => {
+  try {
+    await ensureSchema();
+    await pool.query("DELETE FROM catatan_parenting WHERE id = $1", [
+      req.params.id,
+    ]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error("deleteParenting error:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// ─── REFLEKSI WALI KELAS ─────────────────────────────────────────
+
+exports.getRefleksi = async (req, res) => {
+  try {
+    await ensureSchema();
+
+    const { kelas_id } = req.query;
+    const params = [];
+    let where = "";
+
+    if (kelas_id) {
+      params.push(kelas_id);
+      where = "WHERE kelas_id = $1";
+    }
+
+    const result = await pool.query(
+      `
+      SELECT *
+      FROM refleksi_wali_kelas
+      ${where}
+      ORDER BY tanggal DESC, id DESC
+      `,
+      params,
+    );
+
+    res.json({ success: true, data: result.rows });
+  } catch (err) {
+    console.error("getRefleksi error:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.createRefleksi = async (req, res) => {
+  try {
+    await ensureSchema();
+
+    const { kelas_id, tanggal, capaian, tantangan, rencana } = req.body;
+
+    const result = await pool.query(
+      `
+      INSERT INTO refleksi_wali_kelas (
+        kelas_id, wali_id, tanggal, capaian, tantangan, rencana
+      )
+      VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING *
+      `,
+      [
+        kelas_id || null,
+        getUserId(req),
+        tanggal || new Date(),
+        capaian || null,
+        tantangan || null,
+        rencana || null,
+      ],
+    );
+
+    res.status(201).json({ success: true, data: result.rows[0] });
+  } catch (err) {
+    console.error("createRefleksi error:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.updateRefleksi = async (req, res) => {
+  try {
+    await ensureSchema();
+
+    const { kelas_id, tanggal, capaian, tantangan, rencana } = req.body;
+
+    const result = await pool.query(
+      `
+      UPDATE refleksi_wali_kelas
+      SET
+        kelas_id = $1,
+        tanggal = $2,
+        capaian = $3,
+        tantangan = $4,
+        rencana = $5,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = $6
+      RETURNING *
+      `,
+      [
+        kelas_id || null,
+        tanggal || new Date(),
+        capaian || null,
+        tantangan || null,
+        rencana || null,
+        req.params.id,
+      ],
+    );
+
+    res.json({ success: true, data: result.rows[0] });
+  } catch (err) {
+    console.error("updateRefleksi error:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.deleteRefleksi = async (req, res) => {
+  try {
+    await ensureSchema();
+    await pool.query("DELETE FROM refleksi_wali_kelas WHERE id = $1", [
+      req.params.id,
+    ]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error("deleteRefleksi error:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// ─── SURAT PANGGILAN SISWA ───────────────────────────────────────
+
+exports.getSuratPanggilan = async (req, res) => {
+  try {
+    await ensureSchema();
+
+    const { kelas_id, siswa_id } = req.query;
+    const params = [];
+    const filters = [];
+
+    if (kelas_id) {
+      params.push(kelas_id);
+      filters.push(`kelas_id = $${params.length}`);
+    }
+
+    if (siswa_id) {
+      params.push(siswa_id);
+      filters.push(`siswa_id = $${params.length}`);
+    }
+
+    const where = filters.length ? `WHERE ${filters.join(" AND ")}` : "";
+
+    const result = await pool.query(
+      `
+      SELECT *
+      FROM surat_panggilan_siswa
+      ${where}
+      ORDER BY tanggal DESC, id DESC
+      `,
+      params,
+    );
+
+    res.json({ success: true, data: result.rows });
+  } catch (err) {
+    console.error("getSuratPanggilan error:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.createSuratPanggilan = async (req, res) => {
+  try {
+    await ensureSchema();
+
+    const { siswa_id, kelas_id, tanggal, alasan, tindak_lanjut, status } =
+      req.body;
+
+    const result = await pool.query(
+      `
+      INSERT INTO surat_panggilan_siswa (
+        siswa_id, kelas_id, wali_id, tanggal, alasan, tindak_lanjut, status
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      RETURNING *
+      `,
+      [
+        siswa_id || null,
+        kelas_id || null,
+        getUserId(req),
+        tanggal || new Date(),
+        alasan || null,
+        tindak_lanjut || null,
         status || "draft",
       ],
     );
 
     res.status(201).json({ success: true, data: result.rows[0] });
   } catch (err) {
-    next(err);
+    console.error("createSuratPanggilan error:", err);
+    res.status(500).json({ error: err.message });
   }
 };
 
-exports.updateSuratPanggilan = async (req, res, next) => {
+exports.updateSuratPanggilan = async (req, res) => {
   try {
-    const { id } = req.params;
-    const {
-      siswa_id,
-      kelas_id,
-      wali_id,
-      nomor_surat,
-      tanggal,
-      alasan,
-      tindak_lanjut,
-      status,
-    } = req.body;
+    await ensureSchema();
+
+    const { siswa_id, kelas_id, tanggal, alasan, tindak_lanjut, status } =
+      req.body;
 
     const result = await pool.query(
-      `UPDATE surat_panggilan_siswa SET
-         siswa_id = $1,
-         kelas_id = $2,
-         wali_id = $3,
-         nomor_surat = $4,
-         tanggal = $5,
-         alasan = $6,
-         tindak_lanjut = $7,
-         status = $8,
-         updated_at = CURRENT_TIMESTAMP
-       WHERE id = $9
-       RETURNING *`,
+      `
+      UPDATE surat_panggilan_siswa
+      SET
+        siswa_id = $1,
+        kelas_id = $2,
+        tanggal = $3,
+        alasan = $4,
+        tindak_lanjut = $5,
+        status = $6,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = $7
+      RETURNING *
+      `,
       [
-        siswa_id,
+        siswa_id || null,
         kelas_id || null,
-        wali_id || null,
-        nomor_surat || null,
-        tanggal,
-        alasan,
-        tindak_lanjut || "",
+        tanggal || new Date(),
+        alasan || null,
+        tindak_lanjut || null,
         status || "draft",
-        id,
+        req.params.id,
       ],
     );
 
-    if (result.rowCount === 0)
-      throw createError(404, "Surat panggilan tidak ditemukan");
     res.json({ success: true, data: result.rows[0] });
   } catch (err) {
-    next(err);
+    console.error("updateSuratPanggilan error:", err);
+    res.status(500).json({ error: err.message });
   }
 };
 
-exports.deleteSuratPanggilan = async (req, res, next) => {
+exports.deleteSuratPanggilan = async (req, res) => {
   try {
-    const result = await pool.query(
-      `DELETE FROM surat_panggilan_siswa WHERE id = $1 RETURNING *`,
-      [req.params.id],
-    );
-    if (result.rowCount === 0)
-      throw createError(404, "Surat panggilan tidak ditemukan");
-    res.json({ success: true, message: "Surat panggilan berhasil dihapus" });
+    await ensureSchema();
+    await pool.query("DELETE FROM surat_panggilan_siswa WHERE id = $1", [
+      req.params.id,
+    ]);
+    res.json({ success: true });
   } catch (err) {
-    next(err);
+    console.error("deleteSuratPanggilan error:", err);
+    res.status(500).json({ error: err.message });
   }
 };
 
-// ===== REKAP KEHADIRAN & NILAI (AMBIL DARI ACADEMIC SERVICE) =====
+// ─── REKAP KEHADIRAN SISWA ─────────────────────────────────────
 
-exports.getRekapKehadiran = async (req, res, next) => {
+exports.getRekapKehadiran = async (req, res) => {
   try {
-    const { kelas_id, bulan, tahun } = req.query;
-    if (!kelas_id) throw createError(400, "kelas_id wajib diisi");
+    const { kelas_id, tanggal, tanggal_mulai, tanggal_akhir } = req.query;
 
-    const data = await getAcademicData(req, "/api/academic/absensi-siswa", {
-      kelas_id,
-    });
-
-    const filtered = data.filter((item) => {
-      if (!item?.tanggal) return false;
-      const date = new Date(item.tanggal);
-      const monthOk = bulan ? Number(bulan) === date.getMonth() + 1 : true;
-      const yearOk = tahun ? Number(tahun) === date.getFullYear() : true;
-      return monthOk && yearOk;
-    });
-
-    const grouped = {};
-    for (const row of filtered) {
-      if (!grouped[row.siswa_id]) {
-        grouped[row.siswa_id] = {
-          siswa_id: row.siswa_id,
-          nama_lengkap: row.nama_lengkap,
-          nisn: row.nisn,
-          hadir: 0,
-          sakit: 0,
-          izin: 0,
-          alpa: 0,
-          terlambat: 0,
-          total_pertemuan: 0,
-        };
-      }
-      const status = String(row.status || "").toLowerCase();
-      if (grouped[row.siswa_id][status] !== undefined)
-        grouped[row.siswa_id][status] += 1;
-      grouped[row.siswa_id].total_pertemuan += 1;
+    if (!kelas_id) {
+      return res.status(400).json({
+        success: false,
+        message: "kelas_id wajib diisi",
+      });
     }
 
-    res.json({ success: true, data: Object.values(grouped) });
+    // Mode harian: untuk halaman input presensi
+    if (tanggal) {
+      const result = await pool.query(
+        `
+        SELECT
+          id,
+          siswa_id,
+          kelas_id,
+          tanggal,
+          status,
+          keterangan,
+          created_at,
+          updated_at
+        FROM absensi_siswa
+        WHERE kelas_id = $1
+          AND tanggal = $2
+        ORDER BY siswa_id ASC
+        `,
+        [kelas_id, tanggal],
+      );
+
+      return res.json({
+        success: true,
+        data: result.rows,
+      });
+    }
+
+    // Mode rekap range
+    const params = [kelas_id];
+    const filters = ["kelas_id = $1"];
+
+    if (tanggal_mulai) {
+      params.push(tanggal_mulai);
+      filters.push(`tanggal >= $${params.length}`);
+    }
+
+    if (tanggal_akhir) {
+      params.push(tanggal_akhir);
+      filters.push(`tanggal <= $${params.length}`);
+    }
+
+    const result = await pool.query(
+      `
+      SELECT
+        siswa_id,
+        COUNT(*) FILTER (WHERE status = 'hadir') AS hadir,
+        COUNT(*) FILTER (WHERE status = 'izin') AS izin,
+        COUNT(*) FILTER (WHERE status = 'sakit') AS sakit,
+        COUNT(*) FILTER (WHERE status = 'alpa') AS alpa,
+        COUNT(*) FILTER (WHERE status = 'terlambat') AS terlambat
+      FROM absensi_siswa
+      WHERE ${filters.join(" AND ")}
+      GROUP BY siswa_id
+      ORDER BY siswa_id ASC
+      `,
+      params,
+    );
+
+    return res.json({
+      success: true,
+      data: result.rows,
+    });
   } catch (err) {
-    next(err);
+    console.error("getRekapKehadiran error:", err);
+    return res.status(500).json({
+      success: false,
+      error: err.message,
+    });
   }
 };
 
-exports.getRekapNilai = async (req, res, next) => {
+exports.createRekapKehadiran = async (req, res) => {
   try {
-    const { kelas_id, mapel_id, tahun_ajar } = req.query;
-    if (!kelas_id) throw createError(400, "kelas_id wajib diisi");
+    const { kelas_id, tanggal, data_absensi } = req.body;
 
-    const data = await getAcademicData(req, "/api/academic/nilai", {
-      kelas_id,
-      mapel_id,
-      tahun_ajar,
+    if (!kelas_id || !tanggal || !Array.isArray(data_absensi)) {
+      return res.status(400).json({
+        success: false,
+        message: "kelas_id, tanggal, dan data_absensi wajib diisi",
+      });
+    }
+
+    const allowed = ["hadir", "izin", "sakit", "alpa", "terlambat"];
+    const results = [];
+
+    for (const item of data_absensi) {
+      if (!item.siswa_id) continue;
+
+      let status = String(item.status || "hadir").toLowerCase();
+
+      if (!allowed.includes(status)) {
+        status = "hadir";
+      }
+
+      const result = await pool.query(
+        `
+        INSERT INTO absensi_siswa (
+          siswa_id,
+          kelas_id,
+          tanggal,
+          status,
+          keterangan
+        )
+        VALUES ($1, $2, $3, $4, $5)
+        ON CONFLICT (siswa_id, tanggal)
+        DO UPDATE SET
+          kelas_id = EXCLUDED.kelas_id,
+          status = EXCLUDED.status,
+          keterangan = EXCLUDED.keterangan,
+          updated_at = CURRENT_TIMESTAMP
+        RETURNING *
+        `,
+        [item.siswa_id, kelas_id, tanggal, status, item.keterangan || ""],
+      );
+
+      results.push(result.rows[0]);
+    }
+
+    return res.status(201).json({
+      success: true,
+      message: "Presensi berhasil disimpan",
+      data: results,
     });
-
-    res.json({ success: true, data });
   } catch (err) {
-    next(err);
+    console.error("createRekapKehadiran error:", err);
+    return res.status(500).json({
+      success: false,
+      error: err.message,
+    });
   }
 };
