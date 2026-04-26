@@ -31,34 +31,23 @@ const ArsipSuratPage = () => {
     }
   };
 
-  const handleDownload = async (fileUrl, nomorSurat) => {
+  const handleDownload = async (arsipId, nomorSurat) => {
     const loadingToast = toast.loading("Mendownload file...");
     try {
-      // 1. Ambil file menggunakan Axios (Token otomatis ikut dari interceptor)
-      const response = await academicApi.downloadFile(fileUrl);
-      
-      // 2. Buat objek URL sementara di browser dari data biner (Blob)
-      const blob = new Blob([response.data]);
-      const url = window.URL.createObjectURL(blob);
-      
-      // 3. Buat elemen <a> virtual untuk memicu download paksa
-      const link = document.createElement('a');
-      link.href = url;
-      // Beri nama file download berdasarkan nomor surat (bersihkan karakter miring)
-      const safeFileName = `Arsip_${nomorSurat.replace(/\//g, '-')}.pdf`;
-      link.setAttribute('download', safeFileName); 
-      
-      document.body.appendChild(link);
-      link.click();
-      
-      // 4. Bersihkan memori
-      link.remove();
-      window.URL.revokeObjectURL(url);
-      
+      await academicApi.downloadArsipSurat(arsipId, nomorSurat);
       toast.success("Berhasil mendownload!", { id: loadingToast });
     } catch (error) {
       console.error("Download error:", error);
       toast.error("Gagal mendownload. Sesi mungkin habis atau file hilang.", { id: loadingToast });
+    }
+  };
+
+  const handlePreview = async (arsipId) => {
+    try {
+      await academicApi.previewArsipSurat2(arsipId);
+    } catch (error) {
+      console.error("Preview error:", error);
+      toast.error("Gagal membuka file. Sesi mungkin habis atau file hilang.");
     }
   };
 
@@ -138,17 +127,14 @@ const ArsipSuratPage = () => {
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-2">
                     <button
-                      onClick={() => {
-                        const url = academicApi.getArsipSuratPreviewUrl(arsip.id);
-                        window.open(url, '_blank');
-                      }}
+                      onClick={() => handlePreview(arsip.id)}
                       className="text-blue-600 hover:text-blue-800 underline font-medium text-left text-sm"
                     >
                       👁 Lihat
                     </button>
                     <span className="text-gray-300">|</span>
                     <button
-                      onClick={() => handleDownload(arsip.file_url, arsip.nomor_surat)}
+                      onClick={() => handleDownload(arsip.id, arsip.nomor_surat)}
                       className="text-green-600 hover:text-green-800 underline font-medium text-left text-sm"
                     >
                       ⬇ Unduh
