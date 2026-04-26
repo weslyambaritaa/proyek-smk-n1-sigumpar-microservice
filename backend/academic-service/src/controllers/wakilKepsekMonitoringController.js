@@ -20,9 +20,11 @@ exports.getJadwalMonitoring = async (req, res) => {
         j.hari,
         j.waktu_mulai,
         j.waktu_berakhir,
-        k.nama_kelas
+        k.nama_kelas,
+        g.nama AS nama_guru
       FROM jadwal_mengajar j
       LEFT JOIN kelas k ON j.kelas_id = k.id
+      LEFT JOIN guru g ON j.guru_id = g.id
       WHERE 1=1
     `;
     const params = [];

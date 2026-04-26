@@ -21,7 +21,7 @@ export default function WakakurJadwalPage() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const res = await axiosInstance.get("/api/academic/jadwal");
+      const res = await axiosInstance.get("/api/academic/wakil/jadwal");
       const data = Array.isArray(res.data) ? res.data : (res.data?.data || []);
       setRows(data);
     } catch {
@@ -33,16 +33,22 @@ export default function WakakurJadwalPage() {
 
   useEffect(() => { loadData(); }, []);
 
-  // ── Deteksi Bentrok: guru sama, hari sama, waktu overlap ────────────────
+  // ── Deteksi Bentrok: gunakan is_bentrok dari server, fallback ke client-side ──
   const bentrokIds = useMemo(() => {
     const ids = new Set();
+    // Prioritaskan is_bentrok dari server (endpoint wakil/jadwal)
+    const hasServerBentrok = rows.some(r => r.is_bentrok !== undefined);
+    if (hasServerBentrok) {
+      rows.forEach(r => { if (r.is_bentrok) ids.add(r.id); });
+      return ids;
+    }
+    // Fallback: hitung client-side jika pakai endpoint lain
     for (let i = 0; i < rows.length; i++) {
       for (let j = i + 1; j < rows.length; j++) {
         const a = rows[i], b = rows[j];
         if (!a.guru_id || !b.guru_id) continue;
         if (a.guru_id !== b.guru_id) continue;
         if (a.hari !== b.hari) continue;
-        // Overlap cek
         const aStart = a.waktu_mulai, aEnd = a.waktu_berakhir;
         const bStart = b.waktu_mulai, bEnd = b.waktu_berakhir;
         if (aStart < bEnd && bStart < aEnd) {

@@ -61,7 +61,7 @@ exports.updateArsipSurat = async (req, res) => {
 
             // Hapus file lama dari storage
             if (oldData.rows[0].file_url) {
-                const oldFilePath = path.join(__dirname, '../../', oldData.rows[0].file_url);
+                const oldFilePath = path.join(__dirname, '../../uploads', path.basename(oldData.rows[0].file_url));
                 if (fs.existsSync(oldFilePath)) fs.unlinkSync(oldFilePath);
             }
         } else {
@@ -92,7 +92,7 @@ exports.deleteArsipSurat = async (req, res) => {
 
         // Hapus file fisik dari folder uploads
         if (arsip.rows[0].file_url) {
-            const filePath = path.join(__dirname, '../../', arsip.rows[0].file_url);
+            const filePath = path.join(__dirname, '../../uploads', path.basename(arsip.rows[0].file_url));
             if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
         }
 
@@ -117,7 +117,7 @@ exports.previewArsipSurat = async (req, res) => {
     }
     // Fallback: dari path file di disk
     if (arsip.file_url || arsip.file_path) {
-      const filePath = path.join(__dirname, '../../../uploads', path.basename(arsip.file_url || arsip.file_path));
+      const filePath = path.join(__dirname, '../../uploads', path.basename(arsip.file_url || arsip.file_path));
       if (fs.existsSync(filePath)) {
         const ext = path.extname(filePath).toLowerCase();
         const mimeMap = { '.pdf': 'application/pdf', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.gif': 'image/gif', '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' };

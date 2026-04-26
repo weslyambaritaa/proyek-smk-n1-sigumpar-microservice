@@ -4,9 +4,10 @@ exports.getAllJadwal = async (req, res) => {
     try {
         // Ambil data jadwal beserta nama kelasnya
         const result = await pool.query(`
-            SELECT j.*, k.nama_kelas 
+            SELECT j.*, k.nama_kelas, g.nama AS nama_guru
             FROM jadwal_mengajar j 
-            LEFT JOIN kelas k ON j.kelas_id = k.id 
+            LEFT JOIN kelas k ON j.kelas_id = k.id
+            LEFT JOIN guru g ON j.guru_id = g.id
             ORDER BY 
                 CASE j.hari
                     WHEN 'Senin' THEN 1
