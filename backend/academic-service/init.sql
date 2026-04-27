@@ -73,6 +73,37 @@ CREATE TABLE IF NOT EXISTS refleksi_kelas (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Tabel nilai siswa per mapel
+CREATE TABLE IF NOT EXISTS nilai_siswa (
+    id SERIAL PRIMARY KEY,
+    siswa_id INTEGER NOT NULL REFERENCES siswa(id) ON DELETE CASCADE,
+    kelas_id INTEGER NOT NULL REFERENCES kelas(id) ON DELETE CASCADE,
+    nama_mapel VARCHAR(100) NOT NULL,
+    semester VARCHAR(20) DEFAULT 'Ganjil',
+    tugas NUMERIC(5,2) DEFAULT 0,
+    uts NUMERIC(5,2) DEFAULT 0,
+    uas NUMERIC(5,2) DEFAULT 0,
+    rata_rata NUMERIC(5,2) GENERATED ALWAYS AS (
+        ROUND((tugas + uts + uas) / 3.0, 2)
+    ) STORED,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Tabel kehadiran siswa
+CREATE TABLE IF NOT EXISTS kehadiran_siswa (
+    id SERIAL PRIMARY KEY,
+    siswa_id INTEGER NOT NULL REFERENCES siswa(id) ON DELETE CASCADE,
+    kelas_id INTEGER NOT NULL REFERENCES kelas(id) ON DELETE CASCADE,
+    nama_mapel VARCHAR(100) DEFAULT '',
+    bulan INTEGER NOT NULL,
+    tahun INTEGER NOT NULL,
+    hadir INTEGER DEFAULT 0,
+    izin INTEGER DEFAULT 0,
+    sakit INTEGER DEFAULT 0,
+    alpa INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO academic_user;
 GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO academic_user;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO academic_user;

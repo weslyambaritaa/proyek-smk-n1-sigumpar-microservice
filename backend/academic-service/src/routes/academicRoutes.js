@@ -10,6 +10,10 @@ const piketController = require('../controllers/piketController');
 const upload = require('../middleware/upload');
 const upacaraController = require('../controllers/upacaraController');
 const extractIdentity = require('../middleware/extractIdentity');
+const rekapNilaiController = require('../controllers/rekapNilaiController');
+const rekapKehadiranController = require('../controllers/rekapKehadiranController');
+
+
 
 // === WALI KELAS ===
 const parentingController = require('../controllers/parentingController');
@@ -93,5 +97,19 @@ router.get('/walas/refleksi/:id', extractIdentity, refleksiController.getRefleks
 router.post('/walas/refleksi', extractIdentity, upload.single('foto'), refleksiController.createRefleksi);
 router.put('/walas/refleksi/:id', extractIdentity, upload.single('foto'), refleksiController.updateRefleksi);
 router.delete('/walas/refleksi/:id', extractIdentity, refleksiController.deleteRefleksi);
+
+// Rekap Nilai
+router.get('/walas/rekap-nilai/:kelas_id', extractIdentity, rekapNilaiController.getRekapNilai);
+router.get('/walas/rekap-nilai/siswa/:siswa_id', extractIdentity, rekapNilaiController.getNilaiBySiswa);
+router.post('/walas/rekap-nilai', extractIdentity, rekapNilaiController.createNilai);
+router.put('/walas/rekap-nilai/:id', extractIdentity, rekapNilaiController.updateNilai);
+router.delete('/walas/rekap-nilai/:id', extractIdentity, rekapNilaiController.deleteNilai);
+
+
+// Rekap Kehadiran
+router.get('/walas/rekap-kehadiran/:kelas_id',    extractIdentity, rekapKehadiranController.getRekapKehadiran);
+router.post('/walas/rekap-kehadiran',             extractIdentity, rekapKehadiranController.createKehadiran);
+router.put('/walas/rekap-kehadiran/:id',          extractIdentity, rekapKehadiranController.updateKehadiran);
+router.delete('/walas/rekap-kehadiran/:id',       extractIdentity, rekapKehadiranController.deleteKehadiran);
 
 module.exports = router;
