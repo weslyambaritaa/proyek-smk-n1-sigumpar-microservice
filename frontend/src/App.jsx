@@ -17,10 +17,9 @@ import BerandaWaliKelas from "./pages/wali-kelas/beranda/BerandaWaliKelas";
 import ParentingPage from "./pages/wali-kelas/parenting/ParentingPage";
 import KebersihanPage from "./pages/wali-kelas/kebersihan/KebersihanPage";
 import RefleksiPage from "./pages/wali-kelas/refleksi/RefleksiPage";
+import RekapNilaiPage from "./pages/wali-kelas/nilai/RekapNilaiPage";
+import RekapKehadiranPage from "./pages/wali-kelas/rekap-absensi/RekapKehadiranPage";
 
-/**
- * Komponen reusable untuk grup menu per role (Dropdown)
- */
 const NavDropdown = ({ title, icon, children, isOpen, onClick }) => {
   return (
     <div className="mb-2">
@@ -32,9 +31,7 @@ const NavDropdown = ({ title, icon, children, isOpen, onClick }) => {
           <span>{icon}</span>
           <span>{title}</span>
         </div>
-        <span
-          className={`transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
-        >
+        <span className={`transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}>
           ▼
         </span>
       </button>
@@ -48,7 +45,6 @@ const NavDropdown = ({ title, icon, children, isOpen, onClick }) => {
 };
 
 const App = () => {
-  // State untuk mengontrol dropdown mana yang sedang terbuka
   const [openMenus, setOpenMenus] = useState({});
 
   const toggleMenu = (menuName) => {
@@ -60,20 +56,17 @@ const App = () => {
 
   return (
     <BrowserRouter>
-      {/* === TOAST NOTIFIKASI BESAR & DI TENGAH === */}
       <Toaster
         position="top-center"
         reverseOrder={false}
         toastOptions={{
-          // Styling khusus agar toast lebih besar
           style: {
             padding: "20px 30px",
             fontSize: "16px",
             maxWidth: "600px",
             fontWeight: "500",
             textAlign: "center",
-            boxShadow:
-              "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+            boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
           },
           success: { duration: 3000 },
           error: { duration: 4000 },
@@ -87,7 +80,6 @@ const App = () => {
           </div>
 
           <nav className="flex-1 p-4 overflow-y-auto">
-            {/* Dashboard umum */}
             <NavLink to="/" className={navClass}>
               🏠 Dashboard
             </NavLink>
@@ -104,7 +96,6 @@ const App = () => {
                   <NavLink to="/laporan-tahunan" className={subNavClass}>
                     Laporan Tahunan
                   </NavLink>
-                  {/* Tambah menu kepsek di sini */}
                 </NavDropdown>
               )}
 
@@ -156,6 +147,13 @@ const App = () => {
                   <NavLink to="/walas/refleksi" className={subNavClass}>
                     Refleksi
                   </NavLink>
+                  {/* ✅ MENU BARU */}
+                  <NavLink to="/walas/nilai" className={subNavClass}>
+                    Rekap Nilai
+                  </NavLink>
+                  <NavLink to="/walas/rekap-absensi" className={subNavClass}>
+                    Rekap Absensi
+                  </NavLink>
                   <NavLink to="/academic/pengumuman" className={subNavClass}>
                     Pengumuman
                   </NavLink>
@@ -170,8 +168,6 @@ const App = () => {
                   isOpen={openMenus["tu"]}
                   onClick={() => toggleMenu("tu")}
                 >
-                  {/* <NavLink to="/users" className={subNavClass}>Data Siswa</NavLink>
-                  <NavLink to="/todos" className={subNavClass}>Administrasi</NavLink> */}
                   <NavLink to="/academic/kelas" className={subNavClass}>
                     Data Kelas
                   </NavLink>
@@ -229,7 +225,7 @@ const App = () => {
             </div>
           </nav>
 
-          {/* Profil User di Bawah Sidebar */}
+          {/* Profil User */}
           <div className="p-4 border-t bg-gray-50">
             <p className="text-sm font-semibold truncate">
               {keycloak.tokenParsed?.name}
@@ -247,8 +243,6 @@ const App = () => {
         <main className="flex-1 p-8 overflow-y-auto">
           <Routes>
             <Route path="/" element={<Dashboard />} />
-            {/* <Route path="/users" element={<UsersPage />} />
-            <Route path="/todos" element={<TodosPage />} /> */}
             <Route path="/academic/kelas" element={<KelasPage />} />
             <Route path="/academic/siswa" element={<SiswaPage />} />
             <Route path="/academic/pengumuman" element={<PengumumanPage />} />
@@ -262,7 +256,9 @@ const App = () => {
             <Route path="/walas/parenting" element={<ParentingPage />} />
             <Route path="/walas/kebersihan" element={<KebersihanPage />} />
             <Route path="/walas/refleksi" element={<RefleksiPage />} />
-            {/* Route lainnya bisa ditambahkan di sini */}
+            {/* ✅ ROUTE BARU */}
+            <Route path="/walas/nilai" element={<RekapNilaiPage />} />
+            <Route path="/walas/rekap-absensi" element={<RekapKehadiranPage />} />
           </Routes>
         </main>
       </div>
