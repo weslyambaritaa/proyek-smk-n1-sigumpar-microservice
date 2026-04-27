@@ -18,7 +18,7 @@ app.use(express.json());
 // =======================================================
 // ✅ SERVE STATIC FILES - PATH DISESUAIKAN
 // =======================================================
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+app.use('/api/academic/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Health check endpoint
 app.get("/health", (req, res) => {

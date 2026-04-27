@@ -60,4 +60,8 @@ export const waliKelasApi = {
 
   getRekapKehadiran: (kelas_id) =>
     axiosInstance.get(`/api/academic/walas/rekap-kehadiran/${kelas_id}`),
+
+  // ── FILE VIEWER ──────────────────────────────────────────────
+  viewFile: (foto_url) =>
+    axiosInstance.get(foto_url, { responseType: 'blob' }),
 };

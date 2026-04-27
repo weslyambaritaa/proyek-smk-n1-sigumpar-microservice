@@ -1,10 +1,7 @@
 const pool = require('../config/db');
 
-// =============================================
-// --- KONTROLLER REFLEKSI (WALI KELAS) ---
-// =============================================
+const KONDISI_VALID = ['sangat_baik', 'baik', 'cukup', 'kurang'];
 
-// GET semua refleksi, opsional filter ?kelas_id=1
 exports.getAllRefleksi = async (req, res) => {
     const { kelas_id } = req.query;
     try {
@@ -24,7 +21,6 @@ exports.getAllRefleksi = async (req, res) => {
     }
 };
 
-// GET satu refleksi by ID
 exports.getRefleksiById = async (req, res) => {
     const { id } = req.params;
     try {
@@ -39,7 +35,6 @@ exports.getRefleksiById = async (req, res) => {
     }
 };
 
-// POST buat refleksi baru (terima FormData + file foto)
 exports.createRefleksi = async (req, res) => {
     const {
         kelas_id,
@@ -53,12 +48,19 @@ exports.createRefleksi = async (req, res) => {
 
     const foto_url = req.file
         ? `/api/academic/uploads/${req.file.filename}`
-        : '';
+        : (req.body.foto_url || '');
 
     if (!kelas_id || !tanggal || !kondisi_kelas) {
         return res.status(400).json({
             success: false,
             message: 'kelas_id, tanggal, dan kondisi_kelas wajib diisi'
+        });
+    }
+
+    if (!KONDISI_VALID.includes(kondisi_kelas)) {
+        return res.status(400).json({
+            success: false,
+            message: `kondisi_kelas harus salah satu dari: ${KONDISI_VALID.join(', ')}`
         });
     }
 
@@ -74,10 +76,10 @@ exports.createRefleksi = async (req, res) => {
             kelas_id,
             tanggal,
             kondisi_kelas,
-            hal_positif          || '',
-            hal_perlu_perbaikan  || '',
-            rencana_tindak_lanjut|| '',
-            catatan_tambahan     || '',
+            hal_positif           || '',
+            hal_perlu_perbaikan   || '',
+            rencana_tindak_lanjut || '',
+            catatan_tambahan      || '',
             foto_url
         ]);
 
@@ -87,7 +89,6 @@ exports.createRefleksi = async (req, res) => {
     }
 };
 
-// PUT update refleksi
 exports.updateRefleksi = async (req, res) => {
     const { id } = req.params;
     const {
@@ -100,6 +101,13 @@ exports.updateRefleksi = async (req, res) => {
         catatan_tambahan,
     } = req.body;
 
+    if (kondisi_kelas && !KONDISI_VALID.includes(kondisi_kelas)) {
+        return res.status(400).json({
+            success: false,
+            message: `kondisi_kelas harus salah satu dari: ${KONDISI_VALID.join(', ')}`
+        });
+    }
+
     const foto_url = req.file
         ? `/api/academic/uploads/${req.file.filename}`
         : null;
@@ -110,42 +118,34 @@ exports.updateRefleksi = async (req, res) => {
         if (foto_url) {
             query = `
                 UPDATE refleksi_kelas SET
-                    kelas_id = $1,
-                    tanggal = $2,
-                    kondisi_kelas = $3,
-                    hal_positif = $4,
-                    hal_perlu_perbaikan = $5,
-                    rencana_tindak_lanjut = $6,
-                    catatan_tambahan = $7,
+                    kelas_id = $1, tanggal = $2, kondisi_kelas = $3,
+                    hal_positif = $4, hal_perlu_perbaikan = $5,
+                    rencana_tindak_lanjut = $6, catatan_tambahan = $7,
                     foto_url = $8
                 WHERE id = $9 RETURNING *
             `;
             params = [
                 kelas_id, tanggal, kondisi_kelas,
-                hal_positif          || '',
-                hal_perlu_perbaikan  || '',
-                rencana_tindak_lanjut|| '',
-                catatan_tambahan     || '',
+                hal_positif           || '',
+                hal_perlu_perbaikan   || '',
+                rencana_tindak_lanjut || '',
+                catatan_tambahan      || '',
                 foto_url, id
             ];
         } else {
             query = `
                 UPDATE refleksi_kelas SET
-                    kelas_id = $1,
-                    tanggal = $2,
-                    kondisi_kelas = $3,
-                    hal_positif = $4,
-                    hal_perlu_perbaikan = $5,
-                    rencana_tindak_lanjut = $6,
-                    catatan_tambahan = $7
+                    kelas_id = $1, tanggal = $2, kondisi_kelas = $3,
+                    hal_positif = $4, hal_perlu_perbaikan = $5,
+                    rencana_tindak_lanjut = $6, catatan_tambahan = $7
                 WHERE id = $8 RETURNING *
             `;
             params = [
                 kelas_id, tanggal, kondisi_kelas,
-                hal_positif          || '',
-                hal_perlu_perbaikan  || '',
-                rencana_tindak_lanjut|| '',
-                catatan_tambahan     || '',
+                hal_positif           || '',
+                hal_perlu_perbaikan   || '',
+                rencana_tindak_lanjut || '',
+                catatan_tambahan      || '',
                 id
             ];
         }
@@ -160,7 +160,6 @@ exports.updateRefleksi = async (req, res) => {
     }
 };
 
-// DELETE refleksi
 exports.deleteRefleksi = async (req, res) => {
     const { id } = req.params;
     try {

@@ -1,9 +1,5 @@
 const pool = require('../config/db');
 
-// ==========================================
-// --- KONTROLLER PARENTING KELAS MASSAL ---
-// ==========================================
-
 exports.getAllParenting = async (req, res) => {
     const { kelas_id } = req.query;
     try {
@@ -37,18 +33,10 @@ exports.getParentingById = async (req, res) => {
 };
 
 exports.createParenting = async (req, res) => {
-    // ===== DEBUG LOG - HAPUS SETELAH MASALAH TERSELESAIKAN =====
-    console.log('=== CREATE PARENTING DEBUG ===');
-    console.log('BODY:', req.body);
-    console.log('FILE:', req.file);
-    console.log('HEADERS content-type:', req.headers['content-type']);
-    // ===========================================================
-
     const { kelas_id, tanggal, kehadiran_ortu, agenda_utama, ringkasan_hasil } = req.body;
-    const foto_url = req.file ? `/uploads/${req.file.filename}` : (req.body.foto_url || '');
+    const foto_url = req.file ? `/api/academic/uploads/${req.file.filename}` : (req.body.foto_url || '');
 
     if (!kelas_id || !tanggal || !agenda_utama) {
-        console.log('VALIDASI GAGAL:', { kelas_id, tanggal, agenda_utama }); // DEBUG
         return res.status(400).json({ message: 'kelas_id, tanggal, dan agenda_utama wajib diisi' });
     }
 
@@ -67,7 +55,7 @@ exports.createParenting = async (req, res) => {
 exports.updateParenting = async (req, res) => {
     const { id } = req.params;
     const { kelas_id, tanggal, kehadiran_ortu, agenda_utama, ringkasan_hasil } = req.body;
-    const foto_url = req.file ? `/uploads/${req.file.filename}` : (req.body.foto_url || '');
+    const foto_url = req.file ? `/api/academic/uploads/${req.file.filename}` : (req.body.foto_url || '');
 
     try {
         const result = await pool.query(`

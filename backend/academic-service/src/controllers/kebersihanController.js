@@ -1,12 +1,5 @@
 const pool = require('../config/db');
 
-// ================================================
-// --- KONTROLLER KEBERSIHAN KELAS (WALI KELAS) ---
-// ================================================
-// Mengelola kontrol kebersihan kelas harian
-
-// GET semua data kebersihan
-// Query param opsional: ?kelas_id=1
 exports.getAllKebersihan = async (req, res) => {
     const { kelas_id } = req.query;
     try {
@@ -30,7 +23,6 @@ exports.getAllKebersihan = async (req, res) => {
     }
 };
 
-// GET satu data kebersihan by ID
 exports.getKebersihanById = async (req, res) => {
     const { id } = req.params;
     try {
@@ -44,16 +36,9 @@ exports.getKebersihanById = async (req, res) => {
     }
 };
 
-// POST buat laporan kebersihan baru
 exports.createKebersihan = async (req, res) => {
-    const {
-        kelas_id,
-        tanggal_penilaian,
-        status_kebersihan,
-        catatan
-    } = req.body;
-
-    const foto_url = req.file ? `/uploads/${req.file.filename}` : (req.body.foto_url || '');
+    const { kelas_id, tanggal_penilaian, status_kebersihan, catatan } = req.body;
+    const foto_url = req.file ? `/api/academic/uploads/${req.file.filename}` : (req.body.foto_url || '');
 
     if (!kelas_id || !tanggal_penilaian || !status_kebersihan) {
         return res.status(400).json({ message: 'kelas_id, tanggal_penilaian, dan status_kebersihan wajib diisi' });
@@ -77,11 +62,17 @@ exports.createKebersihan = async (req, res) => {
     }
 };
 
-// PUT update laporan kebersihan
 exports.updateKebersihan = async (req, res) => {
     const { id } = req.params;
     const { kelas_id, tanggal_penilaian, status_kebersihan, catatan } = req.body;
-    const foto_url = req.file ? `/uploads/${req.file.filename}` : (req.body.foto_url || '');
+    const foto_url = req.file ? `/api/academic/uploads/${req.file.filename}` : (req.body.foto_url || '');
+
+    if (status_kebersihan) {
+        const statusValid = ['sangat_bersih', 'bersih', 'cukup', 'kotor'];
+        if (!statusValid.includes(status_kebersihan)) {
+            return res.status(400).json({ message: `status_kebersihan harus salah satu dari: ${statusValid.join(', ')}` });
+        }
+    }
 
     try {
         const result = await pool.query(`
@@ -100,7 +91,6 @@ exports.updateKebersihan = async (req, res) => {
     }
 };
 
-// DELETE data kebersihan
 exports.deleteKebersihan = async (req, res) => {
     const { id } = req.params;
     try {
@@ -114,7 +104,6 @@ exports.deleteKebersihan = async (req, res) => {
     }
 };
 
-// GET rekap kebersihan per kelas
 exports.getRekapKebersihan = async (req, res) => {
     const { kelas_id } = req.params;
     try {
