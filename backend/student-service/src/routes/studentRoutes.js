@@ -1,36 +1,75 @@
 const express = require("express");
 const router = express.Router();
 const studentController = require("../controllers/studentController");
+const extractIdentity = require("../middleware/extractIdentity");
 
-// ─── REKAP KEBERSIHAN KELAS ─────────────────────────────
+// Kebersihan Kelas
 router.get("/kebersihan", studentController.getKebersihan);
-router.post("/kebersihan", studentController.createKebersihan);
-router.put("/kebersihan/:id", studentController.updateKebersihan);
-router.delete("/kebersihan/:id", studentController.deleteKebersihan);
+router.post("/kebersihan", extractIdentity, studentController.createKebersihan);
+router.put(
+  "/kebersihan/:id",
+  extractIdentity,
+  studentController.updateKebersihan,
+);
+router.delete(
+  "/kebersihan/:id",
+  extractIdentity,
+  studentController.deleteKebersihan,
+);
 
-// ─── CATATAN PARENTING ──────────────────────────────────
+// Parenting
 router.get("/parenting", studentController.getParenting);
-router.post("/parenting", studentController.createParenting);
-router.put("/parenting/:id", studentController.updateParenting);
-router.delete("/parenting/:id", studentController.deleteParenting);
+router.post("/parenting", extractIdentity, studentController.createParenting);
+router.put(
+  "/parenting/:id",
+  extractIdentity,
+  studentController.updateParenting,
+);
+router.delete(
+  "/parenting/:id",
+  extractIdentity,
+  studentController.deleteParenting,
+);
 
-// ─── REFLEKSI WALI KELAS ────────────────────────────────
+// Refleksi Wali Kelas
 router.get("/refleksi", studentController.getRefleksi);
-router.post("/refleksi", studentController.createRefleksi);
-router.put("/refleksi/:id", studentController.updateRefleksi);
-router.delete("/refleksi/:id", studentController.deleteRefleksi);
+router.post("/refleksi", extractIdentity, studentController.createRefleksi);
+router.put("/refleksi/:id", extractIdentity, studentController.updateRefleksi);
+router.delete(
+  "/refleksi/:id",
+  extractIdentity,
+  studentController.deleteRefleksi,
+);
 
-// ─── SURAT PANGGILAN SISWA ──────────────────────────────
+// Surat Panggilan Siswa
 router.get("/surat-panggilan", studentController.getSuratPanggilan);
-router.post("/surat-panggilan", studentController.createSuratPanggilan);
-router.put("/surat-panggilan/:id", studentController.updateSuratPanggilan);
-router.delete("/surat-panggilan/:id", studentController.deleteSuratPanggilan);
+router.post(
+  "/surat-panggilan",
+  extractIdentity,
+  studentController.createSuratPanggilan,
+);
+router.put(
+  "/surat-panggilan/:id",
+  extractIdentity,
+  studentController.updateSuratPanggilan,
+);
+router.delete(
+  "/surat-panggilan/:id",
+  extractIdentity,
+  studentController.deleteSuratPanggilan,
+);
 
-// ─── REKAP KEHADIRAN SISWA ──────────────────────────────
-router.get("/rekap-kehadiran", studentController.getRekapKehadiran);
-router.post("/rekap-kehadiran", studentController.createRekapKehadiran);
+// Rekap Kehadiran / Presensi
+router.get(
+  "/rekap-kehadiran",
+  extractIdentity,
+  studentController.getRekapKehadiran,
+);
 
-// ─── REKAP NILAI SISWA ──────────────────────────────────
-router.get("/rekap-nilai", studentController.getRekapNilai);
+router.post(
+  "/rekap-kehadiran",
+  extractIdentity,
+  studentController.createRekapKehadiran,
+);
 
 module.exports = router;

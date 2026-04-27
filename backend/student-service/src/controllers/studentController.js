@@ -1,68 +1,78 @@
 const pool = require("../config/db");
+const axios = require("axios");
+
+const ACADEMIC_SERVICE_URL =
+  process.env.ACADEMIC_SERVICE_URL || "http://academic-service:3003";
 
 const getUserId = (req) => req.user?.sub || req.user?.id || null;
 
-const ensureSchema = async () => {
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS kebersihan_kelas (
-      id SERIAL PRIMARY KEY,
-      kelas_id INTEGER,
-      tanggal DATE NOT NULL DEFAULT CURRENT_DATE,
-      penilaian JSONB DEFAULT '{}',
-      catatan TEXT,
-      foto_url TEXT,
-      created_by UUID,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    );
+const getUserRoles = (req) => {
+  const realmRoles = req.user?.realm_access?.roles || [];
+  const resourceRoles = Object.values(req.user?.resource_access || {}).flatMap(
+    (client) => client.roles || [],
+  );
 
-    CREATE TABLE IF NOT EXISTS catatan_parenting (
-      id SERIAL PRIMARY KEY,
-      siswa_id INTEGER,
-      kelas_id INTEGER,
-      wali_id UUID,
-      tanggal DATE NOT NULL DEFAULT CURRENT_DATE,
-      kehadiran_ortu INTEGER DEFAULT 0,
-      agenda VARCHAR(255),
-      ringkasan TEXT,
-      foto_url TEXT,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    );
+  return [...new Set([...realmRoles, ...resourceRoles])];
+};
 
-    CREATE TABLE IF NOT EXISTS refleksi_wali_kelas (
-      id SERIAL PRIMARY KEY,
-      kelas_id INTEGER,
-      wali_id UUID,
-      tanggal DATE NOT NULL DEFAULT CURRENT_DATE,
-      capaian TEXT,
-      tantangan TEXT,
-      rencana TEXT,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    );
+const assertWaliOwnsKelas = async (req, kelasId) => {
+  const userId = getUserId(req);
+  const roles = getUserRoles(req);
 
-    CREATE TABLE IF NOT EXISTS surat_panggilan_siswa (
-      id SERIAL PRIMARY KEY,
-      siswa_id INTEGER,
-      kelas_id INTEGER,
-      wali_id UUID,
-      tanggal DATE NOT NULL DEFAULT CURRENT_DATE,
-      alasan TEXT,
-      tindak_lanjut TEXT,
-      status VARCHAR(30) DEFAULT 'draft',
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  if (!userId) {
+    const err = new Error("User tidak valid");
+    err.statusCode = 401;
+    throw err;
+  }
+
+  if (!roles.includes("wali-kelas")) {
+    const err = new Error("Hanya wali-kelas yang boleh mengisi presensi kelas");
+    err.statusCode = 403;
+    throw err;
+  }
+
+  const response = await axios.get(
+    `${ACADEMIC_SERVICE_URL}/api/academic/kelas/wali/${userId}`,
+    {
+      headers: {
+        Authorization: req.headers.authorization,
+      },
+    },
+  );
+
+  const kelasList = response.data?.data || [];
+  const allowed = kelasList.some(
+    (kelas) => String(kelas.id) === String(kelasId),
+  );
+
+  if (!allowed) {
+    const err = new Error(
+      "Kelas ini bukan kelas yang di-assign kepada wali-kelas tersebut",
     );
-  `);
+    err.statusCode = 403;
+    throw err;
+  }
+};
+
+const getSiswaIdsByKelas = async (req, kelasId) => {
+  const response = await axios.get(
+    `${ACADEMIC_SERVICE_URL}/api/academic/siswa`,
+    {
+      params: { kelas_id: kelasId },
+      headers: {
+        Authorization: req.headers.authorization,
+      },
+    },
+  );
+
+  const siswa = response.data?.data || [];
+  return siswa.map((item) => Number(item.id));
 };
 
 // ─── KEBERSIHAN KELAS ─────────────────────────────────────────────
 
 exports.getKebersihan = async (req, res) => {
   try {
-    await ensureSchema();
-
     const { kelas_id } = req.query;
     const params = [];
     let where = "";
@@ -91,8 +101,6 @@ exports.getKebersihan = async (req, res) => {
 
 exports.createKebersihan = async (req, res) => {
   try {
-    await ensureSchema();
-
     const { kelas_id, tanggal, penilaian, catatan, foto_url } = req.body;
 
     const result = await pool.query(
@@ -122,8 +130,6 @@ exports.createKebersihan = async (req, res) => {
 
 exports.updateKebersihan = async (req, res) => {
   try {
-    await ensureSchema();
-
     const { id } = req.params;
     const { kelas_id, tanggal, penilaian, catatan, foto_url } = req.body;
 
@@ -159,7 +165,6 @@ exports.updateKebersihan = async (req, res) => {
 
 exports.deleteKebersihan = async (req, res) => {
   try {
-    await ensureSchema();
     await pool.query("DELETE FROM kebersihan_kelas WHERE id = $1", [
       req.params.id,
     ]);
@@ -174,8 +179,6 @@ exports.deleteKebersihan = async (req, res) => {
 
 exports.getParenting = async (req, res) => {
   try {
-    await ensureSchema();
-
     const { kelas_id, siswa_id } = req.query;
     const params = [];
     const filters = [];
@@ -211,8 +214,6 @@ exports.getParenting = async (req, res) => {
 
 exports.createParenting = async (req, res) => {
   try {
-    await ensureSchema();
-
     const {
       siswa_id,
       kelas_id,
@@ -252,8 +253,6 @@ exports.createParenting = async (req, res) => {
 
 exports.updateParenting = async (req, res) => {
   try {
-    await ensureSchema();
-
     const {
       siswa_id,
       kelas_id,
@@ -300,7 +299,6 @@ exports.updateParenting = async (req, res) => {
 
 exports.deleteParenting = async (req, res) => {
   try {
-    await ensureSchema();
     await pool.query("DELETE FROM catatan_parenting WHERE id = $1", [
       req.params.id,
     ]);
@@ -315,8 +313,6 @@ exports.deleteParenting = async (req, res) => {
 
 exports.getRefleksi = async (req, res) => {
   try {
-    await ensureSchema();
-
     const { kelas_id } = req.query;
     const params = [];
     let where = "";
@@ -345,8 +341,6 @@ exports.getRefleksi = async (req, res) => {
 
 exports.createRefleksi = async (req, res) => {
   try {
-    await ensureSchema();
-
     const { kelas_id, tanggal, capaian, tantangan, rencana } = req.body;
 
     const result = await pool.query(
@@ -376,8 +370,6 @@ exports.createRefleksi = async (req, res) => {
 
 exports.updateRefleksi = async (req, res) => {
   try {
-    await ensureSchema();
-
     const { kelas_id, tanggal, capaian, tantangan, rencana } = req.body;
 
     const result = await pool.query(
@@ -412,7 +404,6 @@ exports.updateRefleksi = async (req, res) => {
 
 exports.deleteRefleksi = async (req, res) => {
   try {
-    await ensureSchema();
     await pool.query("DELETE FROM refleksi_wali_kelas WHERE id = $1", [
       req.params.id,
     ]);
@@ -427,8 +418,6 @@ exports.deleteRefleksi = async (req, res) => {
 
 exports.getSuratPanggilan = async (req, res) => {
   try {
-    await ensureSchema();
-
     const { kelas_id, siswa_id } = req.query;
     const params = [];
     const filters = [];
@@ -464,8 +453,6 @@ exports.getSuratPanggilan = async (req, res) => {
 
 exports.createSuratPanggilan = async (req, res) => {
   try {
-    await ensureSchema();
-
     const { siswa_id, kelas_id, tanggal, alasan, tindak_lanjut, status } =
       req.body;
 
@@ -497,8 +484,6 @@ exports.createSuratPanggilan = async (req, res) => {
 
 exports.updateSuratPanggilan = async (req, res) => {
   try {
-    await ensureSchema();
-
     const { siswa_id, kelas_id, tanggal, alasan, tindak_lanjut, status } =
       req.body;
 
@@ -536,7 +521,6 @@ exports.updateSuratPanggilan = async (req, res) => {
 
 exports.deleteSuratPanggilan = async (req, res) => {
   try {
-    await ensureSchema();
     await pool.query("DELETE FROM surat_panggilan_siswa WHERE id = $1", [
       req.params.id,
     ]);
@@ -560,7 +544,8 @@ exports.getRekapKehadiran = async (req, res) => {
       });
     }
 
-    // Mode harian: untuk halaman input presensi
+    await assertWaliOwnsKelas(req, kelas_id);
+
     if (tanggal) {
       const result = await pool.query(
         `
@@ -587,7 +572,6 @@ exports.getRekapKehadiran = async (req, res) => {
       });
     }
 
-    // Mode rekap range
     const params = [kelas_id];
     const filters = ["kelas_id = $1"];
 
@@ -624,7 +608,7 @@ exports.getRekapKehadiran = async (req, res) => {
     });
   } catch (err) {
     console.error("getRekapKehadiran error:", err);
-    return res.status(500).json({
+    return res.status(err.statusCode || 500).json({
       success: false,
       error: err.message,
     });
@@ -639,6 +623,20 @@ exports.createRekapKehadiran = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: "kelas_id, tanggal, dan data_absensi wajib diisi",
+      });
+    }
+
+    await assertWaliOwnsKelas(req, kelas_id);
+
+    const siswaIds = await getSiswaIdsByKelas(req, kelas_id);
+    const invalidSiswa = data_absensi.find(
+      (item) => item.siswa_id && !siswaIds.includes(Number(item.siswa_id)),
+    );
+
+    if (invalidSiswa) {
+      return res.status(400).json({
+        success: false,
+        message: `Siswa ID ${invalidSiswa.siswa_id} tidak terdaftar di kelas ini`,
       });
     }
 
@@ -685,7 +683,7 @@ exports.createRekapKehadiran = async (req, res) => {
     });
   } catch (err) {
     console.error("createRekapKehadiran error:", err);
-    return res.status(500).json({
+    return res.status(err.statusCode || 500).json({
       success: false,
       error: err.message,
     });

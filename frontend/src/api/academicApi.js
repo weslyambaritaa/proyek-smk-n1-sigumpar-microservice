@@ -20,6 +20,11 @@ export const academicApi = {
   updateKelas: (id, payload) => api.put(`/academic/kelas/${id}`, payload),
   deleteKelas: (id) => api.delete(`/academic/kelas/${id}`),
 
+  getKelasByWali: (waliId) => api.get(`/academic/kelas/wali/${waliId}`),
+
+  getSiswaByKelas: (kelasId) =>
+    api.get(`/academic/siswa?kelas_id=${encodeURIComponent(kelasId)}`),
+
   // Search user general dari auth-service, difilter role wali-kelas
   searchWaliKelas: (query) =>
     api.get(
@@ -32,6 +37,9 @@ export const academicApi = {
   createSiswa: (payload) => api.post("/academic/siswa", payload),
   updateSiswa: (id, payload) => api.put(`/academic/siswa/${id}`, payload),
   deleteSiswa: (id) => api.delete(`/academic/siswa/${id}`),
+
+  // Kelas wali
+  getKelasByWali: (waliId) => api.get(`/academic/kelas/wali/${waliId}`),
 
   // Pengumuman
   getAllPengumuman: () => api.get("/academic/pengumuman"),
@@ -49,6 +57,24 @@ export const academicApi = {
   updateArsipSurat: (id, payload) =>
     api.put(`/academic/arsip-surat/${id}`, payload),
   deleteArsipSurat: (id) => api.delete(`/academic/arsip-surat/${id}`),
+  getArsipSuratPreviewUrl: (filePath) => {
+    if (!filePath) return null;
+
+    const filename = filePath.split("/").pop();
+    return `${BASE_URL}/uploads/${filename}`;
+  },
+
+  downloadFile: (filePath) => {
+    if (!filePath) return;
+
+    const filename = filePath.split("/").pop();
+    const url = `${BASE_URL}/uploads/${filename}`;
+
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    link.click();
+  },
 
   // Mapel
   getAllMapel: () => api.get("/academic/mapel"),

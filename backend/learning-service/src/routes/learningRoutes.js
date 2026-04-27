@@ -1,53 +1,70 @@
 const express = require("express");
 const router = express.Router();
+
 const extractIdentity = require("../middleware/extractIdentity");
-const {
-  getAllTodos,
-  getTodoById,
-  createTodo,
-  updateTodo,
-  deleteTodo,
-  getAllPerangkat,
-  uploadPerangkat,
-  downloadPerangkat,
-  deletePerangkat,
-  reviewPerangkat,
-  getRiwayatReview,
-  getVersiDokumen,
-} = require("../controllers/learningController");
-const {
-  getAllAbsensiGuru,
-  getAbsensiGuruById,
-  createAbsensiGuru,
-  updateAbsensiGuru,
-  deleteAbsensiGuru,
-} = require("../controllers/absensiGuruController");
-const kepsekController = require("../controllers/kepsekController");
+const learningController = require("../controllers/learningController");
 
 router.use(extractIdentity);
 
-// ── TODOS ─────────────────────────────────────────────────────────────────
-router.route("/todos").get(getAllTodos).post(createTodo);
-router.route("/todos/:id").get(getTodoById).put(updateTodo).delete(deleteTodo);
+// Absensi Guru
+router
+  .route("/absensi-guru")
+  .get(learningController.getAllAbsensiGuru)
+  .post(learningController.createAbsensiGuru);
 
-// ── ABSENSI GURU ──────────────────────────────────────────────────────────
-router.route("/absensi-guru").get(getAllAbsensiGuru).post(createAbsensiGuru);
-router.route("/absensi-guru/:id").get(getAbsensiGuruById).put(updateAbsensiGuru).delete(deleteAbsensiGuru);
+router
+  .route("/absensi-guru/:id")
+  .get(learningController.getAbsensiGuruById)
+  .put(learningController.updateAbsensiGuru)
+  .delete(learningController.deleteAbsensiGuru);
 
-// ── PERANGKAT PEMBELAJARAN ────────────────────────────────────────────────
-router.route("/perangkat").get(getAllPerangkat).post(uploadPerangkat);
-router.get("/perangkat/:id/download", downloadPerangkat);
-router.get("/perangkat/:id/view", downloadPerangkat);      // alias preview inline
-router.delete("/perangkat/:id", deletePerangkat);
+// Catatan Mengajar
+router
+  .route("/catatan-mengajar")
+  .get(learningController.getCatatanMengajar)
+  .post(learningController.createCatatanMengajar);
 
-// ── KEPSEK: REVIEW PERANGKAT (endpoint baru) ──────────────────────────────
-router.put("/perangkat/:id/review", reviewPerangkat);           // setujui / tolak / minta revisi
-router.get("/perangkat/:id/riwayat-review", getRiwayatReview); // riwayat semua review
-router.get("/perangkat/:id/versi", getVersiDokumen);           // semua versi upload dokumen
+router
+  .route("/catatan-mengajar/:id")
+  .get(learningController.getCatatanMengajarById)
+  .put(learningController.updateCatatanMengajar)
+  .delete(learningController.deleteCatatanMengajar);
 
-// ── KEPSEK: DASHBOARD & EVALUASI ─────────────────────────────────────────
-router.get("/kepsek/dashboard", kepsekController.getKepsekDashboard);
-router.get("/kepsek/evaluasi-guru", kepsekController.getEvaluasiGuru);
-router.post("/kepsek/evaluasi-guru", kepsekController.saveEvaluasiGuru);
+// Evaluasi Guru
+router
+  .route("/evaluasi-guru")
+  .get(learningController.getEvaluasiGuru)
+  .post(learningController.createEvaluasiGuru);
+
+router
+  .route("/evaluasi-guru/:id")
+  .get(learningController.getEvaluasiGuruById)
+  .put(learningController.updateEvaluasiGuru)
+  .delete(learningController.deleteEvaluasiGuru);
+
+// Perangkat Pembelajaran
+router
+  .route("/perangkat")
+  .get(learningController.getAllPerangkat)
+  .post(learningController.uploadPerangkat);
+
+router.get("/perangkat/:id/download", learningController.downloadPerangkat);
+router.get("/perangkat/:id/view", learningController.downloadPerangkat);
+router.delete("/perangkat/:id", learningController.deletePerangkat);
+
+router.put(
+  "/perangkat/:id/review-kepsek",
+  learningController.reviewPerangkatKepsek,
+);
+router.put(
+  "/perangkat/:id/review-wakasek",
+  learningController.reviewPerangkatWakasek,
+);
+
+router.get(
+  "/perangkat/:id/riwayat-review",
+  learningController.getRiwayatReview,
+);
+router.get("/perangkat/:id/versi", learningController.getVersiDokumen);
 
 module.exports = router;

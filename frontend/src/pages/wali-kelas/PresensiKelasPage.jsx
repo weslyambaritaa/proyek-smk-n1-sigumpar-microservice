@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import studentApi from "/src/api/studentApi";
 import academicApi from "/src/api/academicApi";
+import keycloak from "/src/keycloak";
 
 const STATUS_OPTS = ["hadir", "izin", "sakit", "alpa", "terlambat"];
 
@@ -23,36 +24,26 @@ const PresensiKelasPage = () => {
   // GET USER ID DARI TOKEN (SAFE)
   // ================================
   const getUserId = () => {
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) return null;
-
-      const payload = JSON.parse(atob(token.split(".")[1]));
-      return payload.sub || payload.id;
-    } catch (e) {
-      console.error("Token error:", e);
-      return null;
-    }
+    return keycloak?.tokenParsed?.sub || null;
   };
-
   // ================================
   // FETCH KELAS WALI
   // ================================
   const fetchKelas = async () => {
-  try {
-    const userId = getUserId();
-    console.log("USER ID:", userId);
+    try {
+      const userId = getUserId();
+      console.log("USER ID:", userId);
 
-    const res = await academicApi.getKelasByWali(userId);
+      const res = await academicApi.getKelasByWali(userId);
 
-    console.log("FULL RESPONSE:", res);
-    console.log("DATA:", res.data);
+      console.log("FULL RESPONSE:", res);
+      console.log("DATA:", res.data);
 
-    setKelasList(res.data?.data || []);
-  } catch (err) {
-    console.error("ERROR DETAIL:", err);
-  }
-};
+      setKelasList(res.data?.data || []);
+    } catch (err) {
+      console.error("ERROR DETAIL:", err);
+    }
+  };
 
   useEffect(() => {
     fetchKelas();
