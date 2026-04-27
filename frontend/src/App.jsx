@@ -274,4 +274,4 @@ const subNavClass = ({ isActive }) =>
   `block px-4 py-2 text-xs font-medium rounded-lg transition-all
   ${isActive ? "text-blue-600 bg-blue-50 font-bold" : "text-gray-500 hover:text-blue-600 hover:bg-gray-50"}`;
 
-export default App;
+export default App; 

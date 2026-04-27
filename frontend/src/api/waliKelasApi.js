@@ -11,7 +11,6 @@ export const waliKelasApi = {
   getParentingById: (id) =>
     axiosInstance.get(`/api/academic/walas/parenting/${id}`),
   
-  // ✅ FIX: Tanpa manual Content-Type, axios handle multipart boundary otomatis
   createParenting: (formData) =>
     axiosInstance.post('/api/academic/walas/parenting', formData),
   
@@ -31,7 +30,6 @@ export const waliKelasApi = {
   getKebersihanById: (id) =>
     axiosInstance.get(`/api/academic/walas/kebersihan/${id}`),
   
-  // ✅ FIX: Tanpa manual Content-Type
   createKebersihan: (formData) =>
     axiosInstance.post('/api/academic/walas/kebersihan', formData),
   
@@ -47,7 +45,6 @@ export const waliKelasApi = {
   getRefleksiById: (id) =>
     axiosInstance.get(`/api/academic/walas/refleksi/${id}`),
   
-  // ✅ FIX: Ubah parameter jadi formData untuk support upload file
   createRefleksi: (formData) =>
     axiosInstance.post('/api/academic/walas/refleksi', formData),
   
@@ -56,4 +53,11 @@ export const waliKelasApi = {
   
   deleteRefleksi: (id) =>
     axiosInstance.delete(`/api/academic/walas/refleksi/${id}`),
+
+  // ── REKAP NILAI & KEHADIRAN ──────────────────────────────────
+  getRekapNilai: (kelas_id) =>
+    axiosInstance.get(`/api/academic/walas/rekap-nilai/${kelas_id}`),
+
+  getRekapKehadiran: (kelas_id) =>
+    axiosInstance.get(`/api/academic/walas/rekap-kehadiran/${kelas_id}`),
 };
