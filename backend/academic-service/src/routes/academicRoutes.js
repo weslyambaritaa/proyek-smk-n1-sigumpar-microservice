@@ -7,7 +7,6 @@ const siswaController = require('../controllers/siswaController');
 const mapelController = require('../controllers/mapelController');
 const jadwalController = require('../controllers/jadwalController');
 const piketController = require('../controllers/piketController');
-// const verifyToken = require('../middleware/auth'); 
 const upload = require('../middleware/upload');
 const upacaraController = require('../controllers/upacaraController');
 const extractIdentity = require('../middleware/extractIdentity');
@@ -38,7 +37,6 @@ router.delete('/pengumuman/:id', extractIdentity, pengumumanController.deletePen
 
 // Rute Arsip Surat
 router.get('/arsip-surat', extractIdentity, arsipSuratController.getAllArsipSurat);
-// Gunakan upload.single('file') untuk memproses form-data yang memiliki input field bernama 'file'
 router.post('/arsip-surat', extractIdentity, upload.single('file'), arsipSuratController.createArsipSurat);
 router.put('/arsip-surat/:id', extractIdentity, upload.single('file'), arsipSuratController.updateArsipSurat);
 router.delete('/arsip-surat/:id', extractIdentity, arsipSuratController.deleteArsipSurat);
@@ -92,8 +90,8 @@ router.delete('/walas/kebersihan/:id', extractIdentity, kebersihanController.del
 // Refleksi Kelas
 router.get('/walas/refleksi', extractIdentity, refleksiController.getAllRefleksi);
 router.get('/walas/refleksi/:id', extractIdentity, refleksiController.getRefleksiById);
-router.post('/walas/refleksi', extractIdentity, refleksiController.createRefleksi);
-router.put('/walas/refleksi/:id', extractIdentity, refleksiController.updateRefleksi);
+router.post('/walas/refleksi', extractIdentity, upload.single('foto'), refleksiController.createRefleksi);
+router.put('/walas/refleksi/:id', extractIdentity, upload.single('foto'), refleksiController.updateRefleksi);
 router.delete('/walas/refleksi/:id', extractIdentity, refleksiController.deleteRefleksi);
 
 module.exports = router;

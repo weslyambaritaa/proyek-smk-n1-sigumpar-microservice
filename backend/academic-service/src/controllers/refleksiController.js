@@ -3,10 +3,8 @@ const pool = require('../config/db');
 // =============================================
 // --- KONTROLLER REFLEKSI (WALI KELAS) ---
 // =============================================
-// Mencatat refleksi wali kelas berupa judul + isi evaluasi
 
-// GET semua catatan refleksi
-// Query param opsional: ?kelas_id=1
+// GET semua refleksi, opsional filter ?kelas_id=1
 exports.getAllRefleksi = async (req, res) => {
     const { kelas_id } = req.query;
     try {
@@ -30,60 +28,135 @@ exports.getAllRefleksi = async (req, res) => {
 exports.getRefleksiById = async (req, res) => {
     const { id } = req.params;
     try {
-        const result = await pool.query('SELECT * FROM refleksi_kelas WHERE id = $1', [id]);
-        if (result.rowCount === 0) {
-            return res.status(404).json({ message: 'Catatan refleksi tidak ditemukan' });
-        }
+        const result = await pool.query(
+            'SELECT * FROM refleksi_kelas WHERE id = $1', [id]
+        );
+        if (result.rowCount === 0)
+            return res.status(404).json({ message: 'Refleksi tidak ditemukan' });
         res.json({ success: true, data: result.rows[0] });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 };
 
-// POST buat refleksi baru
+// POST buat refleksi baru (terima FormData + file foto)
 exports.createRefleksi = async (req, res) => {
     const {
         kelas_id,
         tanggal,
-        judul_refleksi,
-        isi_refleksi,
+        kondisi_kelas,
+        hal_positif,
+        hal_perlu_perbaikan,
+        rencana_tindak_lanjut,
+        catatan_tambahan,
     } = req.body;
 
-    if (!kelas_id || !tanggal || !judul_refleksi) {
-        return res.status(400).json({ message: 'kelas_id, tanggal, dan judul_refleksi wajib diisi' });
+    const foto_url = req.file
+        ? `/api/academic/uploads/${req.file.filename}`
+        : '';
+
+    if (!kelas_id || !tanggal || !kondisi_kelas) {
+        return res.status(400).json({
+            success: false,
+            message: 'kelas_id, tanggal, dan kondisi_kelas wajib diisi'
+        });
     }
 
     try {
         const result = await pool.query(`
             INSERT INTO refleksi_kelas
-                (kelas_id, tanggal, judul_refleksi, isi_refleksi)
-            VALUES ($1, $2, $3, $4) RETURNING *
-        `, [kelas_id, tanggal, judul_refleksi, isi_refleksi || '']);
+                (kelas_id, tanggal, kondisi_kelas, hal_positif,
+                 hal_perlu_perbaikan, rencana_tindak_lanjut,
+                 catatan_tambahan, foto_url)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            RETURNING *
+        `, [
+            kelas_id,
+            tanggal,
+            kondisi_kelas,
+            hal_positif          || '',
+            hal_perlu_perbaikan  || '',
+            rencana_tindak_lanjut|| '',
+            catatan_tambahan     || '',
+            foto_url
+        ]);
 
         res.status(201).json({ success: true, data: result.rows[0] });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ success: false, message: err.message });
     }
 };
 
 // PUT update refleksi
 exports.updateRefleksi = async (req, res) => {
     const { id } = req.params;
-    const { kelas_id, tanggal, judul_refleksi, isi_refleksi } = req.body;
+    const {
+        kelas_id,
+        tanggal,
+        kondisi_kelas,
+        hal_positif,
+        hal_perlu_perbaikan,
+        rencana_tindak_lanjut,
+        catatan_tambahan,
+    } = req.body;
+
+    const foto_url = req.file
+        ? `/api/academic/uploads/${req.file.filename}`
+        : null;
 
     try {
-        const result = await pool.query(`
-            UPDATE refleksi_kelas
-            SET kelas_id = $1, tanggal = $2, judul_refleksi = $3, isi_refleksi = $4
-            WHERE id = $5 RETURNING *
-        `, [kelas_id, tanggal, judul_refleksi, isi_refleksi || '', id]);
+        let query, params;
 
-        if (result.rowCount === 0) {
-            return res.status(404).json({ message: 'Catatan refleksi tidak ditemukan' });
+        if (foto_url) {
+            query = `
+                UPDATE refleksi_kelas SET
+                    kelas_id = $1,
+                    tanggal = $2,
+                    kondisi_kelas = $3,
+                    hal_positif = $4,
+                    hal_perlu_perbaikan = $5,
+                    rencana_tindak_lanjut = $6,
+                    catatan_tambahan = $7,
+                    foto_url = $8
+                WHERE id = $9 RETURNING *
+            `;
+            params = [
+                kelas_id, tanggal, kondisi_kelas,
+                hal_positif          || '',
+                hal_perlu_perbaikan  || '',
+                rencana_tindak_lanjut|| '',
+                catatan_tambahan     || '',
+                foto_url, id
+            ];
+        } else {
+            query = `
+                UPDATE refleksi_kelas SET
+                    kelas_id = $1,
+                    tanggal = $2,
+                    kondisi_kelas = $3,
+                    hal_positif = $4,
+                    hal_perlu_perbaikan = $5,
+                    rencana_tindak_lanjut = $6,
+                    catatan_tambahan = $7
+                WHERE id = $8 RETURNING *
+            `;
+            params = [
+                kelas_id, tanggal, kondisi_kelas,
+                hal_positif          || '',
+                hal_perlu_perbaikan  || '',
+                rencana_tindak_lanjut|| '',
+                catatan_tambahan     || '',
+                id
+            ];
         }
+
+        const result = await pool.query(query, params);
+        if (result.rowCount === 0)
+            return res.status(404).json({ message: 'Refleksi tidak ditemukan' });
+
         res.json({ success: true, data: result.rows[0] });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ success: false, message: err.message });
     }
 };
 
@@ -91,12 +164,14 @@ exports.updateRefleksi = async (req, res) => {
 exports.deleteRefleksi = async (req, res) => {
     const { id } = req.params;
     try {
-        const result = await pool.query('DELETE FROM refleksi_kelas WHERE id = $1', [id]);
-        if (result.rowCount === 0) {
-            return res.status(404).json({ message: 'Catatan refleksi tidak ditemukan' });
-        }
-        res.json({ success: true, message: 'Catatan refleksi berhasil dihapus' });
+        const result = await pool.query(
+            'DELETE FROM refleksi_kelas WHERE id = $1', [id]
+        );
+        if (result.rowCount === 0)
+            return res.status(404).json({ message: 'Refleksi tidak ditemukan' });
+
+        res.json({ success: true, message: 'Refleksi berhasil dihapus' });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ success: false, message: err.message });
     }
 };
