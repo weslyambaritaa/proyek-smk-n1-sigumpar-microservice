@@ -10,6 +10,41 @@ CREATE TABLE IF NOT EXISTS kebersihan_kelas (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS nilai_siswa (
+    id SERIAL PRIMARY KEY,
+    siswa_id INTEGER NOT NULL,
+    kelas_id INTEGER NOT NULL,
+    mapel_id INTEGER NOT NULL,
+    guru_id UUID NOT NULL,
+    tahun_ajar VARCHAR(20) DEFAULT '2024/2025',
+    semester VARCHAR(20) DEFAULT 'ganjil',
+
+    tugas NUMERIC(5,2) DEFAULT 0,
+    kuis NUMERIC(5,2) DEFAULT 0,
+    uts NUMERIC(5,2) DEFAULT 0,
+    uas NUMERIC(5,2) DEFAULT 0,
+    praktik NUMERIC(5,2) DEFAULT 0,
+
+    bobot_tugas NUMERIC(5,2) DEFAULT 20,
+    bobot_kuis NUMERIC(5,2) DEFAULT 10,
+    bobot_uts NUMERIC(5,2) DEFAULT 25,
+    bobot_uas NUMERIC(5,2) DEFAULT 30,
+    bobot_praktik NUMERIC(5,2) DEFAULT 15,
+
+    nilai_akhir NUMERIC(5,2) DEFAULT 0,
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT unique_nilai_siswa 
+    UNIQUE (siswa_id, kelas_id, mapel_id, tahun_ajar, semester)
+);
+
+CREATE INDEX IF NOT EXISTS idx_nilai_siswa_siswa_id ON nilai_siswa(siswa_id);
+CREATE INDEX IF NOT EXISTS idx_nilai_siswa_kelas_id ON nilai_siswa(kelas_id);
+CREATE INDEX IF NOT EXISTS idx_nilai_siswa_mapel_id ON nilai_siswa(mapel_id);
+CREATE INDEX IF NOT EXISTS idx_nilai_siswa_guru_id ON nilai_siswa(guru_id);
+
 CREATE TABLE IF NOT EXISTS catatan_parenting (
     id SERIAL PRIMARY KEY,
     siswa_id INTEGER,

@@ -285,21 +285,43 @@ const getAllAbsensiGuru = async (req, res, next) => {
     const cols = await getAbsensiGuruColumns();
     const selectClause = buildAbsensiGuruSelect(cols);
 
+    const { tanggal, tanggal_mulai, tanggal_akhir, status, user_id } =
+      req.query;
+
     const params = [];
     const filters = [];
 
+    // Guru mapel hanya boleh melihat riwayat dirinya sendiri
     if (hasRole(req, ["guru-mapel"]) && !hasRole(req, ["kepala-sekolah"])) {
       params.push(getUserId(req));
       filters.push(`user_id = $${params.length}`);
     }
 
-    if (req.query.tanggal) {
-      params.push(req.query.tanggal);
+    // Kepala sekolah boleh filter user tertentu jika dibutuhkan
+    if (user_id && hasRole(req, ["kepala-sekolah"])) {
+      params.push(user_id);
+      filters.push(`user_id = $${params.length}`);
+    }
+
+    // Filter tanggal tunggal
+    if (tanggal) {
+      params.push(tanggal);
       filters.push(`tanggal = $${params.length}`);
     }
 
-    if (req.query.status) {
-      params.push(req.query.status);
+    // Filter range tanggal
+    if (tanggal_mulai) {
+      params.push(tanggal_mulai);
+      filters.push(`tanggal >= $${params.length}`);
+    }
+
+    if (tanggal_akhir) {
+      params.push(tanggal_akhir);
+      filters.push(`tanggal <= $${params.length}`);
+    }
+
+    if (status) {
+      params.push(status);
       filters.push(`status = $${params.length}`);
     }
 

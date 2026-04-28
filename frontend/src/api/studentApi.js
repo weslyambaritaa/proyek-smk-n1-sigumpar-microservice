@@ -47,6 +47,12 @@ export const studentApi = {
   // Rekap Nilai Siswa
   getRekapNilai: (params) =>
     axiosInstance.get("/api/student/rekap-nilai", { params }),
+
+  getNilaiSiswa: (params) =>
+    axiosInstance.get("/api/student/nilai", { params }),
+
+  createOrUpdateNilaiSiswa: (data) =>
+    axiosInstance.post("/api/student/nilai", data),
 };
 
 export default studentApi;

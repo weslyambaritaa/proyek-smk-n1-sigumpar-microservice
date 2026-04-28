@@ -615,6 +615,367 @@ exports.getRekapKehadiran = async (req, res) => {
   }
 };
 
+const hitungNilaiAkhir = ({
+  tugas = 0,
+  kuis = 0,
+  uts = 0,
+  uas = 0,
+  praktik = 0,
+  bobot_tugas = 20,
+  bobot_kuis = 10,
+  bobot_uts = 25,
+  bobot_uas = 30,
+  bobot_praktik = 15,
+}) => {
+  return Number(
+    (
+      (Number(tugas) * Number(bobot_tugas)) / 100 +
+      (Number(kuis) * Number(bobot_kuis)) / 100 +
+      (Number(uts) * Number(bobot_uts)) / 100 +
+      (Number(uas) * Number(bobot_uas)) / 100 +
+      (Number(praktik) * Number(bobot_praktik)) / 100
+    ).toFixed(2),
+  );
+};
+
+exports.getNilaiSiswa = async (req, res) => {
+  try {
+    const {
+      kelas_id,
+      mapel_id,
+      tahun_ajar = "2024/2025",
+      semester = "ganjil",
+    } = req.query;
+
+    if (!kelas_id || !mapel_id) {
+      return res.status(400).json({
+        success: false,
+        message: "kelas_id dan mapel_id wajib diisi",
+      });
+    }
+
+    const result = await pool.query(
+      `
+      SELECT *
+      FROM nilai_siswa
+      WHERE kelas_id = $1
+        AND mapel_id = $2
+        AND tahun_ajar = $3
+        AND semester = $4
+      ORDER BY siswa_id ASC
+      `,
+      [kelas_id, mapel_id, tahun_ajar, semester],
+    );
+
+    return res.json({
+      success: true,
+      data: result.rows,
+    });
+  } catch (err) {
+    console.error("getNilaiSiswa error:", err);
+    return res.status(500).json({
+      success: false,
+      error: err.message,
+    });
+  }
+};
+
+const assertGuruMapelOwnsAssignment = async (req, kelasId, mapelId) => {
+  const userId = getUserId(req);
+  const roles = getUserRoles(req);
+
+  if (!userId) {
+    const err = new Error("User tidak valid");
+    err.statusCode = 401;
+    throw err;
+  }
+
+  if (!roles.includes("guru-mapel")) {
+    const err = new Error("Hanya guru-mapel yang boleh menginput nilai");
+    err.statusCode = 403;
+    throw err;
+  }
+
+  const response = await axios.get(
+    `${ACADEMIC_SERVICE_URL}/api/academic/mapel/guru/${userId}`,
+    {
+      headers: {
+        Authorization: req.headers.authorization,
+      },
+    },
+  );
+
+  const assignments = response.data?.data || response.data || [];
+
+  const allowed = assignments.some((item) => {
+    const itemKelasId = item.kelas_id || item.id_kelas;
+    const itemMapelId = item.mapel_id || item.id_mapel || item.id;
+
+    return (
+      String(itemKelasId) === String(kelasId) &&
+      String(itemMapelId) === String(mapelId)
+    );
+  });
+
+  if (!allowed) {
+    const err = new Error(
+      "Guru-mapel tidak diassign ke kelas dan mapel tersebut",
+    );
+    err.statusCode = 403;
+    throw err;
+  }
+};
+
+exports.createOrUpdateNilaiSiswa = async (req, res) => {
+  try {
+    const {
+      kelas_id,
+      mapel_id,
+      tahun_ajar = "2024/2025",
+      semester = "ganjil",
+      bobot,
+      data_nilai,
+    } = req.body;
+
+    const guru_id = getUserId(req);
+
+    if (!kelas_id || !mapel_id || !guru_id || !Array.isArray(data_nilai)) {
+      return res.status(400).json({
+        success: false,
+        message: "kelas_id, mapel_id, dan data_nilai wajib diisi",
+      });
+    }
+
+    await assertGuruMapelOwnsAssignment(req, kelas_id, mapel_id);
+
+    const siswaIds = await getSiswaIdsByKelas(req, kelas_id);
+
+    const invalidSiswa = data_nilai.find(
+      (item) => !siswaIds.includes(Number(item.siswa_id)),
+    );
+
+    if (invalidSiswa) {
+      return res.status(400).json({
+        success: false,
+        message: `Siswa ID ${invalidSiswa.siswa_id} tidak terdaftar di kelas ini`,
+      });
+    }
+
+    const totalBobot =
+      Number(bobot?.tugas || 0) +
+      Number(bobot?.kuis || 0) +
+      Number(bobot?.uts || 0) +
+      Number(bobot?.uas || 0) +
+      Number(bobot?.praktik || 0);
+
+    if (totalBobot !== 100) {
+      return res.status(400).json({
+        success: false,
+        message: "Total bobot harus 100%",
+      });
+    }
+
+    const results = [];
+
+    for (const item of data_nilai) {
+      const tugas = Number(item.tugas || 0);
+      const kuis = Number(item.kuis || 0);
+      const uts = Number(item.uts || 0);
+      const uas = Number(item.uas || 0);
+      const praktik = Number(item.praktik || 0);
+
+      const payload = {
+        tugas,
+        kuis,
+        uts,
+        uas,
+        praktik,
+        bobot_tugas: Number(bobot.tugas),
+        bobot_kuis: Number(bobot.kuis),
+        bobot_uts: Number(bobot.uts),
+        bobot_uas: Number(bobot.uas),
+        bobot_praktik: Number(bobot.praktik),
+      };
+
+      const nilaiAkhir = hitungNilaiAkhir(payload);
+
+      const result = await pool.query(
+        `
+        INSERT INTO nilai_siswa (
+          siswa_id,
+          kelas_id,
+          mapel_id,
+          guru_id,
+          tahun_ajar,
+          semester,
+          tugas,
+          kuis,
+          uts,
+          uas,
+          praktik,
+          bobot_tugas,
+          bobot_kuis,
+          bobot_uts,
+          bobot_uas,
+          bobot_praktik,
+          nilai_akhir
+        )
+        VALUES (
+          $1, $2, $3, $4, $5, $6,
+          $7, $8, $9, $10, $11,
+          $12, $13, $14, $15, $16,
+          $17
+        )
+        ON CONFLICT (siswa_id, kelas_id, mapel_id, tahun_ajar, semester)
+        DO UPDATE SET
+          guru_id = EXCLUDED.guru_id,
+          tugas = EXCLUDED.tugas,
+          kuis = EXCLUDED.kuis,
+          uts = EXCLUDED.uts,
+          uas = EXCLUDED.uas,
+          praktik = EXCLUDED.praktik,
+          bobot_tugas = EXCLUDED.bobot_tugas,
+          bobot_kuis = EXCLUDED.bobot_kuis,
+          bobot_uts = EXCLUDED.bobot_uts,
+          bobot_uas = EXCLUDED.bobot_uas,
+          bobot_praktik = EXCLUDED.bobot_praktik,
+          nilai_akhir = EXCLUDED.nilai_akhir,
+          updated_at = CURRENT_TIMESTAMP
+        RETURNING *
+        `,
+        [
+          item.siswa_id,
+          kelas_id,
+          mapel_id,
+          guru_id,
+          tahun_ajar,
+          semester,
+          tugas,
+          kuis,
+          uts,
+          uas,
+          praktik,
+          Number(bobot.tugas),
+          Number(bobot.kuis),
+          Number(bobot.uts),
+          Number(bobot.uas),
+          Number(bobot.praktik),
+          nilaiAkhir,
+        ],
+      );
+
+      results.push(result.rows[0]);
+    }
+
+    return res.status(201).json({
+      success: true,
+      message: "Nilai berhasil disimpan",
+      data: results,
+    });
+  } catch (err) {
+    console.error("createOrUpdateNilaiSiswa error:", err);
+    return res.status(err.statusCode || 500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
+
+exports.getNilaiSiswa = async (req, res) => {
+  try {
+    const {
+      kelas_id,
+      mapel_id,
+      tahun_ajar = "2024/2025",
+      semester = "ganjil",
+    } = req.query;
+
+    if (!kelas_id || !mapel_id) {
+      return res.status(400).json({
+        success: false,
+        message: "kelas_id dan mapel_id wajib diisi",
+      });
+    }
+
+    await assertGuruMapelOwnsAssignment(req, kelas_id, mapel_id);
+
+    const result = await pool.query(
+      `
+      SELECT *
+      FROM nilai_siswa
+      WHERE kelas_id = $1
+        AND mapel_id = $2
+        AND tahun_ajar = $3
+        AND semester = $4
+      ORDER BY siswa_id ASC
+      `,
+      [kelas_id, mapel_id, tahun_ajar, semester],
+    );
+
+    return res.json({
+      success: true,
+      data: result.rows,
+    });
+  } catch (err) {
+    console.error("getNilaiSiswa error:", err);
+    return res.status(err.statusCode || 500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
+
+exports.getRekapNilai = async (req, res) => {
+  try {
+    const {
+      kelas_id,
+      mapel_id,
+      tahun_ajar = "2024/2025",
+      semester = "ganjil",
+    } = req.query;
+
+    if (!kelas_id) {
+      return res.status(400).json({
+        success: false,
+        message: "kelas_id wajib diisi",
+      });
+    }
+
+    if (mapel_id) {
+      await assertGuruMapelOwnsAssignment(req, kelas_id, mapel_id);
+    }
+
+    const params = [kelas_id, tahun_ajar, semester];
+    const filters = ["kelas_id = $1", "tahun_ajar = $2", "semester = $3"];
+
+    if (mapel_id) {
+      params.push(mapel_id);
+      filters.push(`mapel_id = $${params.length}`);
+    }
+
+    const result = await pool.query(
+      `
+      SELECT *
+      FROM nilai_siswa
+      WHERE ${filters.join(" AND ")}
+      ORDER BY siswa_id ASC, mapel_id ASC
+      `,
+      params,
+    );
+
+    return res.json({
+      success: true,
+      data: result.rows,
+    });
+  } catch (err) {
+    console.error("getRekapNilai error:", err);
+    return res.status(err.statusCode || 500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
+
 exports.createRekapKehadiran = async (req, res) => {
   try {
     const { kelas_id, tanggal, data_absensi } = req.body;

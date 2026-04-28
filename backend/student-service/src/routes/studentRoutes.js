@@ -17,6 +17,17 @@ router.delete(
   studentController.deleteKebersihan,
 );
 
+// Nilai Siswa
+router.get("/nilai", extractIdentity, studentController.getNilaiSiswa);
+
+router.post(
+  "/nilai",
+  extractIdentity,
+  studentController.createOrUpdateNilaiSiswa,
+);
+
+router.get("/rekap-nilai", extractIdentity, studentController.getRekapNilai);
+
 // Parenting
 router.get("/parenting", studentController.getParenting);
 router.post("/parenting", extractIdentity, studentController.createParenting);

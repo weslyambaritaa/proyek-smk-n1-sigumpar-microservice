@@ -7,6 +7,7 @@ export default function AbsensiGuruPage() {
   const [keterangan, setKeterangan] = useState("");
   const [riwayat, setRiwayat] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [previewRiwayat, setPreviewRiwayat] = useState(null);
 
   const loadAbsensi = async () => {
     try {
@@ -39,9 +40,6 @@ export default function AbsensiGuruPage() {
     e.preventDefault();
 
     try {
-      console.log("FOTO ADA?", !!foto);
-      console.log("PANJANG FOTO:", foto?.length);
-
       if (!foto) {
         alert("Foto absensi wajib diunggah.");
         return;
@@ -77,6 +75,34 @@ export default function AbsensiGuruPage() {
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
+      {previewRiwayat && (
+        <div
+          className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4"
+          onClick={() => setPreviewRiwayat(null)}
+        >
+          <div
+            className="bg-white rounded-xl p-4 max-w-3xl max-h-[90vh]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center mb-3">
+              <h3 className="font-semibold text-gray-800">Foto Absensi</h3>
+              <button
+                onClick={() => setPreviewRiwayat(null)}
+                className="px-3 py-1 rounded bg-gray-100 hover:bg-gray-200"
+              >
+                Tutup
+              </button>
+            </div>
+
+            <img
+              src={previewRiwayat}
+              alt="Preview Foto Absensi"
+              className="max-w-full max-h-[75vh] object-contain rounded-lg"
+            />
+          </div>
+        </div>
+      )}
+
       <div className="bg-white rounded-xl shadow p-6 mb-6">
         <h1 className="text-2xl font-bold text-gray-800 mb-2">Absensi Guru</h1>
         <p className="text-gray-600">
@@ -142,18 +168,34 @@ export default function AbsensiGuruPage() {
               <table className="w-full border text-sm">
                 <thead>
                   <tr className="bg-gray-100">
+                    <th className="border p-2 text-left">Foto</th>
                     <th className="border p-2 text-left">Tanggal</th>
                     <th className="border p-2 text-left">Jam Masuk</th>
                     <th className="border p-2 text-left">Status</th>
                     <th className="border p-2 text-left">Keterangan</th>
                   </tr>
                 </thead>
+
                 <tbody>
                   {riwayat.map((item) => (
                     <tr key={item.id_absensiGuru || item.id}>
                       <td className="border p-2">
+                        {item.foto ? (
+                          <img
+                            src={item.foto}
+                            alt="Foto Absensi"
+                            className="w-16 h-16 object-cover rounded-lg border cursor-pointer hover:opacity-80"
+                            onClick={() => setPreviewRiwayat(item.foto)}
+                          />
+                        ) : (
+                          "-"
+                        )}
+                      </td>
+
+                      <td className="border p-2">
                         {item.tanggal ? String(item.tanggal).slice(0, 10) : "-"}
                       </td>
+
                       <td className="border p-2">
                         {item.jamMasuk
                           ? new Date(item.jamMasuk).toLocaleTimeString(
@@ -165,7 +207,9 @@ export default function AbsensiGuruPage() {
                             )
                           : "-"}
                       </td>
+
                       <td className="border p-2">{item.status || "-"}</td>
+
                       <td className="border p-2">{item.keterangan || "-"}</td>
                     </tr>
                   ))}
