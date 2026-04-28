@@ -63,6 +63,9 @@ CREATE TABLE IF NOT EXISTS absensi_siswa (
   id SERIAL PRIMARY KEY,
   siswa_id INTEGER NOT NULL,
   kelas_id INTEGER NOT NULL,
+  mapel_id INTEGER,
+  jadwal_id INTEGER,
+  guru_id UUID,
   tanggal DATE NOT NULL,
   status VARCHAR(20) NOT NULL CHECK (
     status IN ('hadir', 'sakit', 'izin', 'alpa', 'terlambat')
@@ -71,9 +74,18 @@ CREATE TABLE IF NOT EXISTS absensi_siswa (
   created_by UUID,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT unique_absensi_siswa UNIQUE (siswa_id, tanggal)
+  CONSTRAINT unique_absensi_siswa_jadwal UNIQUE (siswa_id, tanggal, jadwal_id)
 );
 
+-- 1. Absensi wali kelas (tanpa jadwal)
+CREATE UNIQUE INDEX uq_absensi_wali_per_hari
+ON absensi_siswa (siswa_id, tanggal)
+WHERE jadwal_id IS NULL;
+
+-- 2. Absensi guru mapel (berdasarkan jadwal)
+CREATE UNIQUE INDEX uq_absensi_mapel_per_jadwal
+ON absensi_siswa (siswa_id, tanggal, jadwal_id)
+WHERE jadwal_id IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS refleksi_wali_kelas (
     id SERIAL PRIMARY KEY,

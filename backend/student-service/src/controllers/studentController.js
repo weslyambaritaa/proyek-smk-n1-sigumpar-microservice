@@ -533,6 +533,482 @@ exports.deleteSuratPanggilan = async (req, res) => {
 
 // ─── REKAP KEHADIRAN SISWA ─────────────────────────────────────
 
+const normalizeHari = (value = "") =>
+  String(value)
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z]/g, "");
+
+const getHariIndonesiaFromDate = (dateString) => {
+  const date = new Date(`${dateString}T00:00:00+07:00`);
+  const hari = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
+  return hari[date.getDay()];
+};
+
+const getMapelAssignmentsGuruMapel = async (req) => {
+  const userId = getUserId(req);
+  const roles = getUserRoles(req);
+
+  if (!userId) {
+    const err = new Error("User tidak valid");
+    err.statusCode = 401;
+    throw err;
+  }
+
+  if (!roles.includes("guru-mapel")) {
+    const err = new Error(
+      "Hanya guru-mapel yang boleh mengakses rekap absensi mapel",
+    );
+    err.statusCode = 403;
+    throw err;
+  }
+
+  const response = await axios.get(
+    `${ACADEMIC_SERVICE_URL}/api/academic/mapel/guru/${userId}`,
+    {
+      headers: { Authorization: req.headers.authorization },
+    },
+  );
+
+  const rows = Array.isArray(response.data)
+    ? response.data
+    : response.data?.data || [];
+
+  return rows.map((item) => ({
+    kelas_id: item.kelas_id,
+    mapel_id: item.mapel_id || item.id,
+    nama_kelas: item.nama_kelas,
+    tingkat: item.tingkat,
+    nama_mapel: item.nama_mapel,
+    guru_mapel_id: item.guru_mapel_id,
+    guru_mapel_nama: item.guru_mapel_nama,
+  }));
+};
+
+const findOwnedMapelAssignment = async (req, kelasId, mapelId) => {
+  const assignments = await getMapelAssignmentsGuruMapel(req);
+
+  const found = assignments.find(
+    (item) =>
+      String(item.kelas_id) === String(kelasId) &&
+      String(item.mapel_id) === String(mapelId),
+  );
+
+  if (!found) {
+    const err = new Error(
+      "Kelas/mapel ini bukan assignment guru-mapel tersebut",
+    );
+    err.statusCode = 403;
+    throw err;
+  }
+
+  return found;
+};
+
+exports.getAbsensiMapelAssignments = async (req, res) => {
+  try {
+    const data = await getMapelAssignmentsGuruMapel(req);
+
+    return res.json({
+      success: true,
+      data,
+    });
+  } catch (err) {
+    console.error("getAbsensiMapelAssignments error:", err);
+    return res.status(err.statusCode || 500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
+
+const getJadwalGuruMapel = async (req) => {
+  const userId = getUserId(req);
+  const roles = getUserRoles(req);
+
+  if (!userId) {
+    const err = new Error("User tidak valid");
+    err.statusCode = 401;
+    throw err;
+  }
+
+  if (!roles.includes("guru-mapel")) {
+    const err = new Error(
+      "Hanya guru-mapel yang boleh mengakses absensi mapel",
+    );
+    err.statusCode = 403;
+    throw err;
+  }
+
+  const response = await axios.get(
+    `${ACADEMIC_SERVICE_URL}/api/academic/jadwal`,
+    {
+      headers: { Authorization: req.headers.authorization },
+    },
+  );
+
+  const rows = Array.isArray(response.data)
+    ? response.data
+    : response.data?.data || [];
+
+  return rows.filter((item) => String(item.guru_id) === String(userId));
+};
+
+const findOwnedJadwal = async (req, jadwalId) => {
+  const jadwalList = await getJadwalGuruMapel(req);
+  const jadwal = jadwalList.find(
+    (item) => String(item.id) === String(jadwalId),
+  );
+
+  if (!jadwal) {
+    const err = new Error(
+      "Jadwal ini bukan jadwal yang di-assign kepada guru-mapel tersebut",
+    );
+    err.statusCode = 403;
+    throw err;
+  }
+
+  return jadwal;
+};
+
+exports.getAbsensiMapelJadwal = async (req, res) => {
+  try {
+    const jadwalList = await getJadwalGuruMapel(req);
+
+    return res.json({
+      success: true,
+      data: jadwalList,
+    });
+  } catch (err) {
+    console.error("getAbsensiMapelJadwal error:", err);
+    return res.status(err.statusCode || 500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
+
+exports.getAbsensiMapelSiswa = async (req, res) => {
+  try {
+    const { jadwal_id } = req.query;
+
+    if (!jadwal_id) {
+      return res.status(400).json({
+        success: false,
+        message: "jadwal_id wajib diisi",
+      });
+    }
+
+    const jadwal = await findOwnedJadwal(req, jadwal_id);
+    const siswaResponse = await axios.get(
+      `${ACADEMIC_SERVICE_URL}/api/academic/siswa`,
+      {
+        params: { kelas_id: jadwal.kelas_id },
+        headers: { Authorization: req.headers.authorization },
+      },
+    );
+
+    const siswa = siswaResponse.data?.data || siswaResponse.data || [];
+
+    return res.json({
+      success: true,
+      jadwal,
+      data: siswa,
+    });
+  } catch (err) {
+    console.error("getAbsensiMapelSiswa error:", err);
+    return res.status(err.statusCode || 500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
+
+exports.getAbsensiMapel = async (req, res) => {
+  try {
+    const { jadwal_id, tanggal, tanggal_mulai, tanggal_akhir } = req.query;
+
+    if (!jadwal_id) {
+      return res.status(400).json({
+        success: false,
+        message: "jadwal_id wajib diisi",
+      });
+    }
+
+    const jadwal = await findOwnedJadwal(req, jadwal_id);
+
+    const params = [jadwal_id];
+    const filters = ["a.jadwal_id = $1"];
+
+    if (tanggal) {
+      params.push(tanggal);
+      filters.push(`a.tanggal = $${params.length}`);
+    }
+
+    if (tanggal_mulai) {
+      params.push(tanggal_mulai);
+      filters.push(`a.tanggal >= $${params.length}`);
+    }
+
+    if (tanggal_akhir) {
+      params.push(tanggal_akhir);
+      filters.push(`a.tanggal <= $${params.length}`);
+    }
+
+    const result = await pool.query(
+      `
+      SELECT
+        a.id,
+        a.siswa_id,
+        a.kelas_id,
+        a.mapel_id,
+        a.jadwal_id,
+        a.guru_id,
+        a.tanggal,
+        a.status,
+        a.keterangan,
+        a.created_at,
+        a.updated_at
+      FROM absensi_siswa a
+      WHERE ${filters.join(" AND ")}
+      ORDER BY a.tanggal DESC, a.siswa_id ASC
+      `,
+      params,
+    );
+
+    return res.json({
+      success: true,
+      jadwal,
+      data: result.rows,
+    });
+  } catch (err) {
+    console.error("getAbsensiMapel error:", err);
+    return res.status(err.statusCode || 500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
+
+exports.createAbsensiMapel = async (req, res) => {
+  try {
+    const { jadwal_id, tanggal, data_absensi } = req.body;
+    const guru_id = getUserId(req);
+
+    if (!jadwal_id || !tanggal || !Array.isArray(data_absensi)) {
+      return res.status(400).json({
+        success: false,
+        message: "jadwal_id, tanggal, dan data_absensi wajib diisi",
+      });
+    }
+
+    const jadwal = await findOwnedJadwal(req, jadwal_id);
+
+    const hariTanggal = getHariIndonesiaFromDate(tanggal);
+    if (normalizeHari(hariTanggal) !== normalizeHari(jadwal.hari)) {
+      return res.status(400).json({
+        success: false,
+        message: `Tanggal ${tanggal} adalah hari ${hariTanggal}, bukan jadwal ${jadwal.hari}`,
+      });
+    }
+
+    const siswaIds = await getSiswaIdsByKelas(req, jadwal.kelas_id);
+    const invalidSiswa = data_absensi.find(
+      (item) => item.siswa_id && !siswaIds.includes(Number(item.siswa_id)),
+    );
+
+    if (invalidSiswa) {
+      return res.status(400).json({
+        success: false,
+        message: `Siswa ID ${invalidSiswa.siswa_id} tidak terdaftar di kelas jadwal ini`,
+      });
+    }
+
+    const allowed = ["hadir", "izin", "sakit", "alpa", "terlambat"];
+    const results = [];
+
+    for (const item of data_absensi) {
+      if (!item.siswa_id) continue;
+
+      let status = String(item.status || "hadir").toLowerCase();
+      if (!allowed.includes(status)) status = "hadir";
+
+      const result = await pool.query(
+        `
+        INSERT INTO absensi_siswa (
+          siswa_id,
+          kelas_id,
+          mapel_id,
+          jadwal_id,
+          guru_id,
+          tanggal,
+          status,
+          keterangan,
+          created_by
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $5)
+        ON CONFLICT (siswa_id, tanggal, jadwal_id)
+        DO UPDATE SET
+          kelas_id = EXCLUDED.kelas_id,
+          mapel_id = EXCLUDED.mapel_id,
+          guru_id = EXCLUDED.guru_id,
+          status = EXCLUDED.status,
+          keterangan = EXCLUDED.keterangan,
+          updated_at = CURRENT_TIMESTAMP
+        RETURNING *
+        `,
+        [
+          item.siswa_id,
+          jadwal.kelas_id,
+          jadwal.mapel_id,
+          jadwal.id,
+          guru_id,
+          tanggal,
+          status,
+          item.keterangan || "",
+        ],
+      );
+
+      results.push(result.rows[0]);
+    }
+
+    return res.status(201).json({
+      success: true,
+      message: "Absensi mapel berhasil disimpan",
+      jadwal,
+      data: results,
+    });
+  } catch (err) {
+    console.error("createAbsensiMapel error:", err);
+    return res.status(err.statusCode || 500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
+
+exports.getRekapAbsensiMapel = async (req, res) => {
+  try {
+    const { kelas_id, mapel_id, tanggal_mulai, tanggal_akhir } = req.query;
+
+    if (!kelas_id || !mapel_id) {
+      return res.status(400).json({
+        success: false,
+        message: "kelas_id dan mapel_id wajib diisi",
+      });
+    }
+
+    const assignment = await findOwnedMapelAssignment(req, kelas_id, mapel_id);
+
+    const params = [kelas_id, mapel_id];
+    const filters = ["kelas_id = $1", "mapel_id = $2"];
+
+    if (tanggal_mulai) {
+      params.push(tanggal_mulai);
+      filters.push(`tanggal >= $${params.length}`);
+    }
+
+    if (tanggal_akhir) {
+      params.push(tanggal_akhir);
+      filters.push(`tanggal <= $${params.length}`);
+    }
+
+    const result = await pool.query(
+      `
+      SELECT
+        siswa_id,
+        COUNT(*) FILTER (WHERE status = 'hadir') AS hadir,
+        COUNT(*) FILTER (WHERE status = 'izin') AS izin,
+        COUNT(*) FILTER (WHERE status = 'sakit') AS sakit,
+        COUNT(*) FILTER (WHERE status = 'alpa') AS alpa,
+        COUNT(*) FILTER (WHERE status = 'terlambat') AS terlambat,
+        COUNT(*) AS total
+      FROM absensi_siswa
+      WHERE ${filters.join(" AND ")}
+      GROUP BY siswa_id
+      ORDER BY siswa_id ASC
+      `,
+      params,
+    );
+
+    return res.json({
+      success: true,
+      assignment,
+      data: result.rows,
+    });
+  } catch (err) {
+    console.error("getRekapAbsensiMapel error:", err);
+    return res.status(err.statusCode || 500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
+
+exports.getRekapAbsensiKepalaSekolah = async (req, res) => {
+  try {
+    const { kelas_id, mapel_id, tanggal_mulai, tanggal_akhir } = req.query;
+
+    if (!kelas_id) {
+      return res.status(400).json({
+        success: false,
+        message: "kelas_id wajib diisi",
+      });
+    }
+
+    const params = [kelas_id];
+    const filters = ["kelas_id = $1"];
+
+    // Jika mapel dipilih, ambil absensi guru-mapel sesuai mapel.
+    // Jika mapel tidak dipilih, ambil seluruh absensi mapel di kelas tersebut.
+    filters.push("jadwal_id IS NOT NULL");
+
+    if (mapel_id) {
+      params.push(mapel_id);
+      filters.push(`mapel_id = $${params.length}`);
+    }
+
+    if (tanggal_mulai) {
+      params.push(tanggal_mulai);
+      filters.push(`tanggal >= $${params.length}`);
+    }
+
+    if (tanggal_akhir) {
+      params.push(tanggal_akhir);
+      filters.push(`tanggal <= $${params.length}`);
+    }
+
+    const result = await pool.query(
+      `
+      SELECT
+        siswa_id,
+        COUNT(*) FILTER (WHERE status = 'hadir') AS hadir,
+        COUNT(*) FILTER (WHERE status = 'izin') AS izin,
+        COUNT(*) FILTER (WHERE status = 'sakit') AS sakit,
+        COUNT(*) FILTER (WHERE status = 'alpa') AS alpa,
+        COUNT(*) FILTER (WHERE status = 'terlambat') AS terlambat,
+        COUNT(*) AS total
+      FROM absensi_siswa
+      WHERE ${filters.join(" AND ")}
+      GROUP BY siswa_id
+      ORDER BY siswa_id ASC
+      `,
+      params,
+    );
+
+    return res.json({
+      success: true,
+      data: result.rows,
+    });
+  } catch (err) {
+    console.error("getRekapAbsensiKepalaSekolah error:", err);
+    return res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
+
 exports.getRekapKehadiran = async (req, res) => {
   try {
     const { kelas_id, tanggal, tanggal_mulai, tanggal_akhir } = req.query;
@@ -549,20 +1025,21 @@ exports.getRekapKehadiran = async (req, res) => {
     if (tanggal) {
       const result = await pool.query(
         `
-        SELECT
-          id,
-          siswa_id,
-          kelas_id,
-          tanggal,
-          status,
-          keterangan,
-          created_at,
-          updated_at
-        FROM absensi_siswa
-        WHERE kelas_id = $1
-          AND tanggal = $2
-        ORDER BY siswa_id ASC
-        `,
+  SELECT
+    id,
+    siswa_id,
+    kelas_id,
+    tanggal,
+    status,
+    keterangan,
+    created_at,
+    updated_at
+  FROM absensi_siswa
+  WHERE kelas_id = $1
+    AND tanggal = $2
+    AND jadwal_id IS NULL
+  ORDER BY siswa_id ASC
+  `,
         [kelas_id, tanggal],
       );
 
@@ -573,7 +1050,7 @@ exports.getRekapKehadiran = async (req, res) => {
     }
 
     const params = [kelas_id];
-    const filters = ["kelas_id = $1"];
+    const filters = ["kelas_id = $1", "jadwal_id IS NULL"];
 
     if (tanggal_mulai) {
       params.push(tanggal_mulai);
@@ -636,6 +1113,91 @@ const hitungNilaiAkhir = ({
       (Number(praktik) * Number(bobot_praktik)) / 100
     ).toFixed(2),
   );
+};
+
+exports.getGuruMapelAssignments = async (req, res) => {
+  try {
+    const userId = getUserId(req);
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "User guru-mapel tidak terbaca",
+      });
+    }
+
+    const response = await axios.get(
+      `${ACADEMIC_SERVICE_URL}/api/academic/mapel/guru/${userId}`,
+      {
+        headers: { Authorization: req.headers.authorization },
+      },
+    );
+
+    const assignments = Array.isArray(response.data?.data)
+      ? response.data.data
+      : Array.isArray(response.data)
+        ? response.data
+        : [];
+
+    return res.json({ success: true, data: assignments });
+  } catch (err) {
+    console.error(
+      "getGuruMapelAssignments error:",
+      err.response?.data || err.message,
+    );
+    return res.status(err.response?.status || 500).json({
+      success: false,
+      message:
+        err.response?.data?.message ||
+        err.response?.data?.error ||
+        err.message ||
+        "Gagal mengambil assignment guru-mapel",
+    });
+  }
+};
+
+exports.getSiswaUntukInputNilai = async (req, res) => {
+  try {
+    const { kelas_id, mapel_id } = req.query;
+
+    if (!kelas_id || !mapel_id) {
+      return res.status(400).json({
+        success: false,
+        message: "kelas_id dan mapel_id wajib diisi",
+      });
+    }
+
+    await assertGuruMapelOwnsAssignment(req, kelas_id, mapel_id);
+
+    const response = await axios.get(
+      `${ACADEMIC_SERVICE_URL}/api/academic/siswa`,
+      {
+        params: { kelas_id },
+        headers: { Authorization: req.headers.authorization },
+      },
+    );
+
+    const siswa = Array.isArray(response.data?.data)
+      ? response.data.data
+      : Array.isArray(response.data)
+        ? response.data
+        : [];
+
+    return res.json({ success: true, data: siswa });
+  } catch (err) {
+    console.error(
+      "getSiswaUntukInputNilai error:",
+      err.response?.data || err.message,
+    );
+    return res.status(err.statusCode || err.response?.status || 500).json({
+      success: false,
+      message:
+        err.response?.data?.message ||
+        err.response?.data?.error ||
+        err.message ||
+        "Gagal mengambil siswa untuk input nilai",
+    });
+  }
 };
 
 exports.getNilaiSiswa = async (req, res) => {
@@ -979,6 +1541,7 @@ exports.getRekapNilai = async (req, res) => {
 exports.createRekapKehadiran = async (req, res) => {
   try {
     const { kelas_id, tanggal, data_absensi } = req.body;
+    const wali_id = getUserId(req);
 
     if (!kelas_id || !tanggal || !Array.isArray(data_absensi)) {
       return res.status(400).json({
@@ -990,6 +1553,7 @@ exports.createRekapKehadiran = async (req, res) => {
     await assertWaliOwnsKelas(req, kelas_id);
 
     const siswaIds = await getSiswaIdsByKelas(req, kelas_id);
+
     const invalidSiswa = data_absensi.find(
       (item) => item.siswa_id && !siswaIds.includes(Number(item.siswa_id)),
     );
@@ -1008,22 +1572,24 @@ exports.createRekapKehadiran = async (req, res) => {
       if (!item.siswa_id) continue;
 
       let status = String(item.status || "hadir").toLowerCase();
-
-      if (!allowed.includes(status)) {
-        status = "hadir";
-      }
+      if (!allowed.includes(status)) status = "hadir";
 
       const result = await pool.query(
         `
         INSERT INTO absensi_siswa (
           siswa_id,
           kelas_id,
+          mapel_id,
+          jadwal_id,
+          guru_id,
           tanggal,
           status,
-          keterangan
+          keterangan,
+          created_by
         )
-        VALUES ($1, $2, $3, $4, $5)
+        VALUES ($1, $2, NULL, NULL, NULL, $3, $4, $5, $6)
         ON CONFLICT (siswa_id, tanggal)
+        WHERE jadwal_id IS NULL
         DO UPDATE SET
           kelas_id = EXCLUDED.kelas_id,
           status = EXCLUDED.status,
@@ -1031,7 +1597,14 @@ exports.createRekapKehadiran = async (req, res) => {
           updated_at = CURRENT_TIMESTAMP
         RETURNING *
         `,
-        [item.siswa_id, kelas_id, tanggal, status, item.keterangan || ""],
+        [
+          item.siswa_id,
+          kelas_id,
+          tanggal,
+          status,
+          item.keterangan || "",
+          wali_id,
+        ],
       );
 
       results.push(result.rows[0]);
@@ -1039,14 +1612,14 @@ exports.createRekapKehadiran = async (req, res) => {
 
     return res.status(201).json({
       success: true,
-      message: "Presensi berhasil disimpan",
+      message: "Presensi kelas berhasil disimpan",
       data: results,
     });
   } catch (err) {
     console.error("createRekapKehadiran error:", err);
     return res.status(err.statusCode || 500).json({
       success: false,
-      error: err.message,
+      message: err.message,
     });
   }
 };

@@ -18,14 +18,26 @@ router.delete(
 );
 
 // Nilai Siswa
-router.get("/nilai", extractIdentity, studentController.getNilaiSiswa);
 
+// Nilai Siswa
+router.get(
+  "/nilai/assignments",
+  extractIdentity,
+  studentController.getGuruMapelAssignments,
+);
+
+router.get(
+  "/nilai/siswa",
+  extractIdentity,
+  studentController.getSiswaUntukInputNilai,
+);
+
+router.get("/nilai", extractIdentity, studentController.getNilaiSiswa);
 router.post(
   "/nilai",
   extractIdentity,
   studentController.createOrUpdateNilaiSiswa,
 );
-
 router.get("/rekap-nilai", extractIdentity, studentController.getRekapNilai);
 
 // Parenting
@@ -81,6 +93,48 @@ router.post(
   "/rekap-kehadiran",
   extractIdentity,
   studentController.createRekapKehadiran,
+);
+
+// Absensi siswa oleh guru-mapel berdasarkan jadwal mengajar
+router.get(
+  "/absensi-mapel/jadwal",
+  extractIdentity,
+  studentController.getAbsensiMapelJadwal,
+);
+
+router.get(
+  "/absensi-mapel/assignments",
+  extractIdentity,
+  studentController.getAbsensiMapelAssignments,
+);
+
+router.get(
+  "/absensi-mapel/siswa",
+  extractIdentity,
+  studentController.getAbsensiMapelSiswa,
+);
+
+router.get(
+  "/absensi-mapel",
+  extractIdentity,
+  studentController.getAbsensiMapel,
+);
+
+router.post(
+  "/absensi-mapel",
+  extractIdentity,
+  studentController.createAbsensiMapel,
+);
+
+router.get(
+  "/absensi-mapel/rekap",
+  extractIdentity,
+  studentController.getRekapAbsensiMapel,
+);
+
+router.get(
+  "/kepala-sekolah/rekap-absensi",
+  studentController.getRekapAbsensiKepalaSekolah,
 );
 
 module.exports = router;

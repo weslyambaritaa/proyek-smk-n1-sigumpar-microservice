@@ -180,7 +180,7 @@ export default function InputNilaiPage() {
           return;
         }
 
-        const res = await academicApi.getMapelByGuru(guruId);
+        const res = await studentApi.getGuruMapelAssignments();
         const assignments = Array.isArray(res.data?.data)
           ? res.data.data
           : Array.isArray(res.data)
@@ -253,7 +253,10 @@ export default function InputNilaiPage() {
 
     try {
       const [siswaRes, nilaiRes] = await Promise.all([
-        academicApi.getSiswaByKelas(selectedKelas),
+        studentApi.getSiswaUntukInputNilai({
+          kelas_id: selectedKelas,
+          mapel_id: selectedMapel,
+        }),
         studentApi.getNilaiSiswa({
           kelas_id: selectedKelas,
           mapel_id: selectedMapel,
@@ -447,7 +450,7 @@ export default function InputNilaiPage() {
     setLoadingRiwayat(true);
 
     try {
-      const res = await studentApi.getNilaiSiswa({
+      const res = await studentApi.getRekapNilai({
         kelas_id: riwayatKelas,
         mapel_id: riwayatMapel || undefined,
         tahun_ajar: riwayatTahun,

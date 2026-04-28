@@ -53,6 +53,37 @@ export const studentApi = {
 
   createOrUpdateNilaiSiswa: (data) =>
     axiosInstance.post("/api/student/nilai", data),
+
+  getGuruMapelAssignments: () =>
+    axiosInstance.get("/api/student/nilai/assignments"),
+
+  getSiswaUntukInputNilai: (params) =>
+    axiosInstance.get("/api/student/nilai/siswa", { params }),
+
+  // Absensi siswa oleh guru-mapel berdasarkan jadwal mengajar
+  getAbsensiMapelJadwal: () =>
+    axiosInstance.get("/api/student/absensi-mapel/jadwal"),
+
+  getAbsensiMapelSiswa: (params) =>
+    axiosInstance.get("/api/student/absensi-mapel/siswa", { params }),
+
+  getAbsensiMapel: (params) =>
+    axiosInstance.get("/api/student/absensi-mapel", { params }),
+
+  createAbsensiMapel: (data) =>
+    axiosInstance.post("/api/student/absensi-mapel", data),
+
+  getRekapAbsensiMapel: (params) =>
+    axiosInstance.get("/api/student/absensi-mapel/rekap", { params }),
+
+  getAbsensiMapelAssignments: () =>
+    axiosInstance.get("/api/student/absensi-mapel/assignments"),
+
+  getAbsensiMapelSiswaByKelas: (params) =>
+    axiosInstance.get("/api/academic/siswa", { params }),
+
+  getRekapAbsensiKepalaSekolah: (params) =>
+    axiosInstance.get("/api/student/kepala-sekolah/rekap-absensi", { params }),
 };
 
 export default studentApi;
