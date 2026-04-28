@@ -46,17 +46,19 @@ CREATE INDEX IF NOT EXISTS idx_nilai_siswa_mapel_id ON nilai_siswa(mapel_id);
 CREATE INDEX IF NOT EXISTS idx_nilai_siswa_guru_id ON nilai_siswa(guru_id);
 
 CREATE TABLE IF NOT EXISTS catatan_parenting (
-    id SERIAL PRIMARY KEY,
-    siswa_id INTEGER,
-    kelas_id INTEGER,
-    wali_id UUID,
-    tanggal DATE NOT NULL DEFAULT CURRENT_DATE,
-    kehadiran_ortu INTEGER DEFAULT 0,
-    agenda VARCHAR(255),
-    ringkasan TEXT,
-    foto_url TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  id SERIAL PRIMARY KEY,
+  siswa_id INTEGER,
+  kelas_id INTEGER,
+  wali_id UUID,
+  tanggal DATE NOT NULL DEFAULT CURRENT_DATE,
+  kehadiran_ortu INTEGER DEFAULT 0,
+  agenda VARCHAR(255),
+  ringkasan TEXT,
+  catatan TEXT,
+  dokumentasi TEXT,
+  foto_url TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS absensi_siswa (

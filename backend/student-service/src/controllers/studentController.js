@@ -221,38 +221,66 @@ exports.createParenting = async (req, res) => {
       kehadiran_ortu,
       agenda,
       ringkasan,
+      catatan,
+      dokumentasi,
       foto_url,
     } = req.body;
+
+    if (!kelas_id || !tanggal) {
+      return res.status(400).json({
+        success: false,
+        message: "kelas_id dan tanggal wajib diisi",
+      });
+    }
 
     const result = await pool.query(
       `
       INSERT INTO catatan_parenting (
-        siswa_id, kelas_id, wali_id, tanggal, kehadiran_ortu, agenda, ringkasan, foto_url
+        siswa_id,
+        kelas_id,
+        wali_id,
+        tanggal,
+        kehadiran_ortu,
+        agenda,
+        ringkasan,
+        catatan,
+        dokumentasi,
+        foto_url
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
       RETURNING *
       `,
       [
         siswa_id || null,
-        kelas_id || null,
+        kelas_id,
         getUserId(req),
-        tanggal || new Date(),
-        kehadiran_ortu || 0,
+        tanggal,
+        Number(kehadiran_ortu || 0),
         agenda || null,
         ringkasan || null,
-        foto_url || null,
+        catatan || ringkasan || null,
+        dokumentasi || foto_url || null,
+        foto_url || dokumentasi || null,
       ],
     );
 
-    res.status(201).json({ success: true, data: result.rows[0] });
+    return res.status(201).json({
+      success: true,
+      message: "Catatan parenting berhasil disimpan",
+      data: result.rows[0],
+    });
   } catch (err) {
     console.error("createParenting error:", err);
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({
+      success: false,
+      message: err.message,
+    });
   }
 };
 
 exports.updateParenting = async (req, res) => {
   try {
+    const { id } = req.params;
     const {
       siswa_id,
       kelas_id,
@@ -260,6 +288,8 @@ exports.updateParenting = async (req, res) => {
       kehadiran_ortu,
       agenda,
       ringkasan,
+      catatan,
+      dokumentasi,
       foto_url,
     } = req.body;
 
@@ -273,27 +303,38 @@ exports.updateParenting = async (req, res) => {
         kehadiran_ortu = $4,
         agenda = $5,
         ringkasan = $6,
-        foto_url = $7,
+        catatan = $7,
+        dokumentasi = $8,
+        foto_url = $9,
         updated_at = CURRENT_TIMESTAMP
-      WHERE id = $8
+      WHERE id = $10
       RETURNING *
       `,
       [
         siswa_id || null,
         kelas_id || null,
         tanggal || new Date(),
-        kehadiran_ortu || 0,
+        Number(kehadiran_ortu || 0),
         agenda || null,
         ringkasan || null,
-        foto_url || null,
-        req.params.id,
+        catatan || ringkasan || null,
+        dokumentasi || foto_url || null,
+        foto_url || dokumentasi || null,
+        id,
       ],
     );
 
-    res.json({ success: true, data: result.rows[0] });
+    return res.json({
+      success: true,
+      message: "Catatan parenting berhasil diperbarui",
+      data: result.rows[0],
+    });
   } catch (err) {
     console.error("updateParenting error:", err);
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({
+      success: false,
+      message: err.message,
+    });
   }
 };
 
