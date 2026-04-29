@@ -223,29 +223,18 @@ exports.createParenting = async (req, res) => {
       ringkasan,
       catatan,
       dokumentasi,
-      foto_url,
     } = req.body;
 
-    if (!kelas_id || !tanggal) {
-      return res.status(400).json({
-        success: false,
-        message: "kelas_id dan tanggal wajib diisi",
-      });
-    }
+    const foto_url = req.file
+      ? `/uploads/parenting/${req.file.filename}`
+      : req.body.foto_url || null;
 
     const result = await pool.query(
       `
       INSERT INTO catatan_parenting (
-        siswa_id,
-        kelas_id,
-        wali_id,
-        tanggal,
-        kehadiran_ortu,
-        agenda,
-        ringkasan,
-        catatan,
-        dokumentasi,
-        foto_url
+        siswa_id, kelas_id, wali_id, tanggal,
+        kehadiran_ortu, agenda, ringkasan,
+        catatan, dokumentasi, foto_url
       )
       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
       RETURNING *
@@ -254,27 +243,24 @@ exports.createParenting = async (req, res) => {
         siswa_id || null,
         kelas_id,
         getUserId(req),
-        tanggal,
+        tanggal || new Date(),
         Number(kehadiran_ortu || 0),
         agenda || null,
         ringkasan || null,
         catatan || ringkasan || null,
-        dokumentasi || foto_url || null,
-        foto_url || dokumentasi || null,
+        dokumentasi || null,
+        foto_url,
       ],
     );
 
-    return res.status(201).json({
+    res.status(201).json({
       success: true,
       message: "Catatan parenting berhasil disimpan",
       data: result.rows[0],
     });
   } catch (err) {
     console.error("createParenting error:", err);
-    return res.status(500).json({
-      success: false,
-      message: err.message,
-    });
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 

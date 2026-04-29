@@ -1,7 +1,18 @@
 const express = require("express");
 const router = express.Router();
+const multer = require("multer");
+const path = require("path");
 const studentController = require("../controllers/studentController");
 const extractIdentity = require("../middleware/extractIdentity");
+
+const storage = multer.diskStorage({
+  destination: "uploads/parenting",
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + "-" + file.originalname.replace(/\s+/g, "-"));
+  },
+});
+
+const upload = multer({ storage });
 
 // Kebersihan Kelas
 router.get("/kebersihan", studentController.getKebersihan);

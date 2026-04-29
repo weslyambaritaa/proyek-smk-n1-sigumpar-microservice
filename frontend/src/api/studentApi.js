@@ -14,7 +14,12 @@ export const studentApi = {
   // Catatan Parenting
   getParenting: (params) =>
     axiosInstance.get("/api/student/parenting", { params }),
-  createParenting: (data) => axiosInstance.post("/api/student/parenting", data),
+  createParenting: (data) =>
+    axiosInstance.post("/api/student/parenting", data, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    }),
   updateParenting: (id, data) =>
     axiosInstance.put(`/api/student/parenting/${id}`, data),
   deleteParenting: (id) => axiosInstance.delete(`/api/student/parenting/${id}`),

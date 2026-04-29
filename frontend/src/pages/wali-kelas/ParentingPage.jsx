@@ -110,7 +110,17 @@ export default function ParentingPage() {
       fd.append("agenda", agenda);
       fd.append("ringkasan", ringkasan);
       if (file) fd.append("foto", file);
-      await studentApi.createParenting(fd);
+      await studentApi.createParenting({
+        siswa_id: form.siswa_id || null,
+        kelas_id: selectedKelas,
+        tanggal: form.tanggal,
+        kehadiran_ortu: Number(form.kehadiran_ortu || 0),
+        agenda: form.agenda,
+        ringkasan: form.ringkasan,
+        catatan: form.catatan,
+        dokumentasi: form.dokumentasi,
+        foto_url: form.foto_url,
+      });
       toast.success("Laporan parenting berhasil disimpan!");
       setAgenda("");
       setRingkasan("");

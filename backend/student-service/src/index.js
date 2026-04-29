@@ -1,11 +1,13 @@
 const express = require("express");
 const helmet = require("helmet");
 const morgan = require("morgan");
+const path = require("path");
 const studentRoutes = require("./routes/studentRoutes");
 
 const app = express();
 const PORT = process.env.PORT || 3008;
 
+app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 app.use(helmet({ crossOriginResourcePolicy: false }));
 app.use(morgan("dev"));
 app.use(express.json({ limit: "20mb" }));
