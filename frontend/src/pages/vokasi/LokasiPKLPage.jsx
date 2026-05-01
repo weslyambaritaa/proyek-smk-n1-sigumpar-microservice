@@ -1,297 +1,432 @@
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
-import { academicApi } from "../../api/academicApi";
-import axiosInstance from "../../api/axiosInstance";
-import keycloak from "../../keycloak";
-import ImagePreviewModal from "../../components/common/ImagePreviewModal";
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
+import { vocationalApi } from "../../api/vocationalApi";
 
-// ✅ Sama persis dengan ParentingPage — sederhana & konsisten
-function getFullFotoUrl(foto_url) {
-  if (!foto_url) return null;
-  if (foto_url.startsWith("http")) return foto_url;
-  const base = axiosInstance.defaults.baseURL || "";
-  return base ? `${base}${foto_url}` : foto_url;
-}
+const emptyForm = {
+  kelas_id: "",
+  nama_kelas: "",
+  siswa_id: "",
+  nama_siswa: "",
+  nisn: "",
+  nama_perusahaan: "",
+  alamat: "",
+  posisi: "",
+  deskripsi_pekerjaan: "",
+  pembimbing_industri: "",
+  kontak_pembimbing: "",
+  tanggal: new Date().toISOString().slice(0, 10),
+  tanggal_selesai: "",
+  foto_url: "",
+};
 
-// ✅ Format tanggal agar tidak tampil "2026-04-05T00:00:00.000Z"
-function formatTanggal(tanggal) {
-  if (!tanggal) return "—";
-  try {
-    return new Date(tanggal).toLocaleDateString("id-ID", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
-  } catch {
-    return tanggal;
-  }
-}
+const getDateOnly = (value) => {
+  if (!value) return "";
+  return String(value).slice(0, 10);
+};
 
 export default function LokasiPKLPage() {
-  const userId = keycloak.tokenParsed?.sub || "";
-  const namaSiswaLogin = keycloak.tokenParsed?.name || "";
+  const [tab, setTab] = useState("input");
 
   const [kelasList, setKelasList] = useState([]);
+  const [siswaList, setSiswaList] = useState([]);
+  const [lokasiList, setLokasiList] = useState([]);
 
-  const [selectedKelas, setSelectedKelas] = useState("");
-  const [namaSiswaInput, setNamaSiswaInput] = useState("");
-  const [namaPerusahaan, setNamaPerusahaan] = useState("");
-  const [alamat, setAlamat] = useState("");
-  const [posisi, setPosisi] = useState("");
-  const [deskripsi, setDeskripsi] = useState("");
-  const [pembimbing, setPembimbing] = useState("");
-  const [kontak, setKontak] = useState("");
-  const [tanggal, setTanggal] = useState(new Date().toISOString().slice(0, 10));
+  const [form, setForm] = useState(emptyForm);
   const [foto, setFoto] = useState(null);
-  const [fotoPreview, setFotoPreview] = useState(null); // ✅ simpan raw foto_url dari DB saat edit
+  const [editingId, setEditingId] = useState(null);
 
-  const [rows, setRows] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loadingKelas, setLoadingKelas] = useState(false);
+  const [loadingSiswa, setLoadingSiswa] = useState(false);
+  const [loadingLokasi, setLoadingLokasi] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [editId, setEditId] = useState(null);
 
-  const [previewSrc, setPreviewSrc] = useState(null);
-  const [previewName, setPreviewName] = useState("");
+  const [filterKelas, setFilterKelas] = useState("");
+  const [filterSiswa, setFilterSiswa] = useState("");
+  const [filterMulai, setFilterMulai] = useState("");
+  const [filterSelesai, setFilterSelesai] = useState("");
 
   const fileRef = useRef();
 
-  const namaKelas =
-    kelasList.find((k) => String(k.id) === String(selectedKelas))?.nama_kelas || "";
+  const filteredRekap = useMemo(() => {
+    return lokasiList.filter((item) => {
+      const itemTanggal = getDateOnly(item.tanggal);
+
+      const matchKelas =
+        !filterKelas || String(item.kelas_id) === String(filterKelas);
+
+      const matchSiswa =
+        !filterSiswa || String(item.siswa_id) === String(filterSiswa);
+
+      const matchMulai = !filterMulai || itemTanggal >= filterMulai;
+      const matchSelesai = !filterSelesai || itemTanggal <= filterSelesai;
+
+      return matchKelas && matchSiswa && matchMulai && matchSelesai;
+    });
+  }, [lokasiList, filterKelas, filterSiswa, filterMulai, filterSelesai]);
+
+  const loadKelas = async () => {
+    setLoadingKelas(true);
+
+    try {
+      const res = await vocationalApi.getKelasVokasi();
+      setKelasList(Array.isArray(res.data?.data) ? res.data.data : []);
+    } catch (err) {
+      console.error("Gagal memuat kelas:", err);
+      toast.error("Gagal memuat kelas");
+    } finally {
+      setLoadingKelas(false);
+    }
+  };
+
+  const loadSiswaByKelas = async (kelasId) => {
+    if (!kelasId) {
+      setSiswaList([]);
+      return;
+    }
+
+    setLoadingSiswa(true);
+
+    try {
+      const res = await vocationalApi.getSiswaVokasi({ kelas_id: kelasId });
+      setSiswaList(Array.isArray(res.data?.data) ? res.data.data : []);
+    } catch (err) {
+      console.error("Gagal memuat siswa:", err);
+      toast.error("Gagal memuat siswa");
+      setSiswaList([]);
+    } finally {
+      setLoadingSiswa(false);
+    }
+  };
+
+  const loadLokasi = async () => {
+    setLoadingLokasi(true);
+
+    try {
+      const res = await vocationalApi.getAllLokasiPKL();
+      setLokasiList(Array.isArray(res.data?.data) ? res.data.data : []);
+    } catch (err) {
+      console.error("Gagal memuat lokasi PKL:", err);
+      toast.error("Gagal memuat data lokasi PKL");
+    } finally {
+      setLoadingLokasi(false);
+    }
+  };
 
   useEffect(() => {
-    academicApi
-      .getAllKelas()
-      .then((r) => {
-        setKelasList(Array.isArray(r.data) ? r.data : r.data?.data || []);
-      })
-      .catch(() => {});
-
-    loadData();
+    loadKelas();
+    loadLokasi();
   }, []);
 
-  const loadData = async () => {
-    setLoading(true);
-    try {
-      const res = await axiosInstance.get("/api/vocational/pkl/lokasi");
-      setRows(Array.isArray(res.data?.data) ? res.data.data : []);
-    } catch {
-      toast.error("Gagal memuat data lokasi PKL");
-      setRows([]);
-    } finally {
-      setLoading(false);
-    }
+  useEffect(() => {
+    loadSiswaByKelas(form.kelas_id);
+  }, [form.kelas_id]);
+
+  const handleChangeKelas = (kelasId) => {
+    const kelas = kelasList.find((item) => String(item.id) === String(kelasId));
+
+    setForm((prev) => ({
+      ...prev,
+      kelas_id: kelasId,
+      nama_kelas: kelas?.nama_kelas || "",
+      siswa_id: "",
+      nama_siswa: "",
+      nisn: "",
+    }));
   };
 
-  const handleFotoChange = (e) => {
-    const f = e.target.files[0];
-    if (!f) return;
+  const handleChangeSiswa = (siswaId) => {
+    const siswa = siswaList.find((item) => String(item.id) === String(siswaId));
 
-    if (!f.type.startsWith("image/")) {
-      toast.error("Hanya file gambar yang diizinkan");
-      return;
-    }
-
-    if (f.size > 5 * 1024 * 1024) {
-      toast.error("Ukuran foto maksimal 5MB");
-      return;
-    }
-
-    setFoto(f);
-
-    // ✅ fotoPreview untuk file baru = data URL (base64)
-    const reader = new FileReader();
-    reader.onloadend = () => setFotoPreview(reader.result);
-    reader.readAsDataURL(f);
-  };
-
-  const handleRemoveFoto = () => {
-    setFoto(null);
-    setFotoPreview(null);
-    if (fileRef.current) fileRef.current.value = "";
-  };
-
-  // ✅ Sama persis dengan ParentingPage — selalu terima raw URL, resolve di sini
-  const handlePreviewFoto = (url, nama) => {
-    const full = getFullFotoUrl(url);
-    if (!full) {
-      toast.error("Foto tidak tersedia");
-      return;
-    }
-    setPreviewSrc(full);
-    setPreviewName(nama || "Foto Lokasi PKL");
+    setForm((prev) => ({
+      ...prev,
+      siswa_id: siswaId,
+      nama_siswa: siswa?.nama_lengkap || siswa?.nama_siswa || "",
+      nisn: siswa?.nisn || "",
+    }));
   };
 
   const resetForm = () => {
-    setEditId(null);
-    setSelectedKelas("");
-    setNamaSiswaInput("");
-    setNamaPerusahaan("");
-    setAlamat("");
-    setPosisi("");
-    setDeskripsi("");
-    setPembimbing("");
-    setKontak("");
-    setTanggal(new Date().toISOString().slice(0, 10));
+    setForm(emptyForm);
     setFoto(null);
-    setFotoPreview(null);
-    if (fileRef.current) fileRef.current.value = "";
+    setEditingId(null);
+
+    if (fileRef.current) {
+      fileRef.current.value = "";
+    }
   };
 
-  const handleSimpan = async (e) => {
+  const validateForm = () => {
+    if (!form.kelas_id) {
+      toast.error("Pilih kelas terlebih dahulu");
+      return false;
+    }
+
+    if (!form.siswa_id) {
+      toast.error("Pilih siswa terlebih dahulu");
+      return false;
+    }
+
+    if (!form.nama_perusahaan.trim()) {
+      toast.error("Nama perusahaan wajib diisi");
+      return false;
+    }
+
+    if (!form.tanggal) {
+      toast.error("Tanggal mulai wajib diisi");
+      return false;
+    }
+
+    if (
+      form.tanggal_selesai &&
+      form.tanggal &&
+      form.tanggal_selesai < form.tanggal
+    ) {
+      toast.error("Tanggal selesai tidak boleh lebih awal dari tanggal mulai");
+      return false;
+    }
+
+    return true;
+  };
+
+  const buildFormData = () => {
+    const fd = new FormData();
+
+    fd.append("kelas_id", form.kelas_id);
+    fd.append("nama_kelas", form.nama_kelas);
+    fd.append("siswa_id", form.siswa_id);
+    fd.append("nama_siswa", form.nama_siswa);
+    fd.append("nisn", form.nisn);
+    fd.append("nama_perusahaan", form.nama_perusahaan);
+    fd.append("alamat", form.alamat);
+    fd.append("posisi", form.posisi);
+    fd.append("deskripsi_pekerjaan", form.deskripsi_pekerjaan);
+    fd.append("pembimbing_industri", form.pembimbing_industri);
+    fd.append("kontak_pembimbing", form.kontak_pembimbing);
+    fd.append("tanggal", form.tanggal);
+    fd.append("tanggal_selesai", form.tanggal_selesai);
+    fd.append("foto_url", form.foto_url || "");
+
+    if (foto) {
+      fd.append("foto", foto);
+    }
+
+    return fd;
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!namaSiswaInput.trim() && !namaSiswaLogin.trim()) {
-      toast.error("Nama siswa wajib diisi");
-      return;
-    }
-
-    if (!namaPerusahaan.trim()) {
-      toast.error("Nama perusahaan wajib diisi");
-      return;
-    }
+    if (!validateForm()) return;
 
     setSaving(true);
-    try {
-      const fd = new FormData();
-      fd.append("siswa_id", userId);
-      fd.append("kelas_id", selectedKelas || "");
-      fd.append("nama_siswa", namaSiswaInput.trim() || namaSiswaLogin);
-      fd.append("nama_perusahaan", namaPerusahaan);
-      fd.append("alamat", alamat);
-      fd.append("posisi", posisi);
-      fd.append("deskripsi_pekerjaan", deskripsi);
-      fd.append("pembimbing_industri", pembimbing);
-      fd.append("kontak_pembimbing", kontak);
-      fd.append("tanggal", tanggal);
-      if (foto) fd.append("foto", foto);
 
-      if (editId) {
-        await axiosInstance.put(`/api/vocational/pkl/lokasi/${editId}`, fd, {
-          headers: { "Content-Type": "multipart/form-data" },
-        });
-        toast.success("Data lokasi PKL berhasil diperbarui!");
+    try {
+      const fd = buildFormData();
+
+      if (editingId) {
+        await vocationalApi.updateLokasiPKL(editingId, fd);
+        toast.success("Lokasi PKL berhasil diperbarui");
       } else {
-        await axiosInstance.post("/api/vocational/pkl/lokasi", fd, {
-          headers: { "Content-Type": "multipart/form-data" },
-        });
-        toast.success("Lokasi PKL berhasil disimpan!");
+        await vocationalApi.createLokasiPKL(fd);
+        toast.success("Lokasi PKL berhasil disimpan");
       }
 
       resetForm();
-      loadData();
+      await loadLokasi();
     } catch (err) {
-      toast.error(err.response?.data?.error || "Gagal menyimpan data");
+      console.error("Gagal menyimpan lokasi PKL:", err);
+      toast.error(err?.response?.data?.error || "Gagal menyimpan lokasi PKL");
     } finally {
       setSaving(false);
     }
   };
 
-  const handleEdit = (row) => {
-    setEditId(row.id);
-    setSelectedKelas(row.kelas_id ? String(row.kelas_id) : "");
-    setNamaSiswaInput(row.nama_siswa || "");
-    setNamaPerusahaan(row.nama_perusahaan || "");
-    setAlamat(row.alamat || "");
-    setPosisi(row.posisi || "");
-    setDeskripsi(row.deskripsi_pekerjaan || "");
-    setPembimbing(row.pembimbing_industri || "");
-    setKontak(row.kontak_pembimbing || "");
-    setTanggal(row.tanggal ? row.tanggal.slice(0, 10) : new Date().toISOString().slice(0, 10));
+  const handleEdit = async (item) => {
+    setTab("input");
+
+    setEditingId(item.id);
+
+    setForm({
+      kelas_id: item.kelas_id ? String(item.kelas_id) : "",
+      nama_kelas: item.nama_kelas || "",
+      siswa_id: item.siswa_id ? String(item.siswa_id) : "",
+      nama_siswa: item.nama_siswa || "",
+      nisn: item.nisn || "",
+      nama_perusahaan: item.nama_perusahaan || "",
+      alamat: item.alamat || "",
+      posisi: item.posisi || "",
+      deskripsi_pekerjaan: item.deskripsi_pekerjaan || "",
+      pembimbing_industri: item.pembimbing_industri || "",
+      kontak_pembimbing: item.kontak_pembimbing || "",
+      tanggal:
+        getDateOnly(item.tanggal) || new Date().toISOString().slice(0, 10),
+      tanggal_selesai: getDateOnly(item.tanggal_selesai),
+      foto_url: item.foto_url || "",
+    });
+
     setFoto(null);
-    // ✅ Simpan raw foto_url dari DB (bukan resolved), biarkan getFullFotoUrl handle saat render
-    setFotoPreview(row.foto_url || null);
-    if (fileRef.current) fileRef.current.value = "";
-    window.scrollTo({ top: 0, behavior: "smooth" });
+
+    if (fileRef.current) {
+      fileRef.current.value = "";
+    }
   };
 
   const handleDelete = async (id) => {
     if (!window.confirm("Hapus data lokasi PKL ini?")) return;
 
     try {
-      await axiosInstance.delete(`/api/vocational/pkl/lokasi/${id}`);
-      toast.success("Data berhasil dihapus");
-      loadData();
-    } catch {
-      toast.error("Gagal menghapus data");
+      await vocationalApi.deleteLokasiPKL(id);
+      toast.success("Lokasi PKL berhasil dihapus");
+      await loadLokasi();
+    } catch (err) {
+      console.error("Gagal menghapus lokasi PKL:", err);
+      toast.error(err?.response?.data?.error || "Gagal menghapus lokasi PKL");
     }
   };
 
-  // ✅ Resolve URL foto untuk ditampilkan di <img src>
-  // Bedakan: data URL (foto baru dipilih) vs raw URL dari DB (foto lama)
-  const resolvedFotoPreviewSrc = fotoPreview
-    ? fotoPreview.startsWith("data:")
-      ? fotoPreview                    // blob baru — langsung pakai
-      : getFullFotoUrl(fotoPreview)    // raw URL dari DB — resolve dulu
-    : null;
+  const handleExportExcel = () => {
+    if (filteredRekap.length === 0) {
+      toast.error("Tidak ada data untuk diexport");
+      return;
+    }
+
+    const rows = filteredRekap.map((item, index) => ({
+      No: index + 1,
+      Kelas: item.nama_kelas || "-",
+      "Nama Siswa": item.nama_siswa || "-",
+      NISN: item.nisn || "-",
+      "Nama Perusahaan": item.nama_perusahaan || "-",
+      Alamat: item.alamat || "-",
+      Posisi: item.posisi || "-",
+      "Deskripsi Pekerjaan": item.deskripsi_pekerjaan || "-",
+      "Pembimbing Industri": item.pembimbing_industri || "-",
+      "Kontak Pembimbing": item.kontak_pembimbing || "-",
+      "Tanggal Mulai": getDateOnly(item.tanggal) || "-",
+      "Tanggal Selesai Estimasi": getDateOnly(item.tanggal_selesai) || "-",
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet([]);
+
+    XLSX.utils.sheet_add_aoa(
+      worksheet,
+      [
+        ["Rekap Lokasi PKL"],
+        [`Jumlah Data: ${filteredRekap.length}`],
+        [
+          `Filter Kelas: ${
+            kelasList.find((k) => String(k.id) === String(filterKelas))
+              ?.nama_kelas || "Semua"
+          }`,
+        ],
+        [],
+      ],
+      { origin: "A1" },
+    );
+
+    XLSX.utils.sheet_add_json(worksheet, rows, {
+      origin: "A5",
+      skipHeader: false,
+    });
+
+    worksheet["!cols"] = [
+      { wch: 6 },
+      { wch: 14 },
+      { wch: 28 },
+      { wch: 18 },
+      { wch: 28 },
+      { wch: 35 },
+      { wch: 20 },
+      { wch: 35 },
+      { wch: 25 },
+      { wch: 20 },
+      { wch: 16 },
+      { wch: 22 },
+    ];
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Lokasi PKL");
+
+    const excelBuffer = XLSX.write(workbook, {
+      bookType: "xlsx",
+      type: "array",
+    });
+
+    const file = new Blob([excelBuffer], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+
+    saveAs(file, `rekap-lokasi-pkl-${Date.now()}.xlsx`);
+    toast.success("Rekap lokasi PKL berhasil diexport");
+  };
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      {previewSrc && (
-        <ImagePreviewModal
-          src={previewSrc}
-          fileName={previewName}
-          onClose={() => {
-            setPreviewSrc(null);
-            setPreviewName("");
-          }}
-        />
-      )}
+    <div className="min-h-screen bg-gray-50">
+      <div className="bg-white border-b border-gray-200 px-8 py-5">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-1 h-7 bg-blue-600 rounded-full" />
+          <div>
+            <h1 className="text-xl font-bold text-gray-800">Lokasi PKL</h1>
+            <p className="text-sm text-gray-500">
+              Kelola lokasi PKL siswa berdasarkan kelas dan data dari
+              academic-service.
+            </p>
+          </div>
+        </div>
 
-      <div className="bg-white border-b px-8 py-5">
-        <h1 className="text-2xl font-bold text-gray-800 tracking-tight">
-          LOKASI PKL
-        </h1>
-        <p className="text-sm text-gray-500 mt-0.5">
-          Catat dan dokumentasi lokasi Praktik Kerja Lapangan
-        </p>
-        {(namaSiswaInput || namaSiswaLogin || namaKelas) && (
-          <p className="text-sm text-blue-600 mt-1 font-medium">
-            {namaSiswaInput || namaSiswaLogin}
-            {namaKelas ? ` | ${namaKelas}` : ""}
-          </p>
-        )}
+        <div className="flex gap-2">
+          <button
+            onClick={() => setTab("input")}
+            className={`px-5 py-2.5 rounded-xl text-sm font-semibold ${
+              tab === "input"
+                ? "bg-blue-600 text-white"
+                : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+            }`}
+          >
+            ✏️ Input Lokasi
+          </button>
+
+          <button
+            onClick={() => setTab("rekap")}
+            className={`px-5 py-2.5 rounded-xl text-sm font-semibold ${
+              tab === "rekap"
+                ? "bg-blue-600 text-white"
+                : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+            }`}
+          >
+            📊 Rekap
+          </button>
+        </div>
       </div>
 
-      <div className="px-8 py-6 max-w-5xl mx-auto space-y-6">
-        <form
-          onSubmit={handleSimpan}
-          className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden"
-        >
-          <div className="flex items-center gap-3 px-6 py-4 bg-blue-50 border-b border-blue-100">
-            <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white text-lg">
-              🏭
-            </div>
-            <h2 className="font-bold text-gray-800 uppercase tracking-wide text-sm">
-              {editId ? "Edit Data Lokasi PKL" : "Tambah Lokasi PKL"}
-            </h2>
-            {editId && (
-              <button
-                type="button"
-                onClick={resetForm}
-                className="ml-auto text-xs text-gray-400 hover:text-red-500 font-semibold"
-              >
-                ✕ Batal Edit
-              </button>
-            )}
-          </div>
+      <div className="px-8 py-5 max-w-7xl mx-auto space-y-5">
+        {tab === "input" && (
+          <>
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5">
+              <h2 className="font-bold text-gray-800 mb-4">
+                {editingId ? "Edit Lokasi PKL" : "Tambah Lokasi PKL"}
+              </h2>
 
-          <div className="p-6">
-            <div className="flex flex-col md:flex-row gap-6">
-              <div className="flex-1 space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <form onSubmit={handleSubmit}>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">
                       Kelas
                     </label>
                     <select
-                      value={selectedKelas}
-                      onChange={(e) => setSelectedKelas(e.target.value)}
+                      value={form.kelas_id}
+                      onChange={(e) => handleChangeKelas(e.target.value)}
+                      disabled={loadingKelas}
                       className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
-                      <option value="">-- Pilih Kelas --</option>
-                      {kelasList.map((k) => (
-                        <option key={k.id} value={k.id}>
-                          {k.nama_kelas}
+                      <option value="">
+                        {loadingKelas ? "Memuat kelas..." : "-- Pilih Kelas --"}
+                      </option>
+
+                      {kelasList.map((kelas) => (
+                        <option key={kelas.id} value={kelas.id}>
+                          {kelas.nama_kelas}
                         </option>
                       ))}
                     </select>
@@ -299,84 +434,90 @@ export default function LokasiPKLPage() {
 
                   <div>
                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">
-                      Nama Siswa <span className="text-red-500">*</span>
+                      Nama Siswa
                     </label>
-                    <input
-                      type="text"
-                      value={namaSiswaInput}
-                      onChange={(e) => setNamaSiswaInput(e.target.value)}
-                      placeholder="Ketik nama siswa yang PKL..."
-                      required
-                      className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                </div>
+                    <select
+                      value={form.siswa_id}
+                      onChange={(e) => handleChangeSiswa(e.target.value)}
+                      disabled={!form.kelas_id || loadingSiswa}
+                      className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">
+                        {loadingSiswa ? "Memuat siswa..." : "-- Pilih Siswa --"}
+                      </option>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">
-                      Nama Perusahaan / Instansi <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={namaPerusahaan}
-                      onChange={(e) => setNamaPerusahaan(e.target.value)}
-                      placeholder="Contoh: PT. Maju Bersama"
-                      className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
+                      {siswaList.map((siswa) => (
+                        <option key={siswa.id} value={siswa.id}>
+                          {siswa.nama_lengkap || siswa.nama_siswa || "-"}
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
                   <div>
                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">
-                      Posisi / Bagian
+                      NISN
                     </label>
                     <input
                       type="text"
-                      value={posisi}
-                      onChange={(e) => setPosisi(e.target.value)}
-                      placeholder="Contoh: Teknisi, Admin, dll"
-                      className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      value={form.nisn}
+                      readOnly
+                      className="w-full border border-gray-200 bg-gray-50 rounded-xl px-4 py-2.5 text-sm text-gray-500"
+                      placeholder="Otomatis"
                     />
                   </div>
-                </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">
-                    Alamat Perusahaan
-                  </label>
-                  <textarea
-                    value={alamat}
-                    onChange={(e) => setAlamat(e.target.value)}
-                    rows={2}
-                    placeholder="Alamat lengkap tempat PKL..."
-                    className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-                  />
-                </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">
+                      Nama Perusahaan
+                    </label>
+                    <input
+                      type="text"
+                      value={form.nama_perusahaan}
+                      onChange={(e) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          nama_perusahaan: e.target.value,
+                        }))
+                      }
+                      className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Contoh: PT Maju Jaya"
+                    />
+                  </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">
-                    Deskripsi Pekerjaan
-                  </label>
-                  <textarea
-                    value={deskripsi}
-                    onChange={(e) => setDeskripsi(e.target.value)}
-                    rows={3}
-                    placeholder="Uraikan pekerjaan yang dilakukan..."
-                    className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-                  />
-                </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">
+                      Posisi
+                    </label>
+                    <input
+                      type="text"
+                      value={form.posisi}
+                      onChange={(e) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          posisi: e.target.value,
+                        }))
+                      }
+                      className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Contoh: Teknisi / Admin / Operator"
+                    />
+                  </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">
                       Pembimbing Industri
                     </label>
                     <input
                       type="text"
-                      value={pembimbing}
-                      onChange={(e) => setPembimbing(e.target.value)}
-                      placeholder="Nama pembimbing"
+                      value={form.pembimbing_industri}
+                      onChange={(e) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          pembimbing_industri: e.target.value,
+                        }))
+                      }
                       className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Nama pembimbing"
                     />
                   </div>
 
@@ -386,289 +527,366 @@ export default function LokasiPKLPage() {
                     </label>
                     <input
                       type="text"
-                      value={kontak}
-                      onChange={(e) => setKontak(e.target.value)}
+                      value={form.kontak_pembimbing}
+                      onChange={(e) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          kontak_pembimbing: e.target.value,
+                        }))
+                      }
+                      className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="No. HP / Email"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">
+                      Tanggal Mulai
+                    </label>
+                    <input
+                      type="date"
+                      value={form.tanggal}
+                      onChange={(e) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          tanggal: e.target.value,
+                        }))
+                      }
                       className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
 
                   <div>
                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">
-                      Tanggal Mulai PKL
+                      Estimasi Tanggal Selesai
                     </label>
                     <input
                       type="date"
-                      value={tanggal}
-                      onChange={(e) => setTanggal(e.target.value)}
+                      value={form.tanggal_selesai}
+                      onChange={(e) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          tanggal_selesai: e.target.value,
+                        }))
+                      }
                       className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
+
+                  <div className="md:col-span-2">
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">
+                      Alamat Perusahaan
+                    </label>
+                    <input
+                      type="text"
+                      value={form.alamat}
+                      onChange={(e) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          alamat: e.target.value,
+                        }))
+                      }
+                      className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Alamat lokasi PKL"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">
+                      Foto Lokasi
+                    </label>
+                    <input
+                      type="file"
+                      ref={fileRef}
+                      accept="image/*"
+                      onChange={(e) => setFoto(e.target.files[0] || null)}
+                      className="w-full border border-gray-300 rounded-xl px-4 py-2 text-sm"
+                    />
+                  </div>
+
+                  <div className="md:col-span-3">
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">
+                      Deskripsi Pekerjaan
+                    </label>
+                    <textarea
+                      rows={3}
+                      value={form.deskripsi_pekerjaan}
+                      onChange={(e) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          deskripsi_pekerjaan: e.target.value,
+                        }))
+                      }
+                      className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                      placeholder="Deskripsikan pekerjaan atau bidang tugas siswa selama PKL..."
+                    />
+                  </div>
                 </div>
 
+                <div className="mt-5 flex justify-end gap-2">
+                  {editingId && (
+                    <button
+                      type="button"
+                      onClick={resetForm}
+                      className="px-6 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold text-sm rounded-xl"
+                    >
+                      Batal
+                    </button>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={saving}
+                    className="px-8 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-bold text-sm rounded-xl"
+                  >
+                    {saving
+                      ? "Menyimpan..."
+                      : editingId
+                        ? "Update Lokasi PKL"
+                        : "Simpan Lokasi PKL"}
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+              <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                <h2 className="font-bold text-gray-800">Daftar Lokasi PKL</h2>
+
                 <button
-                  type="submit"
-                  disabled={saving}
-                  className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-bold text-sm rounded-xl shadow-sm transition-all active:scale-95 uppercase tracking-wider"
+                  onClick={loadLokasi}
+                  className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 text-sm font-semibold rounded-xl"
                 >
-                  {saving
-                    ? "Menyimpan..."
-                    : editId
-                    ? "Update Lokasi PKL"
-                    : "Simpan Lokasi PKL"}
+                  Refresh
                 </button>
               </div>
 
-              {/* ✅ Area upload foto — konsep sama dengan ParentingPage */}
-              <div className="w-full md:w-56 flex flex-col gap-3">
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest">
-                  Foto Lokasi PKL
-                </label>
-
-                <div
-                  onClick={() => !resolvedFotoPreviewSrc && fileRef.current?.click()}
-                  className={`flex-1 min-h-48 border-2 rounded-xl overflow-hidden transition-all ${
-                    resolvedFotoPreviewSrc
-                      ? "border-blue-300 cursor-default"
-                      : "border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:border-blue-400 hover:bg-blue-50"
-                  }`}
-                >
-                  {resolvedFotoPreviewSrc ? (
-                    <img
-                      src={resolvedFotoPreviewSrc}
-                      alt="Preview Foto PKL"
-                      className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
-                      // ✅ Kirim fotoPreview (raw URL) ke handlePreviewFoto, bukan resolvedSrc
-                      onClick={() =>
-                        handlePreviewFoto(fotoPreview, "Preview Foto Lokasi PKL")
-                      }
-                      title="Klik untuk preview fullscreen"
-                      onError={(e) => {
-                        e.currentTarget.style.display = "none";
-                      }}
-                    />
-                  ) : (
-                    <>
-                      <div className="text-4xl text-gray-300 mb-2">📷</div>
-                      <p className="text-xs text-gray-400 text-center px-3">
-                        Klik untuk upload foto lokasi
-                      </p>
-                    </>
-                  )}
+              {loadingLokasi ? (
+                <div className="py-12 text-center text-gray-400">
+                  Memuat data lokasi PKL...
                 </div>
+              ) : lokasiList.length === 0 ? (
+                <div className="py-12 text-center text-gray-400">
+                  Belum ada data lokasi PKL.
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50 text-xs font-bold text-gray-500 uppercase tracking-wider">
+                      <tr>
+                        <th className="px-5 py-3 text-left">Siswa</th>
+                        <th className="px-5 py-3 text-left">Kelas</th>
+                        <th className="px-5 py-3 text-left">Perusahaan</th>
+                        <th className="px-5 py-3 text-left">Posisi</th>
+                        <th className="px-5 py-3 text-left">Periode</th>
+                        <th className="px-5 py-3 text-center">Aksi</th>
+                      </tr>
+                    </thead>
 
-                <input
-                  ref={fileRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleFotoChange}
-                />
+                    <tbody className="divide-y divide-gray-50">
+                      {lokasiList.map((item) => (
+                        <tr key={item.id} className="hover:bg-gray-50/70">
+                          <td className="px-5 py-3 font-semibold text-gray-800">
+                            {item.nama_siswa || "-"}
+                            <p className="text-xs font-normal text-gray-400">
+                              {item.nisn || "-"}
+                            </p>
+                          </td>
 
-                {resolvedFotoPreviewSrc && (
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        handlePreviewFoto(fotoPreview, "Preview Foto Lokasi PKL")
-                      }
-                      className="flex-1 text-xs text-blue-500 hover:text-blue-700 font-semibold text-center py-1 border border-blue-200 rounded-lg transition-colors"
-                    >
-                      🔍 Preview
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleRemoveFoto}
-                      className="flex-1 text-xs text-red-400 hover:text-red-600 font-semibold text-center py-1 border border-red-200 rounded-lg transition-colors"
-                    >
-                      ✕ Hapus
-                    </button>
-                  </div>
-                )}
+                          <td className="px-5 py-3 text-gray-600">
+                            {item.nama_kelas || "-"}
+                          </td>
 
-                <p className="text-xs text-gray-400 text-center leading-relaxed">
-                  JPG, PNG, WEBP
-                  <br />
-                  Maks 5MB
-                </p>
-              </div>
-            </div>
-          </div>
-        </form>
+                          <td className="px-5 py-3 text-gray-600">
+                            {item.nama_perusahaan || "-"}
+                            <p className="text-xs text-gray-400">
+                              {item.alamat || "-"}
+                            </p>
+                          </td>
 
-        {/* Tabel Histori */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-            <div>
-              <h2 className="font-bold text-gray-800 text-sm uppercase tracking-wide">
-                Histori Lokasi PKL
-              </h2>
-              {!loading && (
-                <p className="text-xs text-gray-400 mt-0.5">
-                  {rows.length} data ditemukan
-                </p>
+                          <td className="px-5 py-3 text-gray-600">
+                            {item.posisi || "-"}
+                          </td>
+
+                          <td className="px-5 py-3 text-gray-600">
+                            {getDateOnly(item.tanggal) || "-"} s/d{" "}
+                            {getDateOnly(item.tanggal_selesai) || "-"}
+                          </td>
+
+                          <td className="px-5 py-3">
+                            <div className="flex justify-center gap-2">
+                              <button
+                                onClick={() => handleEdit(item)}
+                                className="px-3 py-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 text-xs font-semibold"
+                              >
+                                Edit
+                              </button>
+
+                              <button
+                                onClick={() => handleDelete(item.id)}
+                                className="px-3 py-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 text-xs font-semibold"
+                              >
+                                Hapus
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </div>
+          </>
+        )}
 
-            <button
-              onClick={loadData}
-              disabled={loading}
-              className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
-            >
-              {loading ? "..." : "↻ Refresh"}
-            </button>
-          </div>
+        {tab === "rekap" && (
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-100">
+              <h2 className="font-bold text-gray-800 mb-3">Rekap Lokasi PKL</h2>
 
-          {loading ? (
-            <div className="py-16 text-center text-gray-400">
-              <div className="inline-block w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mb-3" />
-              <p>Memuat data...</p>
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">
+                    Kelas
+                  </label>
+                  <select
+                    value={filterKelas}
+                    onChange={(e) => {
+                      setFilterKelas(e.target.value);
+                      setFilterSiswa("");
+                    }}
+                    className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Semua Kelas</option>
+                    {kelasList.map((kelas) => (
+                      <option key={kelas.id} value={kelas.id}>
+                        {kelas.nama_kelas}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">
+                    Siswa
+                  </label>
+                  <select
+                    value={filterSiswa}
+                    onChange={(e) => setFilterSiswa(e.target.value)}
+                    className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Semua Siswa</option>
+                    {lokasiList
+                      .filter(
+                        (item) =>
+                          !filterKelas ||
+                          String(item.kelas_id) === String(filterKelas),
+                      )
+                      .map((item) => (
+                        <option key={item.id} value={item.siswa_id}>
+                          {item.nama_siswa || "-"}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">
+                    Tanggal Mulai
+                  </label>
+                  <input
+                    type="date"
+                    value={filterMulai}
+                    onChange={(e) => setFilterMulai(e.target.value)}
+                    className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">
+                    Tanggal Akhir
+                  </label>
+                  <input
+                    type="date"
+                    value={filterSelesai}
+                    onChange={(e) => setFilterSelesai(e.target.value)}
+                    className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <button
+                  onClick={handleExportExcel}
+                  disabled={filteredRekap.length === 0}
+                  className="px-5 py-2 bg-green-600 hover:bg-green-700 disabled:opacity-60 text-white font-bold text-sm rounded-xl"
+                >
+                  📥 Export Excel
+                </button>
+              </div>
             </div>
-          ) : rows.length === 0 ? (
-            <div className="py-16 text-center text-gray-400">
-              <p className="text-4xl mb-2">🏭</p>
-              <p>Belum ada data lokasi PKL</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50 text-xs font-bold text-gray-500 uppercase tracking-wider">
-                  <tr>
-                    <th className="px-4 py-3 text-left w-10">No</th>
-                    <th className="px-4 py-3 text-left w-20">Foto</th>
-                    <th className="px-4 py-3 text-left">Perusahaan / Instansi</th>
-                    <th className="px-4 py-3 text-left">Siswa & Posisi</th>
-                    <th className="px-4 py-3 text-left">Alamat</th>
-                    <th className="px-4 py-3 text-left">Pembimbing</th>
-                    <th className="px-4 py-3 text-left w-28">Tgl Mulai</th>
-                    <th className="px-4 py-3 text-center w-32">Aksi</th>
-                  </tr>
-                </thead>
 
-                <tbody className="divide-y divide-gray-100">
-                  {rows.map((row, i) => (
-                    <tr
-                      key={row.id}
-                      className="hover:bg-gray-50/70 transition-colors"
-                    >
-                      <td className="px-4 py-3">
-                        <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-bold">
-                          {i + 1}
-                        </div>
-                      </td>
-
-                      {/* ✅ Foto thumbnail — sama persis dengan ParentingPage */}
-                      <td className="px-4 py-3">
-                        {row.foto_url ? (
-                          <img
-                            src={getFullFotoUrl(row.foto_url)}
-                            alt="Foto Lokasi"
-                            onClick={() =>
-                              handlePreviewFoto(
-                                row.foto_url,
-                                `Foto PKL — ${row.nama_perusahaan || "Lokasi PKL"}`
-                              )
-                            }
-                            className="w-12 h-12 object-cover rounded-lg border border-gray-200 cursor-pointer hover:opacity-80 hover:shadow-md transition-all"
-                            title="Klik untuk lihat foto"
-                            onError={(e) => {
-                              e.target.style.display = "none";
-                              e.target.parentNode.innerHTML =
-                                '<div class="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center text-gray-300 text-lg" title="Foto tidak ditemukan">📷</div>';
-                            }}
-                          />
-                        ) : (
-                          <div
-                            className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center text-gray-300 text-lg"
-                            title="Tidak ada foto"
-                          >
-                            📷
-                          </div>
-                        )}
-                      </td>
-
-                      <td className="px-4 py-3">
-                        <p className="font-bold text-gray-800 text-sm">
-                          {row.nama_perusahaan || "—"}
-                        </p>
-                        {row.deskripsi_pekerjaan && (
-                          <p className="text-xs text-gray-400 mt-0.5 line-clamp-2 max-w-[180px]">
-                            {row.deskripsi_pekerjaan}
-                          </p>
-                        )}
-                      </td>
-
-                      <td className="px-4 py-3">
-                        {row.nama_siswa ? (
-                          <p className="text-sm font-semibold text-gray-700">
-                            👤 {row.nama_siswa}
-                          </p>
-                        ) : (
-                          <p className="text-sm text-gray-400">—</p>
-                        )}
-
-                        {row.posisi && (
-                          <span className="inline-block text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-semibold mt-1">
-                            {row.posisi}
-                          </span>
-                        )}
-                      </td>
-
-                      <td className="px-4 py-3">
-                        <p className="text-xs text-gray-500 max-w-[160px] line-clamp-2">
-                          {row.alamat || "—"}
-                        </p>
-                      </td>
-
-                      <td className="px-4 py-3">
-                        {row.pembimbing_industri ? (
-                          <>
-                            <p className="text-xs font-semibold text-gray-700">
-                              {row.pembimbing_industri}
-                            </p>
-                            {row.kontak_pembimbing && (
-                              <p className="text-xs text-gray-400 mt-0.5">
-                                {row.kontak_pembimbing}
-                              </p>
-                            )}
-                          </>
-                        ) : (
-                          <span className="text-xs text-gray-300">—</span>
-                        )}
-                      </td>
-
-                      {/* ✅ Tanggal diformat agar tidak tampil ISO string panjang */}
-                      <td className="px-4 py-3">
-                        <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-lg font-medium">
-                          {formatTanggal(row.tanggal)}
-                        </span>
-                      </td>
-
-                      <td className="px-4 py-3">
-                        <div className="flex items-center justify-center gap-1.5">
-                          <button
-                            onClick={() => handleEdit(row)}
-                            className="px-2.5 py-1.5 text-xs font-semibold text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors"
-                            title="Edit"
-                          >
-                            ✏️ Edit
-                          </button>
-                          <button
-                            onClick={() => handleDelete(row.id)}
-                            className="px-2.5 py-1.5 text-xs font-semibold text-red-500 border border-red-200 rounded-lg hover:bg-red-50 transition-colors"
-                            title="Hapus"
-                          >
-                            🗑️
-                          </button>
-                        </div>
-                      </td>
+            {filteredRekap.length === 0 ? (
+              <div className="py-12 text-center text-gray-400">
+                Tidak ada data rekap lokasi PKL.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50 text-xs font-bold text-gray-500 uppercase tracking-wider">
+                    <tr>
+                      <th className="px-5 py-3 text-left">No</th>
+                      <th className="px-5 py-3 text-left">Kelas</th>
+                      <th className="px-5 py-3 text-left">Siswa</th>
+                      <th className="px-5 py-3 text-left">Perusahaan</th>
+                      <th className="px-5 py-3 text-left">Posisi</th>
+                      <th className="px-5 py-3 text-left">Pembimbing</th>
+                      <th className="px-5 py-3 text-left">Periode</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+                  </thead>
+
+                  <tbody className="divide-y divide-gray-50">
+                    {filteredRekap.map((item, index) => (
+                      <tr key={item.id} className="hover:bg-gray-50/70">
+                        <td className="px-5 py-3 text-gray-500">{index + 1}</td>
+
+                        <td className="px-5 py-3 text-gray-600">
+                          {item.nama_kelas || "-"}
+                        </td>
+
+                        <td className="px-5 py-3 font-semibold text-gray-800">
+                          {item.nama_siswa || "-"}
+                          <p className="text-xs font-normal text-gray-400">
+                            {item.nisn || "-"}
+                          </p>
+                        </td>
+
+                        <td className="px-5 py-3 text-gray-600">
+                          {item.nama_perusahaan || "-"}
+                        </td>
+
+                        <td className="px-5 py-3 text-gray-600">
+                          {item.posisi || "-"}
+                        </td>
+
+                        <td className="px-5 py-3 text-gray-600">
+                          {item.pembimbing_industri || "-"}
+                          <p className="text-xs text-gray-400">
+                            {item.kontak_pembimbing || "-"}
+                          </p>
+                        </td>
+
+                        <td className="px-5 py-3 text-gray-600">
+                          {getDateOnly(item.tanggal) || "-"} s/d{" "}
+                          {getDateOnly(item.tanggal_selesai) || "-"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

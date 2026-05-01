@@ -1,205 +1,378 @@
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { vocationalApi } from "../../api/vocationalApi";
-import { academicApi } from "../../api/academicApi";
 
 export default function ProgresPKLPage() {
-  const [rows,      setRows]      = useState([]);
+  const [kelasList, setKelasList] = useState([]);
   const [siswaList, setSiswaList] = useState([]);
-  const [loading,   setLoading]   = useState(false);
-  const [isOpen,    setIsOpen]    = useState(false);
-  const [editId,    setEditId]    = useState(null);
-  const [form,      setForm]      = useState({ siswa_id: "", minggu_ke: 1, deskripsi: "" });
+  const [progresList, setProgresList] = useState([]);
 
-  const fetchRows = async () => {
-    setLoading(true);
+  const [kelasId, setKelasId] = useState("");
+  const [siswaId, setSiswaId] = useState("");
+  const [mingguKe, setMingguKe] = useState("");
+  const [deskripsi, setDeskripsi] = useState("");
+
+  const [editingId, setEditingId] = useState(null);
+
+  const [loadingKelas, setLoadingKelas] = useState(false);
+  const [loadingSiswa, setLoadingSiswa] = useState(false);
+  const [loadingProgres, setLoadingProgres] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const selectedSiswa = siswaList.find(
+    (item) => String(item.id) === String(siswaId),
+  );
+
+  const filteredProgres = useMemo(() => {
+    if (!siswaId) return progresList;
+
+    return progresList.filter(
+      (item) => String(item.siswa_id) === String(siswaId),
+    );
+  }, [progresList, siswaId]);
+
+  const loadKelas = async () => {
+    setLoadingKelas(true);
+
+    try {
+      const res = await vocationalApi.getKelasVokasi();
+      setKelasList(Array.isArray(res.data?.data) ? res.data.data : []);
+    } catch (err) {
+      console.error("Gagal memuat kelas:", err);
+      toast.error("Gagal memuat daftar kelas");
+    } finally {
+      setLoadingKelas(false);
+    }
+  };
+
+  const loadSiswa = async (selectedKelasId) => {
+    if (!selectedKelasId) {
+      setSiswaList([]);
+      setSiswaId("");
+      return;
+    }
+
+    setLoadingSiswa(true);
+
+    try {
+      const res = await vocationalApi.getSiswaVokasi({
+        kelas_id: selectedKelasId,
+      });
+
+      setSiswaList(Array.isArray(res.data?.data) ? res.data.data : []);
+    } catch (err) {
+      console.error("Gagal memuat siswa:", err);
+      toast.error("Gagal memuat daftar siswa");
+      setSiswaList([]);
+    } finally {
+      setLoadingSiswa(false);
+    }
+  };
+
+  const loadProgres = async () => {
+    setLoadingProgres(true);
+
     try {
       const res = await vocationalApi.getAllProgresPKL();
-      setRows(Array.isArray(res.data?.data) ? res.data.data : (Array.isArray(res.data) ? res.data : []));
-    } catch { setRows([]); }
-    finally { setLoading(false); }
+      setProgresList(Array.isArray(res.data?.data) ? res.data.data : []);
+    } catch (err) {
+      console.error("Gagal memuat progres PKL:", err);
+      toast.error("Gagal memuat progres PKL");
+    } finally {
+      setLoadingProgres(false);
+    }
   };
 
   useEffect(() => {
-    fetchRows();
-    academicApi.getAllSiswa()
-      .then((r) => setSiswaList(Array.isArray(r.data?.data) ? r.data.data : Array.isArray(r.data) ? r.data : []))
-      .catch(() => {});
+    loadKelas();
+    loadProgres();
   }, []);
 
-  const openAdd = () => {
-    setEditId(null);
-    setForm({ siswa_id: "", minggu_ke: 1, deskripsi: "" });
-    setIsOpen(true);
-  };
+  useEffect(() => {
+    loadSiswa(kelasId);
+  }, [kelasId]);
 
-  const openEdit = (row) => {
-    setEditId(row.id);
-    setForm({ siswa_id: row.siswa_id, minggu_ke: row.minggu_ke, deskripsi: row.deskripsi || "" });
-    setIsOpen(true);
+  const resetForm = () => {
+    setSiswaId("");
+    setMingguKe("");
+    setDeskripsi("");
+    setEditingId(null);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.siswa_id) return toast.error("Pilih siswa terlebih dahulu");
+
+    if (!siswaId) {
+      toast.error("Pilih siswa terlebih dahulu");
+      return;
+    }
+
+    if (!mingguKe) {
+      toast.error("Minggu ke wajib diisi");
+      return;
+    }
+
+    const payload = {
+      siswa_id: Number(siswaId),
+      kelas_id: kelasId ? Number(kelasId) : null,
+      nama_siswa:
+        selectedSiswa?.nama_lengkap || selectedSiswa?.nama_siswa || "",
+      nisn: selectedSiswa?.nisn || "",
+      minggu_ke: Number(mingguKe),
+      deskripsi: deskripsi || "",
+    };
+
+    setSaving(true);
+
     try {
-      if (editId) {
-        await vocationalApi.updateProgresPKL(editId, form);
-        toast.success("Progres PKL berhasil diperbarui!");
+      if (editingId) {
+        await vocationalApi.updateProgresPKL(editingId, payload);
+        toast.success("Progres PKL berhasil diperbarui");
       } else {
-        await vocationalApi.createProgresPKL(form);
-        toast.success("Progres PKL berhasil disimpan!");
+        await vocationalApi.createProgresPKL(payload);
+        toast.success("Progres PKL berhasil disimpan");
       }
-      setIsOpen(false);
-      fetchRows();
-    } catch { toast.error("Gagal menyimpan data"); }
+
+      resetForm();
+      await loadProgres();
+    } catch (err) {
+      console.error("Gagal menyimpan progres PKL:", err);
+      toast.error(err?.response?.data?.error || "Gagal menyimpan progres PKL");
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const handleDelete = async (row) => {
-    if (!window.confirm("Hapus laporan progres ini?")) return;
+  const handleEdit = (item) => {
+    setEditingId(item.id);
+    setSiswaId(String(item.siswa_id || ""));
+    setMingguKe(String(item.minggu_ke || ""));
+    setDeskripsi(item.deskripsi || "");
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm("Hapus progres PKL ini?")) return;
+
     try {
-      await vocationalApi.deleteProgresPKL(row.id);
-      toast.success("Data berhasil dihapus");
-      fetchRows();
-    } catch { toast.error("Gagal menghapus data"); }
+      await vocationalApi.deleteProgresPKL(id);
+      toast.success("Progres PKL berhasil dihapus");
+      await loadProgres();
+    } catch (err) {
+      console.error("Gagal menghapus progres PKL:", err);
+      toast.error(err?.response?.data?.error || "Gagal menghapus progres PKL");
+    }
   };
 
-  const getSiswaName = (id) => {
-    const s = siswaList.find((x) => String(x.id) === String(id));
-    return s ? s.nama_lengkap : `Siswa #${id}`;
+  const getNamaSiswa = (item) => {
+    const siswa = siswaList.find((s) => String(s.id) === String(item.siswa_id));
+
+    return (
+      siswa?.nama_lengkap || siswa?.nama_siswa || `Siswa ID: ${item.siswa_id}`
+    );
   };
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800">Pelaporan Progres PKL</h1>
-          <p className="text-sm text-gray-500 mt-1">Laporan progres mingguan siswa Praktik Kerja Lapangan</p>
-        </div>
-        <button onClick={openAdd}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm">
-          + Tambah Progres
-        </button>
-      </div>
-
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <div className="px-6 py-4 border-b flex items-center justify-between">
-          <h2 className="font-bold text-gray-700">Laporan Progres PKL</h2>
-          <span className="text-xs text-gray-400 bg-gray-100 px-3 py-1 rounded-full">{rows.length} laporan</span>
-        </div>
-
-        {loading ? (
-          <div className="py-16 text-center text-gray-400">Memuat data...</div>
-        ) : rows.length === 0 ? (
-          <div className="py-16 text-center text-gray-400">
-            <div className="text-5xl mb-3">🏠</div>
-            <p className="font-medium">Belum ada laporan progres PKL</p>
-            <p className="text-sm mt-1">Tambahkan laporan mingguan siswa menggunakan tombol di atas.</p>
+    <div className="min-h-screen bg-gray-50">
+      <div className="bg-white border-b border-gray-200 px-8 py-5">
+        <div className="flex items-center gap-3">
+          <div className="w-1 h-7 bg-blue-600 rounded-full" />
+          <div>
+            <h1 className="text-xl font-bold text-gray-800">Progres PKL</h1>
+            <p className="text-sm text-gray-500">
+              Kelola laporan progres mingguan siswa PKL.
+            </p>
           </div>
-        ) : (
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-xs font-bold text-gray-500 uppercase tracking-wide">
-              <tr>
-                <th className="px-5 py-3 text-left">No</th>
-                <th className="px-5 py-3 text-left">Nama Siswa</th>
-                <th className="px-5 py-3 text-center">Minggu Ke</th>
-                <th className="px-5 py-3 text-left">Deskripsi Progres</th>
-                <th className="px-5 py-3 text-center w-24">Tindakan</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {rows.map((r, i) => (
-                <tr key={r.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-5 py-3 text-gray-400">{i + 1}</td>
-                  <td className="px-5 py-3 font-semibold text-gray-800">{getSiswaName(r.siswa_id)}</td>
-                  <td className="px-5 py-3 text-center">
-                    <span className="bg-blue-100 text-blue-700 px-3 py-0.5 rounded-full text-xs font-bold">
-                      Minggu {r.minggu_ke}
-                    </span>
-                  </td>
-                  <td className="px-5 py-3 text-gray-500 max-w-xs truncate">{r.deskripsi || "-"}</td>
-                  <td className="px-5 py-3">
-                    <div className="flex items-center justify-center gap-2">
-                      <button onClick={() => openEdit(r)}
-                        className="text-xs text-blue-600 hover:text-blue-800 font-semibold px-2 py-1 rounded hover:bg-blue-50">
-                        Edit
-                      </button>
-                      <button onClick={() => handleDelete(r)}
-                        className="text-xs text-red-500 hover:text-red-700 font-semibold px-2 py-1 rounded hover:bg-red-50">
-                        Hapus
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+        </div>
       </div>
 
-      {/* Slide Panel */}
-      {isOpen && (
-        <div className="fixed inset-0 z-50 flex justify-end bg-black/50 backdrop-blur-sm">
-          <div className="bg-white w-full max-w-md h-full flex flex-col animate-slide-right shadow-2xl">
-            <div className="px-6 py-4 border-b">
-              <h2 className="text-lg font-bold text-gray-800">
-                {editId ? "Edit Laporan Progres PKL" : "Tambah Laporan Progres PKL"}
-              </h2>
-              <p className="text-sm text-gray-400 mt-0.5">Isi data progres mingguan PKL siswa</p>
-            </div>
-            <form id="progres-form" onSubmit={handleSubmit}
-              className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+      <div className="px-8 py-5 max-w-6xl mx-auto space-y-5">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5">
+          <h2 className="font-bold text-gray-800 mb-4">
+            {editingId ? "Edit Progres PKL" : "Tambah Progres PKL"}
+          </h2>
+
+          <form onSubmit={handleSubmit}>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-gray-600 uppercase mb-1.5">
-                  Siswa <span className="text-red-500">*</span>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">
+                  Kelas
                 </label>
                 <select
-                  value={form.siswa_id}
-                  onChange={(e) => setForm({ ...form, siswa_id: e.target.value })}
-                  required
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-400 focus:outline-none">
-                  <option value="">-- Pilih Siswa --</option>
-                  {siswaList.map((s) => (
-                    <option key={s.id} value={s.id}>{s.nama_lengkap}</option>
+                  value={kelasId}
+                  onChange={(e) => setKelasId(e.target.value)}
+                  disabled={loadingKelas}
+                  className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">
+                    {loadingKelas ? "Memuat kelas..." : "-- Pilih Kelas --"}
+                  </option>
+
+                  {kelasList.map((kelas) => (
+                    <option key={kelas.id} value={kelas.id}>
+                      {kelas.nama_kelas}
+                    </option>
                   ))}
                 </select>
               </div>
+
               <div>
-                <label className="block text-xs font-semibold text-gray-600 uppercase mb-1.5">
-                  Minggu Ke <span className="text-red-500">*</span>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">
+                  Siswa
+                </label>
+                <select
+                  value={siswaId}
+                  onChange={(e) => setSiswaId(e.target.value)}
+                  disabled={!kelasId || loadingSiswa}
+                  className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">
+                    {loadingSiswa ? "Memuat siswa..." : "-- Pilih Siswa --"}
+                  </option>
+
+                  {siswaList.map((siswa) => (
+                    <option key={siswa.id} value={siswa.id}>
+                      {siswa.nama_lengkap || siswa.nama_siswa || "-"}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">
+                  Minggu Ke
                 </label>
                 <input
-                  type="number" min={1} max={24}
-                  value={form.minggu_ke}
-                  onChange={(e) => setForm({ ...form, minggu_ke: parseInt(e.target.value) || 1 })}
-                  required
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-400 focus:outline-none" />
+                  type="number"
+                  min="1"
+                  value={mingguKe}
+                  onChange={(e) => setMingguKe(e.target.value)}
+                  placeholder="Contoh: 1"
+                  className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
               </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 uppercase mb-1.5">
-                  Deskripsi Progres
-                </label>
-                <textarea
-                  rows={5}
-                  value={form.deskripsi}
-                  onChange={(e) => setForm({ ...form, deskripsi: e.target.value })}
-                  placeholder="Deskripsikan kegiatan / progres yang dicapai minggu ini..."
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-400 focus:outline-none resize-none" />
+
+              <div className="flex items-end gap-2">
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="w-full px-5 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-bold text-sm rounded-xl"
+                >
+                  {saving ? "Menyimpan..." : editingId ? "Update" : "Simpan"}
+                </button>
+
+                {editingId && (
+                  <button
+                    type="button"
+                    onClick={resetForm}
+                    className="px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold text-sm rounded-xl"
+                  >
+                    Batal
+                  </button>
+                )}
               </div>
-            </form>
-            <div className="px-6 py-4 border-t bg-gray-50 flex justify-end gap-3">
-              <button onClick={() => setIsOpen(false)}
-                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-300">
-                Batal
-              </button>
-              <button type="submit" form="progres-form"
-                className="px-5 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700">
-                Simpan
-              </button>
             </div>
-          </div>
+
+            <div className="mt-4">
+              <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">
+                Deskripsi Progres
+              </label>
+              <textarea
+                rows={4}
+                value={deskripsi}
+                onChange={(e) => setDeskripsi(e.target.value)}
+                placeholder="Tuliskan aktivitas/progres siswa selama minggu ini..."
+                className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+              />
+            </div>
+
+            {selectedSiswa && (
+              <p className="text-xs text-gray-400 mt-2">
+                Siswa terpilih:{" "}
+                <span className="font-semibold">
+                  {selectedSiswa.nama_lengkap || selectedSiswa.nama_siswa}
+                </span>
+              </p>
+            )}
+          </form>
         </div>
-      )}
+
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+            <div>
+              <h2 className="font-bold text-gray-800">Riwayat Progres PKL</h2>
+              <p className="text-xs text-gray-400">
+                Menampilkan progres yang sudah disimpan.
+              </p>
+            </div>
+
+            <button
+              onClick={loadProgres}
+              className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 text-sm font-semibold rounded-xl"
+            >
+              Refresh
+            </button>
+          </div>
+
+          {loadingProgres ? (
+            <div className="py-12 text-center text-gray-400">
+              Memuat progres PKL...
+            </div>
+          ) : filteredProgres.length === 0 ? (
+            <div className="py-12 text-center text-gray-400">
+              Belum ada progres PKL.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 text-xs font-bold text-gray-500 uppercase tracking-wider">
+                  <tr>
+                    <th className="px-5 py-3 text-left">Siswa</th>
+                    <th className="px-5 py-3 text-center">Minggu</th>
+                    <th className="px-5 py-3 text-left">Deskripsi</th>
+                    <th className="px-5 py-3 text-center">Aksi</th>
+                  </tr>
+                </thead>
+
+                <tbody className="divide-y divide-gray-50">
+                  {filteredProgres.map((item) => (
+                    <tr key={item.id} className="hover:bg-gray-50/70">
+                      <td className="px-5 py-3 font-semibold text-gray-800">
+                        {getNamaSiswa(item)}
+                      </td>
+
+                      <td className="px-5 py-3 text-center text-gray-600">
+                        Minggu {item.minggu_ke}
+                      </td>
+
+                      <td className="px-5 py-3 text-gray-600">
+                        {item.deskripsi || "-"}
+                      </td>
+
+                      <td className="px-5 py-3">
+                        <div className="flex justify-center gap-2">
+                          <button
+                            onClick={() => handleEdit(item)}
+                            className="px-3 py-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 text-xs font-semibold"
+                          >
+                            Edit
+                          </button>
+
+                          <button
+                            onClick={() => handleDelete(item.id)}
+                            className="px-3 py-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 text-xs font-semibold"
+                          >
+                            Hapus
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
