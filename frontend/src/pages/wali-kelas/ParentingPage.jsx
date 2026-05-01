@@ -92,45 +92,53 @@ export default function ParentingPage() {
 
   const handleSimpan = async (e) => {
     e.preventDefault();
+
     if (!selectedKelas) {
       toast.error("Pilih kelas terlebih dahulu");
       return;
     }
+
     if (!agenda.trim()) {
       toast.error("Agenda utama wajib diisi");
       return;
     }
+
     setSaving(true);
+
     try {
       const fd = new FormData();
       fd.append("kelas_id", selectedKelas);
-      fd.append("wali_id", waliId || "");
       fd.append("tanggal", tanggal);
       fd.append("kehadiran_ortu", kehadiranOrtu || 0);
       fd.append("agenda", agenda);
       fd.append("ringkasan", ringkasan);
-      if (file) fd.append("foto", file);
-      await studentApi.createParenting({
-        siswa_id: form.siswa_id || null,
-        kelas_id: selectedKelas,
-        tanggal: form.tanggal,
-        kehadiran_ortu: Number(form.kehadiran_ortu || 0),
-        agenda: form.agenda,
-        ringkasan: form.ringkasan,
-        catatan: form.catatan,
-        dokumentasi: form.dokumentasi,
-        foto_url: form.foto_url,
-      });
+      fd.append("catatan", ringkasan);
+
+      if (file) {
+        fd.append("foto", file);
+      }
+
+      await studentApi.createParenting(fd);
+
       toast.success("Laporan parenting berhasil disimpan!");
+
       setAgenda("");
       setRingkasan("");
       setKehadiranOrtu("");
       setFile(null);
       setFotoPreview(null);
-      if (fileInputRef.current) fileInputRef.current.value = "";
-      loadHistori();
+
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+
+      await loadHistori();
     } catch (err) {
-      toast.error(err.response?.data?.error || "Gagal menyimpan laporan");
+      toast.error(
+        err.response?.data?.message ||
+          err.response?.data?.error ||
+          "Gagal menyimpan laporan",
+      );
     } finally {
       setSaving(false);
     }

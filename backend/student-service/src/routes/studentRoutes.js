@@ -2,17 +2,32 @@ const express = require("express");
 const router = express.Router();
 const multer = require("multer");
 const path = require("path");
+const fs = require("fs");
 const studentController = require("../controllers/studentController");
 const extractIdentity = require("../middleware/extractIdentity");
 
+const uploadDir = path.join(__dirname, "../../uploads/parenting");
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
 const storage = multer.diskStorage({
-  destination: "uploads/parenting",
+  destination: uploadDir,
   filename: (req, file, cb) => {
-    cb(null, Date.now() + "-" + file.originalname.replace(/\s+/g, "-"));
+    const ext = path.extname(file.originalname);
+    const safeBase = path
+      .basename(file.originalname, ext)
+      .replace(/\s+/g, "-")
+      .replace(/[^a-zA-Z0-9-_]/g, "");
+
+    cb(null, `${Date.now()}-${safeBase}${ext}`);
   },
 });
 
-const upload = multer({ storage });
+const upload = multer({
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 },
+});
 
 // Kebersihan Kelas
 router.get("/kebersihan", studentController.getKebersihan);
@@ -53,12 +68,21 @@ router.get("/rekap-nilai", extractIdentity, studentController.getRekapNilai);
 
 // Parenting
 router.get("/parenting", studentController.getParenting);
-router.post("/parenting", extractIdentity, studentController.createParenting);
+
+router.post(
+  "/parenting",
+  extractIdentity,
+  upload.single("foto"),
+  studentController.createParenting,
+);
+
 router.put(
   "/parenting/:id",
   extractIdentity,
+  upload.single("foto"),
   studentController.updateParenting,
 );
+
 router.delete(
   "/parenting/:id",
   extractIdentity,

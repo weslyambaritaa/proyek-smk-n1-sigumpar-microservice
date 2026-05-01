@@ -30,6 +30,9 @@ export const deleteCatatanMengajar = (id) =>
 export const getEvaluasiGuru = (params = {}) =>
   api.get("/api/learning/evaluasi-guru", { params });
 
+export const getGuruMapelForEvaluasi = () =>
+  api.get("/api/learning/evaluasi-guru/guru-mapel");
+
 export const createEvaluasiGuru = (data) =>
   api.post("/api/learning/evaluasi-guru", data);
 
@@ -64,6 +67,7 @@ export const learningApi = {
   deleteCatatanMengajar,
 
   getEvaluasiGuru,
+  getGuruMapelForEvaluasi,
   createEvaluasiGuru,
 
   getAllPerangkat,

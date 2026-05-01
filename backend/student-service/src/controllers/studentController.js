@@ -225,9 +225,23 @@ exports.createParenting = async (req, res) => {
       dokumentasi,
     } = req.body;
 
+    if (!kelas_id) {
+      return res.status(400).json({
+        success: false,
+        message: "kelas_id wajib diisi",
+      });
+    }
+
+    if (!agenda || !agenda.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Agenda wajib diisi",
+      });
+    }
+
     const foto_url = req.file
-      ? `/uploads/parenting/${req.file.filename}`
-      : req.body.foto_url || null;
+      ? `/api/student/uploads/parenting/${req.file.filename}`
+      : null;
 
     const result = await pool.query(
       `
@@ -245,7 +259,7 @@ exports.createParenting = async (req, res) => {
         getUserId(req),
         tanggal || new Date(),
         Number(kehadiran_ortu || 0),
-        agenda || null,
+        agenda.trim(),
         ringkasan || null,
         catatan || ringkasan || null,
         dokumentasi || null,
@@ -260,7 +274,10 @@ exports.createParenting = async (req, res) => {
     });
   } catch (err) {
     console.error("createParenting error:", err);
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({
+      success: false,
+      message: err.message,
+    });
   }
 };
 

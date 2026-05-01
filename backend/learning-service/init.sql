@@ -37,19 +37,24 @@ CREATE TABLE IF NOT EXISTS catatan_mengajar (
 
 CREATE TABLE IF NOT EXISTS evaluasi_guru (
   id SERIAL PRIMARY KEY,
-  guru_id UUID,
+  guru_id UUID NOT NULL,
   nama_guru VARCHAR(255) NOT NULL,
   mapel VARCHAR(255),
   semester VARCHAR(50),
+  penilaian JSONB NOT NULL DEFAULT '{}',
+  skor NUMERIC(5,2) CHECK (skor >= 0 AND skor <= 100),
+  predikat VARCHAR(50),
+  catatan TEXT,
   evaluator_id UUID,
   evaluator_nama VARCHAR(255),
   evaluator_role VARCHAR(50),
-  status VARCHAR(30) DEFAULT 'selesai',
-  skor INTEGER CHECK (skor >= 0 AND skor <= 100),
-  catatan TEXT,
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()
 );
+
+CREATE INDEX IF NOT EXISTS idx_evaluasi_guru_id ON evaluasi_guru(guru_id);
+CREATE INDEX IF NOT EXISTS idx_evaluasi_created_at ON evaluasi_guru(created_at);
+
 
 CREATE TABLE IF NOT EXISTS perangkat_pembelajaran (
   id SERIAL PRIMARY KEY,

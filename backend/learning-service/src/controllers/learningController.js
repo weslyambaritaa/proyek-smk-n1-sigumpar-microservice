@@ -820,22 +820,91 @@ const deleteCatatanMengajar = async (req, res) => {
 
 const getEvaluasiGuru = async (req, res) => {
   try {
+    const result = await pool.query(`
+      SELECT 
+        id,
+        guru_id,
+        nama_guru,
+        mapel,
+        semester,
+        penilaian,
+        skor,
+        predikat,
+        catatan,
+        evaluator_id,
+        evaluator_nama,
+        evaluator_role,
+        created_at,
+        updated_at
+      FROM evaluasi_guru
+      ORDER BY created_at DESC
+    `);
+
+    return res.json({
+      success: true,
+      data: result.rows,
+    });
+  } catch (err) {
+    console.error("[getEvaluasiGuru]", err);
+
+    return res.status(500).json({
+      success: false,
+      message: "Gagal mengambil data evaluasi guru",
+      error: err.message,
+    });
+  }
+};
+
+const getGuruMapelForEvaluasi = async (req, res) => {
+  try {
     if (!hasRole(req, ["kepala-sekolah", "waka-sekolah"])) {
       return res.status(403).json({
         success: false,
         message:
-          "Hanya kepala-sekolah atau waka-sekolah yang dapat melihat evaluasi guru",
+          "Hanya kepala-sekolah atau waka-sekolah yang dapat melihat daftar guru-mapel",
       });
     }
 
-    const result = await pool.query(
-      "SELECT * FROM evaluasi_guru ORDER BY created_at DESC, id DESC",
+    const authHeader = req.headers.authorization;
+
+    const response = await fetch(
+      "http://auth-service:3005/api/auth?role=guru-mapel",
+      {
+        headers: {
+          Authorization: authHeader || "",
+        },
+      },
     );
 
-    res.json({ success: true, data: result.rows });
+    const json = await response.json();
+
+    if (!response.ok) {
+      return res.status(response.status).json({
+        success: false,
+        message:
+          json.message || "Gagal mengambil data guru-mapel dari auth-service",
+      });
+    }
+
+    const data = (json.data || []).map((user) => ({
+      id: user.id,
+      nama: user.nama_lengkap || user.username,
+      username: user.username,
+      email: user.email,
+      roles: user.roles || [],
+      mapel: "-",
+    }));
+
+    res.json({
+      success: true,
+      data,
+    });
   } catch (err) {
-    console.error("[getEvaluasiGuru]", err);
-    res.status(500).json({ success: false, message: err.message });
+    console.error("[getGuruMapelForEvaluasi]", err);
+    res.status(500).json({
+      success: false,
+      message: "Gagal komunikasi ke auth-service",
+    });
   }
 };
 
@@ -870,13 +939,21 @@ const createEvaluasiGuru = async (req, res) => {
       });
     }
 
-    const { guru_id, nama_guru, mapel, semester, status, skor, catatan } =
-      req.body;
+    const {
+      guru_id,
+      nama_guru,
+      mapel,
+      semester,
+      penilaian,
+      skor,
+      predikat,
+      catatan,
+    } = req.body;
 
-    if (!nama_guru) {
+    if (!guru_id || !nama_guru) {
       return res.status(400).json({
         success: false,
-        message: "nama_guru wajib diisi",
+        message: "guru_id dan nama_guru wajib diisi",
       });
     }
 
@@ -892,27 +969,29 @@ const createEvaluasiGuru = async (req, res) => {
         nama_guru,
         mapel,
         semester,
+        penilaian,
+        skor,
+        predikat,
+        catatan,
         evaluator_id,
         evaluator_nama,
-        evaluator_role,
-        status,
-        skor,
-        catatan
+        evaluator_role
       )
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
       RETURNING *
       `,
       [
-        guru_id || null,
+        guru_id,
         nama_guru,
         mapel || null,
         semester || null,
+        JSON.stringify(penilaian || {}),
+        skor || null,
+        predikat || null,
+        catatan || null,
         getUserId(req),
         getUserName(req),
         evaluatorRole,
-        status || "selesai",
-        skor || null,
-        catatan || null,
       ],
     );
 
@@ -1532,6 +1611,7 @@ module.exports = {
   getEvaluasiGuru,
   getEvaluasiGuruById,
   createEvaluasiGuru,
+  getGuruMapelForEvaluasi,
   updateEvaluasiGuru,
   deleteEvaluasiGuru,
 

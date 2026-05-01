@@ -11,22 +11,47 @@ CREATE TABLE IF NOT EXISTS anggota_regu (
     siswa_id INTEGER NOT NULL
 );
 
--- 3. Tabel Absensi (Sekarang punya regu_id)
 CREATE TABLE IF NOT EXISTS absensi_pramuka (
-    id SERIAL PRIMARY KEY, 
-    regu_id INTEGER REFERENCES kelas_pramuka(id) ON DELETE CASCADE,
-    siswa_id INTEGER NOT NULL, 
-    tanggal DATE NOT NULL, 
-    status VARCHAR(20) NOT NULL
+    id SERIAL PRIMARY KEY,
+    kelas_id INTEGER NOT NULL,
+    siswa_id INTEGER NOT NULL,
+    nama_lengkap VARCHAR(150),
+    nisn VARCHAR(30),
+    tanggal DATE NOT NULL DEFAULT CURRENT_DATE,
+    status VARCHAR(20) NOT NULL CHECK (status IN ('hadir', 'izin', 'sakit', 'alpa')),
+    keterangan TEXT,
+    created_by UUID,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 4. Tabel Laporan (Sekarang punya regu_id)
-CREATE TABLE IF NOT EXISTS laporan_pramuka (
-    id SERIAL PRIMARY KEY, 
-    regu_id INTEGER REFERENCES kelas_pramuka(id) ON DELETE CASCADE,
-    deskripsi TEXT, 
-    file_url TEXT
+CREATE UNIQUE INDEX IF NOT EXISTS uq_absensi_pramuka_kelas_siswa_tanggal
+ON absensi_pramuka (kelas_id, siswa_id, tanggal);
+
+
+-- ============================================
+-- TABLE: laporan_pramuka
+-- ============================================
+
+CREATE TABLE laporan_pramuka (
+    id SERIAL PRIMARY KEY,
+
+    kelas_id INTEGER,
+    tanggal DATE DEFAULT CURRENT_DATE,
+
+    judul VARCHAR(150),
+    deskripsi TEXT,
+    file_url TEXT,
+
+    created_by UUID,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+
+
+
+
 CREATE TABLE IF NOT EXISTS laporan_lokasi_pkl (id SERIAL PRIMARY KEY, siswa_id TEXT, nama_perusahaan VARCHAR(150), alamat TEXT);
 CREATE TABLE IF NOT EXISTS laporan_progres_pkl (id SERIAL PRIMARY KEY, siswa_id INTEGER, minggu_ke INTEGER, deskripsi TEXT);
 
@@ -47,14 +72,56 @@ GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO vocational_user;
 GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO vocational_user;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO vocational_user;
 
-CREATE TABLE IF NOT EXISTS silabus_pramuka (
+
+
+CREATE TABLE laporan_kegiatan (
     id SERIAL PRIMARY KEY,
-    tingkat_kelas VARCHAR(20),
-    judul_kegiatan VARCHAR(255) NOT NULL,
+
+    judul VARCHAR(255) NOT NULL,
+    deskripsi TEXT,
     tanggal DATE NOT NULL DEFAULT CURRENT_DATE,
-    file_url TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+
+    file_data BYTEA,
+    file_mime VARCHAR(100),
+    file_nama VARCHAR(255),
+
+    created_by UUID,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+-- =====================================================
+-- OPTIONAL: AUTO UPDATE updated_at
+-- =====================================================
+
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+   NEW.updated_at = CURRENT_TIMESTAMP;
+   RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger untuk silabus
+DROP TRIGGER IF EXISTS set_updated_at_silabus ON silabus_pramuka;
+CREATE TRIGGER set_updated_at_silabus
+BEFORE UPDATE ON silabus_pramuka
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_column();
+
+-- Trigger untuk laporan
+DROP TRIGGER IF EXISTS set_updated_at_laporan ON laporan_kegiatan;
+CREATE TRIGGER set_updated_at_laporan
+BEFORE UPDATE ON laporan_kegiatan
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_column();
+
+
+-- =====================================================
+-- PRIVILEGES
+-- =====================================================
+
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO vocational_user;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO vocational_user;
 
 -- ─── DETAIL TAMBAHAN TABEL LOKASI PKL ────────────────────────────────────
 -- Alter table to add more columns if not exists
@@ -66,12 +133,29 @@ ALTER TABLE laporan_pramuka ADD COLUMN IF NOT EXISTS tanggal DATE DEFAULT CURREN
 -- Silabus Pramuka
 CREATE TABLE IF NOT EXISTS silabus_pramuka (
     id SERIAL PRIMARY KEY,
-    tingkat_kelas VARCHAR(20),
+
+    kelas_id INTEGER,
+    nama_kelas VARCHAR(100),
+
     judul_kegiatan VARCHAR(255) NOT NULL,
     tanggal DATE NOT NULL DEFAULT CURRENT_DATE,
-    file_url TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+
+    file_data BYTEA,
+    file_mime VARCHAR(100),
+    file_nama VARCHAR(255),
+
+    created_by UUID,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+ALTER TABLE silabus_pramuka ADD COLUMN IF NOT EXISTS kelas_id INTEGER;
+ALTER TABLE silabus_pramuka ADD COLUMN IF NOT EXISTS nama_kelas VARCHAR(100);
+ALTER TABLE silabus_pramuka ADD COLUMN IF NOT EXISTS file_data BYTEA;
+ALTER TABLE silabus_pramuka ADD COLUMN IF NOT EXISTS file_mime VARCHAR(100);
+ALTER TABLE silabus_pramuka ADD COLUMN IF NOT EXISTS file_nama VARCHAR(255);
+ALTER TABLE silabus_pramuka ADD COLUMN IF NOT EXISTS created_by UUID;
+ALTER TABLE silabus_pramuka ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
 
 -- PKL Lokasi detail columns
 ALTER TABLE laporan_lokasi_pkl ADD COLUMN IF NOT EXISTS nama_siswa VARCHAR(150);

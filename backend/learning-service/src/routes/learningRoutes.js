@@ -36,6 +36,11 @@ router
   .get(learningController.getEvaluasiGuru)
   .post(learningController.createEvaluasiGuru);
 
+router.get(
+  "/evaluasi-guru/guru-mapel",
+  learningController.getGuruMapelForEvaluasi,
+);
+
 router
   .route("/evaluasi-guru/:id")
   .get(learningController.getEvaluasiGuruById)
