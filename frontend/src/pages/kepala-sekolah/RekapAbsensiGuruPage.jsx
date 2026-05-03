@@ -4,6 +4,27 @@ import * as XLSX from "xlsx";
 import { getAbsensiGuru } from "../../api/learningApi";
 import ImagePreviewModal from "../../components/common/ImagePreviewModal";
 
+const BASE_URL = import.meta.env.VITE_LEARNING_URL || "";
+
+function getTodayJakartaDate() {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Jakarta",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+
+  const get = (type) => parts.find((part) => part.type === type)?.value;
+
+  return `${get("year")}-${get("month")}-${get("day")}`;
+}
+
+function getFullFotoUrl(foto) {
+  if (!foto) return null;
+  if (foto.startsWith("data:") || foto.startsWith("http")) return foto;
+  return `${BASE_URL}${foto}`;
+}
+
 const STATUS_COLOR = {
   hadir: "bg-green-500 text-white",
   terlambat: "bg-yellow-400 text-white",
@@ -14,20 +35,52 @@ const STATUS_COLOR = {
 
 const formatDate = (value) => {
   if (!value) return "-";
-  return String(value).slice(0, 10);
+
+  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return value;
+  }
+
+  return new Date(value).toLocaleDateString("id-ID", {
+    timeZone: "Asia/Jakarta",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
 };
 
 const formatTime = (value) => {
   if (!value) return "-";
 
-  return new Date(value).toLocaleTimeString("id-ID", {
+  return `${new Date(value).toLocaleTimeString("id-ID", {
+    timeZone: "Asia/Jakarta",
     hour: "2-digit",
     minute: "2-digit",
-  });
+  })} WIB`;
 };
 
+function normalizeAbsensiGuruRow(row) {
+  return {
+    ...row,
+    id: row.id || row.id_absensiGuru || row.id_absensi_guru,
+    namaGuru:
+      row.namaGuru || row.nama_guru || row.nama || row.nama_lengkap || "-",
+    mataPelajaran:
+      row.mataPelajaran ||
+      row.mata_pelajaran ||
+      row.mapel ||
+      row.nama_mapel ||
+      "-",
+    jamMasuk: row.jamMasuk || row.jam_masuk || row.jam_masuk_guru || null,
+    tanggal: row.tanggal || null,
+    status: row.status || "-",
+    keterangan: row.keterangan || "-",
+    foto:
+      row.foto || row.foto_url || row.fotoAbsensi || row.foto_absensi || null,
+  };
+}
+
 export default function RekapAbsensiGuruPage() {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = getTodayJakartaDate();
 
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -63,15 +116,23 @@ export default function RekapAbsensiGuruPage() {
 
     try {
       const res = await getAbsensiGuru(buildParams());
-      setRows(Array.isArray(res.data?.data) ? res.data.data : []);
+      const data = Array.isArray(res.data?.data) ? res.data.data : [];
+      const mappedData = data.map(normalizeAbsensiGuruRow);
+
+      setRows(mappedData);
     } catch (err) {
       console.error(
         "Gagal memuat rekap absensi guru:",
         err.response?.data || err,
       );
+
       toast.error(
-        err.response?.data?.message || "Gagal memuat data absensi guru",
+        err.response?.data?.message ||
+          err.response?.data?.error ||
+          "Gagal memuat data absensi guru",
       );
+
+      setRows([]);
     } finally {
       setLoading(false);
     }
@@ -85,16 +146,24 @@ export default function RekapAbsensiGuruPage() {
     const keyword = search.toLowerCase();
 
     return rows.filter((row) => {
-      const nama = row.namaGuru || row.nama_guru || "";
-      return nama.toLowerCase().includes(keyword);
+      const nama = String(row.namaGuru || "").toLowerCase();
+      const mapel = String(row.mataPelajaran || "").toLowerCase();
+
+      return nama.includes(keyword) || mapel.includes(keyword);
     });
   }, [rows, search]);
 
   const stats = useMemo(() => {
     return filtered.reduce(
       (acc, row) => {
+        const rowStatus = String(row.status || "").toLowerCase();
+
         acc.total += 1;
-        acc[row.status] = (acc[row.status] || 0) + 1;
+
+        if (rowStatus) {
+          acc[rowStatus] = (acc[rowStatus] || 0) + 1;
+        }
+
         return acc;
       },
       {
@@ -116,10 +185,10 @@ export default function RekapAbsensiGuruPage() {
 
     const data = filtered.map((row, index) => ({
       No: index + 1,
-      "Nama Guru": row.namaGuru || row.nama_guru || "-",
-      "Mata Pelajaran": row.mataPelajaran || row.mata_pelajaran || "-",
+      "Nama Guru": row.namaGuru || "-",
+      "Mata Pelajaran": row.mataPelajaran || "-",
       Tanggal: formatDate(row.tanggal),
-      "Jam Masuk": formatTime(row.jamMasuk || row.jam_masuk),
+      "Jam Masuk": formatTime(row.jamMasuk),
       Status: row.status || "-",
       Keterangan: row.keterangan || "-",
     }));
@@ -133,6 +202,17 @@ export default function RekapAbsensiGuruPage() {
       modeFilter === "harian" ? tanggal : `${tanggalMulai}_sd_${tanggalAkhir}`;
 
     XLSX.writeFile(workbook, `rekap-absensi-guru-${periode}.xlsx`);
+  };
+
+  const handleResetFilter = () => {
+    const jakartaToday = getTodayJakartaDate();
+
+    setModeFilter("harian");
+    setTanggal(jakartaToday);
+    setTanggalMulai(jakartaToday);
+    setTanggalAkhir(jakartaToday);
+    setStatus("");
+    setSearch("");
   };
 
   return (
@@ -277,13 +357,13 @@ export default function RekapAbsensiGuruPage() {
 
             <div>
               <label className="block text-xs font-semibold text-gray-500 mb-1">
-                Cari Nama Guru
+                Cari Nama / Mapel
               </label>
               <input
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Cari guru..."
+                placeholder="Cari guru atau mapel..."
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
               />
             </div>
@@ -292,7 +372,7 @@ export default function RekapAbsensiGuruPage() {
               <button
                 onClick={loadData}
                 disabled={loading}
-                className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm font-semibold text-gray-600 hover:bg-gray-50"
+                className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-60"
               >
                 {loading ? "..." : "Refresh"}
               </button>
@@ -304,12 +384,30 @@ export default function RekapAbsensiGuruPage() {
                 Export Excel
               </button>
             </div>
+
+            <div className="md:col-span-6 flex justify-end">
+              <button
+                onClick={handleResetFilter}
+                className="px-4 py-2 border border-gray-200 rounded-lg text-sm font-semibold text-gray-500 hover:bg-gray-50"
+              >
+                Reset Filter
+              </button>
+            </div>
           </div>
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-100">
-            <h2 className="font-bold text-gray-800">Data Kehadiran Guru</h2>
+          <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+            <h2 className="font-bold text-gray-800">
+              Data Kehadiran Guru
+              <span className="ml-2 text-xs font-normal text-gray-400">
+                ({filtered.length} data)
+              </span>
+            </h2>
+
+            <p className="text-xs text-gray-400">
+              Jam ditampilkan dalam zona waktu WIB / Asia Jakarta
+            </p>
           </div>
 
           {loading ? (
@@ -325,6 +423,7 @@ export default function RekapAbsensiGuruPage() {
                     <th className="px-5 py-3 text-left">No</th>
                     <th className="px-5 py-3 text-left">Foto</th>
                     <th className="px-5 py-3 text-left">Nama Guru</th>
+                    <th className="px-5 py-3 text-left">Mata Pelajaran</th>
                     <th className="px-5 py-3 text-left">Tanggal</th>
                     <th className="px-5 py-3 text-left">Jam Masuk</th>
                     <th className="px-5 py-3 text-left">Status</th>
@@ -336,7 +435,7 @@ export default function RekapAbsensiGuruPage() {
                   {filtered.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={7}
+                        colSpan={8}
                         className="py-12 text-center text-gray-400"
                       >
                         <p className="text-3xl mb-2">📋</p>
@@ -344,56 +443,69 @@ export default function RekapAbsensiGuruPage() {
                       </td>
                     </tr>
                   ) : (
-                    filtered.map((row, index) => (
-                      <tr
-                        key={row.id_absensiGuru || row.id || index}
-                        className="hover:bg-gray-50/70"
-                      >
-                        <td className="px-5 py-3 text-gray-400">{index + 1}</td>
+                    filtered.map((row, index) => {
+                      const statusKey = String(row.status || "").toLowerCase();
+                      const fotoUrl = getFullFotoUrl(row.foto);
 
-                        <td className="px-5 py-3">
-                          {row.foto ? (
-                            <img
-                              src={row.foto}
-                              alt="Foto Absensi"
-                              onClick={() => setPreviewImg(row.foto)}
-                              className="w-12 h-12 object-cover rounded-lg border border-gray-200 cursor-pointer hover:opacity-80"
-                            />
-                          ) : (
-                            <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center text-gray-300">
-                              📷
-                            </div>
-                          )}
-                        </td>
+                      return (
+                        <tr
+                          key={
+                            row.id || `${row.namaGuru}-${row.tanggal}-${index}`
+                          }
+                          className="hover:bg-gray-50/70"
+                        >
+                          <td className="px-5 py-3 text-gray-400">
+                            {index + 1}
+                          </td>
 
-                        <td className="px-5 py-3 font-semibold text-gray-800">
-                          {row.namaGuru || row.nama_guru || "-"}
-                        </td>
+                          <td className="px-5 py-3">
+                            {fotoUrl ? (
+                              <img
+                                src={fotoUrl}
+                                alt="Foto Absensi"
+                                onClick={() => setPreviewImg(fotoUrl)}
+                                className="w-12 h-12 object-cover rounded-lg border border-gray-200 cursor-pointer hover:opacity-80"
+                              />
+                            ) : (
+                              <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center text-gray-300">
+                                📷
+                              </div>
+                            )}
+                          </td>
 
-                        <td className="px-5 py-3 text-gray-500">
-                          {formatDate(row.tanggal)}
-                        </td>
+                          <td className="px-5 py-3 font-semibold text-gray-800">
+                            {row.namaGuru || "-"}
+                          </td>
 
-                        <td className="px-5 py-3 text-gray-500">
-                          {formatTime(row.jamMasuk || row.jam_masuk)} WIB
-                        </td>
+                          <td className="px-5 py-3 text-gray-500">
+                            {row.mataPelajaran || "-"}
+                          </td>
 
-                        <td className="px-5 py-3">
-                          <span
-                            className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${
-                              STATUS_COLOR[row.status] ||
-                              "bg-gray-200 text-gray-600"
-                            }`}
-                          >
-                            {row.status || "-"}
-                          </span>
-                        </td>
+                          <td className="px-5 py-3 text-gray-500">
+                            {formatDate(row.tanggal)}
+                          </td>
 
-                        <td className="px-5 py-3 text-gray-500 max-w-xs truncate">
-                          {row.keterangan || "-"}
-                        </td>
-                      </tr>
-                    ))
+                          <td className="px-5 py-3 text-gray-500 font-mono text-xs">
+                            {formatTime(row.jamMasuk)}
+                          </td>
+
+                          <td className="px-5 py-3">
+                            <span
+                              className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${
+                                STATUS_COLOR[statusKey] ||
+                                "bg-gray-200 text-gray-600"
+                              }`}
+                            >
+                              {row.status || "-"}
+                            </span>
+                          </td>
+
+                          <td className="px-5 py-3 text-gray-500 max-w-xs truncate">
+                            {row.keterangan || "-"}
+                          </td>
+                        </tr>
+                      );
+                    })
                   )}
                 </tbody>
               </table>

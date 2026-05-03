@@ -198,13 +198,14 @@ export default function AbsensiGuruPage() {
 
                       <td className="border p-2">
                         {item.jamMasuk
-                          ? new Date(item.jamMasuk).toLocaleTimeString(
+                          ? `${new Date(item.jamMasuk).toLocaleTimeString(
                               "id-ID",
                               {
+                                timeZone: "Asia/Jakarta",
                                 hour: "2-digit",
                                 minute: "2-digit",
                               },
-                            )
+                            )} WIB`
                           : "-"}
                       </td>
 

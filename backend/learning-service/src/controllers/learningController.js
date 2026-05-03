@@ -276,6 +276,49 @@ const buildAbsensiGuruInsertCols = (cols) => {
 
 // ─── 5.1 ABSENSI GURU ──────────────────────────────────────────
 
+const ABSENSI_GURU_TIMEZONE = "Asia/Jakarta";
+const ABSENSI_GURU_BATAS_JAM = 7;
+const ABSENSI_GURU_BATAS_MENIT = 30;
+
+const getJakartaParts = (date = new Date()) => {
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: ABSENSI_GURU_TIMEZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    weekday: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  });
+
+  const parts = formatter.formatToParts(date).reduce((acc, part) => {
+    if (part.type !== "literal") acc[part.type] = part.value;
+    return acc;
+  }, {});
+
+  return {
+    tanggal: `${parts.year}-${parts.month}-${parts.day}`,
+    weekday: parts.weekday,
+    jam: Number(parts.hour),
+    menit: Number(parts.minute),
+    detik: Number(parts.second),
+  };
+};
+
+const isWeekendJakarta = (weekday) => {
+  return weekday === "Sat" || weekday === "Sun";
+};
+
+const isAfterAbsensiGuruDeadline = ({ jam, menit, detik }) => {
+  if (jam > ABSENSI_GURU_BATAS_JAM) return true;
+  if (jam < ABSENSI_GURU_BATAS_JAM) return false;
+  if (menit > ABSENSI_GURU_BATAS_MENIT) return true;
+  if (menit < ABSENSI_GURU_BATAS_MENIT) return false;
+  return detik > 0;
+};
+
 const getAllAbsensiGuru = async (req, res, next) => {
   try {
     if (!hasRole(req, ["guru-mapel", "kepala-sekolah"])) {
@@ -398,7 +441,6 @@ const createAbsensiGuru = async (req, res, next) => {
       null;
 
     const keterangan = req.body.keterangan || "";
-
     const userId = getUserId(req);
 
     if (!userId) {
@@ -412,27 +454,21 @@ const createAbsensiGuru = async (req, res, next) => {
       );
     }
 
-    const now = new Date(
-      new Date().toLocaleString("en-US", { timeZone: "Asia/Jakarta" }),
-    );
+    const nowUtc = new Date();
+    const waktuJakarta = getJakartaParts(nowUtc);
 
-    const hari = now.getDay();
-
-    if (hari === 0 || hari === 6) {
+    if (isWeekendJakarta(waktuJakarta.weekday)) {
       throw createError(400, "Absensi hanya dibuka Senin sampai Jumat");
     }
 
-    const jam = now.getHours();
-    const menit = now.getMinutes();
-
-    if (jam > 20 || (jam === 20 && menit > 30)) {
+    if (isAfterAbsensiGuruDeadline(waktuJakarta)) {
       throw createError(
         400,
-        "Absensi sudah ditutup. Batas absensi pukul 20.30 WIB",
+        "Absensi sudah ditutup. Batas absensi pukul 07.30 WIB",
       );
     }
 
-    const tanggal = now.toISOString().slice(0, 10);
+    const tanggal = waktuJakarta.tanggal;
 
     const existing = await pool.query(
       "SELECT 1 FROM absensi_guru WHERE user_id = $1 AND tanggal = $2",
@@ -464,7 +500,16 @@ const createAbsensiGuru = async (req, res, next) => {
       VALUES ($1,$2,$3,$4,$5,$6,$7,$8${idValPart})
       RETURNING ${selectClause}
       `,
-      [userId, getUserName(req), "-", now, tanggal, foto, "hadir", keterangan],
+      [
+        userId,
+        getUserName(req),
+        "-",
+        nowUtc,
+        tanggal,
+        foto,
+        "hadir",
+        keterangan,
+      ],
     );
 
     return res.status(201).json({

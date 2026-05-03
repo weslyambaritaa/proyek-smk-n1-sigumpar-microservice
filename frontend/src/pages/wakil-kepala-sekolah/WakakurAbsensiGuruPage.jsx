@@ -5,111 +5,240 @@ import ImagePreviewModal from "../../components/common/ImagePreviewModal";
 
 const BASE_URL = import.meta.env.VITE_LEARNING_URL || "";
 
+function getTodayJakartaDate() {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Jakarta",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+
+  const get = (type) => parts.find((part) => part.type === type)?.value;
+
+  return `${get("year")}-${get("month")}-${get("day")}`;
+}
+
 function getFullFotoUrl(foto) {
   if (!foto) return null;
   if (foto.startsWith("data:") || foto.startsWith("http")) return foto;
   return `${BASE_URL}${foto}`;
 }
 
+function formatDate(value) {
+  if (!value) return "-";
+
+  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return value;
+  }
+
+  return new Date(value).toLocaleDateString("id-ID", {
+    timeZone: "Asia/Jakarta",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+}
+
+function formatTime(value) {
+  if (!value) return "-";
+
+  return `${new Date(value).toLocaleTimeString("id-ID", {
+    timeZone: "Asia/Jakarta",
+    hour: "2-digit",
+    minute: "2-digit",
+  })} WIB`;
+}
+
+function normalizeAbsensiGuruRow(row) {
+  return {
+    ...row,
+    id: row.id || row.id_absensiGuru || row.id_absensi_guru,
+    namaGuru:
+      row.namaGuru || row.nama_guru || row.nama || row.nama_lengkap || "-",
+    mataPelajaran:
+      row.mataPelajaran ||
+      row.mata_pelajaran ||
+      row.mapel ||
+      row.nama_mapel ||
+      "-",
+    jamMasuk: row.jamMasuk || row.jam_masuk || row.jam_masuk_guru || null,
+    tanggal: row.tanggal || null,
+    status: row.status || "-",
+    keterangan: row.keterangan || "-",
+    foto:
+      row.foto || row.foto_url || row.fotoAbsensi || row.foto_absensi || null,
+  };
+}
+
 const STATUS_COLOR = {
-  hadir:     "bg-green-100 text-green-700 border-green-200",
+  hadir: "bg-green-100 text-green-700 border-green-200",
   terlambat: "bg-yellow-100 text-yellow-700 border-yellow-200",
-  izin:      "bg-blue-100 text-blue-700 border-blue-200",
-  sakit:     "bg-orange-100 text-orange-700 border-orange-200",
-  alpa:      "bg-red-100 text-red-700 border-red-200",
+  izin: "bg-blue-100 text-blue-700 border-blue-200",
+  sakit: "bg-orange-100 text-orange-700 border-orange-200",
+  alpa: "bg-red-100 text-red-700 border-red-200",
 };
 
 export default function WakakurAbsensiGuruPage() {
-  const [rows,         setRows]         = useState([]);
-  const [loading,      setLoading]      = useState(false);
-  const [tanggal,      setTanggal]      = useState(new Date().toISOString().slice(0, 10));
-  const [searchGuru,   setSearchGuru]   = useState("");
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [tanggal, setTanggal] = useState(getTodayJakartaDate());
+  const [searchGuru, setSearchGuru] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
-  const [filterMapel,  setFilterMapel]  = useState("");
-  const [previewSrc,   setPreviewSrc]   = useState(null);
-  const [previewName,  setPreviewName]  = useState("");
+  const [filterMapel, setFilterMapel] = useState("");
+  const [previewSrc, setPreviewSrc] = useState(null);
+  const [previewName, setPreviewName] = useState("");
 
-  // Pagination
   const PAGE_SIZE = 15;
   const [page, setPage] = useState(1);
 
   const loadData = async () => {
     setLoading(true);
+
     try {
       const params = {};
       if (tanggal) params.tanggal = tanggal;
+
       const res = await getAbsensiGuru(params);
-      setRows(Array.isArray(res.data?.data) ? res.data.data : []);
+      const data = Array.isArray(res.data?.data) ? res.data.data : [];
+      const mappedData = data.map(normalizeAbsensiGuruRow);
+
+      setRows(mappedData);
       setPage(1);
-    } catch {
-      toast.error("Gagal memuat data absensi guru");
+    } catch (err) {
+      console.error(
+        "Gagal memuat data absensi guru:",
+        err.response?.data || err,
+      );
+      toast.error(
+        err.response?.data?.message ||
+          err.response?.data?.error ||
+          "Gagal memuat data absensi guru",
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { loadData(); }, [tanggal]);
+  useEffect(() => {
+    loadData();
+  }, [tanggal]);
 
-  // ── Stats ──────────────────────────────────────────────────────────────
-  const stats = useMemo(() =>
-    rows.reduce((a, r) => {
-      a.total++;
-      a[r.status] = (a[r.status] || 0) + 1;
-      return a;
-    }, { total: 0, hadir: 0, terlambat: 0, izin: 0, sakit: 0, alpa: 0 }),
-    [rows]
+  const stats = useMemo(
+    () =>
+      rows.reduce(
+        (acc, row) => {
+          const status = String(row.status || "").toLowerCase();
+
+          acc.total += 1;
+          if (status) {
+            acc[status] = (acc[status] || 0) + 1;
+          }
+
+          return acc;
+        },
+        { total: 0, hadir: 0, terlambat: 0, izin: 0, sakit: 0, alpa: 0 },
+      ),
+    [rows],
   );
 
-  // ── Filter ─────────────────────────────────────────────────────────────
   const filtered = useMemo(() => {
-    return rows.filter(r => {
-      if (searchGuru  && !r.namaGuru?.toLowerCase().includes(searchGuru.toLowerCase()))  return false;
-      if (filterStatus && r.status !== filterStatus)                                      return false;
-      if (filterMapel  && !r.mataPelajaran?.toLowerCase().includes(filterMapel.toLowerCase())) return false;
+    return rows.filter((row) => {
+      const namaGuru = String(row.namaGuru || "").toLowerCase();
+      const mataPelajaran = String(row.mataPelajaran || "").toLowerCase();
+      const status = String(row.status || "").toLowerCase();
+
+      if (searchGuru && !namaGuru.includes(searchGuru.toLowerCase())) {
+        return false;
+      }
+
+      if (filterStatus && status !== filterStatus) {
+        return false;
+      }
+
+      if (filterMapel && !mataPelajaran.includes(filterMapel.toLowerCase())) {
+        return false;
+      }
+
       return true;
     });
   }, [rows, searchGuru, filterStatus, filterMapel]);
 
-  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const handlePreviewFoto = (foto, namaGuru) => {
     const url = getFullFotoUrl(foto);
-    if (!url) { toast("Tidak ada foto bukti untuk absensi ini"); return; }
+
+    if (!url) {
+      toast("Tidak ada foto bukti untuk absensi ini");
+      return;
+    }
+
     setPreviewSrc(url);
     setPreviewName(`Foto Bukti — ${namaGuru || "Guru"}`);
   };
 
   return (
     <div className="min-h-screen bg-gray-100">
-      {/* Image Preview Modal */}
       {previewSrc && (
         <ImagePreviewModal
           src={previewSrc}
           fileName={previewName}
-          onClose={() => { setPreviewSrc(null); setPreviewName(""); }}
+          onClose={() => {
+            setPreviewSrc(null);
+            setPreviewName("");
+          }}
         />
       )}
 
-      {/* Header */}
       <div className="bg-white border-b px-8 py-5">
-        <h1 className="text-2xl font-bold text-gray-800">MONITORING ABSENSI GURU</h1>
+        <h1 className="text-2xl font-bold text-gray-800">
+          MONITORING ABSENSI GURU
+        </h1>
         <p className="text-sm text-gray-500 mt-0.5">
           Rekap kehadiran guru mapel — termasuk foto bukti absensi
         </p>
       </div>
 
       <div className="px-8 py-6 max-w-7xl mx-auto space-y-5">
-
-        {/* Stats Card */}
         <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
           {[
-            { l: "Total",     v: stats.total,     c: "text-gray-800",   cls: "bg-white border" },
-            { l: "Hadir",     v: stats.hadir,     c: "text-green-700",  cls: "bg-green-50 border border-green-200" },
-            { l: "Terlambat", v: stats.terlambat, c: "text-yellow-700", cls: "bg-yellow-50 border border-yellow-200" },
-            { l: "Izin",      v: stats.izin,      c: "text-blue-700",   cls: "bg-blue-50 border border-blue-200" },
-            { l: "Sakit",     v: stats.sakit,     c: "text-orange-700", cls: "bg-orange-50 border border-orange-200" },
-            { l: "Alpa",      v: stats.alpa,      c: "text-red-700",    cls: "bg-red-50 border border-red-200" },
+            {
+              l: "Total",
+              v: stats.total,
+              c: "text-gray-800",
+              cls: "bg-white border",
+            },
+            {
+              l: "Hadir",
+              v: stats.hadir,
+              c: "text-green-700",
+              cls: "bg-green-50 border border-green-200",
+            },
+            {
+              l: "Terlambat",
+              v: stats.terlambat,
+              c: "text-yellow-700",
+              cls: "bg-yellow-50 border border-yellow-200",
+            },
+            {
+              l: "Izin",
+              v: stats.izin,
+              c: "text-blue-700",
+              cls: "bg-blue-50 border border-blue-200",
+            },
+            {
+              l: "Sakit",
+              v: stats.sakit,
+              c: "text-orange-700",
+              cls: "bg-orange-50 border border-orange-200",
+            },
+            {
+              l: "Alpa",
+              v: stats.alpa,
+              c: "text-red-700",
+              cls: "bg-red-50 border border-red-200",
+            },
           ].map(({ l, v, c, cls }) => (
             <div key={l} className={`rounded-xl p-3 text-center ${cls}`}>
               <p className="text-xs font-semibold opacity-70 mb-1">{l}</p>
@@ -118,31 +247,57 @@ export default function WakakurAbsensiGuruPage() {
           ))}
         </div>
 
-        {/* Filter */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5">
-          <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">Filter Absensi</p>
+          <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">
+            Filter Absensi
+          </p>
+
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3 items-end">
             <div>
-              <label className="block text-xs text-gray-400 mb-1">Tanggal</label>
-              <input type="date" value={tanggal} onChange={e => setTanggal(e.target.value)}
-                className="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              <label className="block text-xs text-gray-400 mb-1">
+                Tanggal
+              </label>
+              <input
+                type="date"
+                value={tanggal}
+                onChange={(e) => setTanggal(e.target.value)}
+                className="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
             </div>
+
             <div>
-              <label className="block text-xs text-gray-400 mb-1">Nama Guru</label>
-              <input type="text" value={searchGuru} onChange={e => setSearchGuru(e.target.value)}
+              <label className="block text-xs text-gray-400 mb-1">
+                Nama Guru
+              </label>
+              <input
+                type="text"
+                value={searchGuru}
+                onChange={(e) => setSearchGuru(e.target.value)}
                 placeholder="Cari nama guru..."
-                className="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                className="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
             </div>
+
             <div>
-              <label className="block text-xs text-gray-400 mb-1">Mata Pelajaran</label>
-              <input type="text" value={filterMapel} onChange={e => setFilterMapel(e.target.value)}
+              <label className="block text-xs text-gray-400 mb-1">
+                Mata Pelajaran
+              </label>
+              <input
+                type="text"
+                value={filterMapel}
+                onChange={(e) => setFilterMapel(e.target.value)}
                 placeholder="Cari mapel..."
-                className="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                className="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
             </div>
+
             <div>
               <label className="block text-xs text-gray-400 mb-1">Status</label>
-              <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
-                className="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
                 <option value="">Semua Status</option>
                 <option value="hadir">Hadir</option>
                 <option value="terlambat">Terlambat</option>
@@ -151,20 +306,31 @@ export default function WakakurAbsensiGuruPage() {
                 <option value="alpa">Alpa</option>
               </select>
             </div>
+
             <div className="flex gap-2">
-              <button onClick={loadData} disabled={loading}
-                className="flex-1 px-3 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-xs font-bold rounded-xl">
+              <button
+                onClick={loadData}
+                disabled={loading}
+                className="flex-1 px-3 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-xs font-bold rounded-xl"
+              >
                 {loading ? "..." : "↻ Muat"}
               </button>
-              <button onClick={() => { setSearchGuru(""); setFilterStatus(""); setFilterMapel(""); }}
-                className="px-3 py-2.5 border border-gray-200 rounded-xl text-xs text-gray-500 hover:bg-gray-50 font-semibold">
+
+              <button
+                onClick={() => {
+                  setTanggal(getTodayJakartaDate());
+                  setSearchGuru("");
+                  setFilterStatus("");
+                  setFilterMapel("");
+                }}
+                className="px-3 py-2.5 border border-gray-200 rounded-xl text-xs text-gray-500 hover:bg-gray-50 font-semibold"
+              >
                 Reset
               </button>
             </div>
           </div>
         </div>
 
-        {/* Tabel Absensi */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
           <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
             <h2 className="font-bold text-gray-800">
@@ -173,7 +339,10 @@ export default function WakakurAbsensiGuruPage() {
                 ({filtered.length} data · halaman {page}/{totalPages || 1})
               </span>
             </h2>
-            <p className="text-xs text-gray-400">* Klik "Foto Bukti" untuk preview foto absensi</p>
+
+            <p className="text-xs text-gray-400">
+              * Klik "Foto Bukti" untuk preview foto absensi
+            </p>
           </div>
 
           {loading ? (
@@ -202,64 +371,124 @@ export default function WakakurAbsensiGuruPage() {
                       <th className="px-4 py-3 text-center">Foto Bukti</th>
                     </tr>
                   </thead>
+
                   <tbody className="divide-y divide-gray-50">
-                    {paginated.map((r, i) => (
-                      <tr key={r.id_absensiGuru || i} className="hover:bg-gray-50/70">
-                        <td className="px-4 py-3 text-gray-400">{(page - 1) * PAGE_SIZE + i + 1}</td>
-                        <td className="px-4 py-3 font-semibold text-gray-800">{r.namaGuru || "-"}</td>
-                        <td className="px-4 py-3 text-gray-600">{r.mataPelajaran || "-"}</td>
-                        <td className="px-4 py-3 text-gray-500">{r.tanggal || "-"}</td>
-                        <td className="px-4 py-3 text-gray-500 font-mono text-xs">
-                          {r.jamMasuk
-                            ? new Date(r.jamMasuk).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }) + " WIB"
-                            : "-"}
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <span className={`px-3 py-1 rounded-full text-xs font-bold border uppercase ${STATUS_COLOR[r.status] || "bg-gray-100 text-gray-600 border-gray-200"}`}>
-                            {r.status || "-"}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-gray-500 max-w-xs truncate">{r.keterangan || "-"}</td>
-                        <td className="px-4 py-3 text-center">
-                          {r.foto ? (
-                            <button
-                              onClick={() => handlePreviewFoto(r.foto, r.namaGuru)}
-                              className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs font-bold rounded-lg border border-blue-200 transition-colors flex items-center gap-1 mx-auto"
+                    {paginated.map((row, index) => {
+                      const statusKey = String(row.status || "").toLowerCase();
+
+                      return (
+                        <tr
+                          key={
+                            row.id || `${row.namaGuru}-${row.tanggal}-${index}`
+                          }
+                          className="hover:bg-gray-50/70"
+                        >
+                          <td className="px-4 py-3 text-gray-400">
+                            {(page - 1) * PAGE_SIZE + index + 1}
+                          </td>
+
+                          <td className="px-4 py-3 font-semibold text-gray-800">
+                            {row.namaGuru || "-"}
+                          </td>
+
+                          <td className="px-4 py-3 text-gray-600">
+                            {row.mataPelajaran || "-"}
+                          </td>
+
+                          <td className="px-4 py-3 text-gray-500">
+                            {formatDate(row.tanggal)}
+                          </td>
+
+                          <td className="px-4 py-3 text-gray-500 font-mono text-xs">
+                            {formatTime(row.jamMasuk)}
+                          </td>
+
+                          <td className="px-4 py-3 text-center">
+                            <span
+                              className={`px-3 py-1 rounded-full text-xs font-bold border uppercase ${
+                                STATUS_COLOR[statusKey] ||
+                                "bg-gray-100 text-gray-600 border-gray-200"
+                              }`}
                             >
-                              📷 Foto Bukti
-                            </button>
-                          ) : (
-                            <span className="text-xs text-gray-300 font-medium">Tidak ada foto</span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
+                              {row.status || "-"}
+                            </span>
+                          </td>
+
+                          <td className="px-4 py-3 text-gray-500 max-w-xs truncate">
+                            {row.keterangan || "-"}
+                          </td>
+
+                          <td className="px-4 py-3 text-center">
+                            {row.foto ? (
+                              <button
+                                onClick={() =>
+                                  handlePreviewFoto(row.foto, row.namaGuru)
+                                }
+                                className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs font-bold rounded-lg border border-blue-200 transition-colors flex items-center gap-1 mx-auto"
+                              >
+                                📷 Foto Bukti
+                              </button>
+                            ) : (
+                              <span className="text-xs text-gray-300 font-medium">
+                                Tidak ada foto
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
 
-              {/* Pagination */}
               {totalPages > 1 && (
                 <div className="px-6 py-3 border-t border-gray-100 flex items-center justify-between">
                   <p className="text-xs text-gray-400">
-                    Menampilkan {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} dari {filtered.length} data
+                    Menampilkan {(page - 1) * PAGE_SIZE + 1}–
+                    {Math.min(page * PAGE_SIZE, filtered.length)} dari{" "}
+                    {filtered.length} data
                   </p>
+
                   <div className="flex gap-2">
-                    <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-                      className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-40">
+                    <button
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                      disabled={page === 1}
+                      className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-40"
+                    >
                       ← Prev
                     </button>
+
                     {Array.from({ length: Math.min(5, totalPages) }, (_, k) => {
-                      const p = Math.max(1, Math.min(page - 2, totalPages - 4)) + k;
+                      const start = Math.max(
+                        1,
+                        Math.min(page - 2, totalPages - 4),
+                      );
+                      const p = start + k;
+
+                      if (p > totalPages) return null;
+
                       return (
-                        <button key={p} onClick={() => setPage(p)}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold border ${p === page ? "bg-blue-600 text-white border-blue-600" : "border-gray-200 text-gray-600 hover:bg-gray-50"}`}>
+                        <button
+                          key={p}
+                          onClick={() => setPage(p)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold border ${
+                            p === page
+                              ? "bg-blue-600 text-white border-blue-600"
+                              : "border-gray-200 text-gray-600 hover:bg-gray-50"
+                          }`}
+                        >
                           {p}
                         </button>
                       );
                     })}
-                    <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-                      className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-40">
+
+                    <button
+                      onClick={() =>
+                        setPage((p) => Math.min(totalPages, p + 1))
+                      }
+                      disabled={page === totalPages}
+                      className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-40"
+                    >
                       Next →
                     </button>
                   </div>
