@@ -33,7 +33,7 @@ export const academicApi = {
 
   // Siswa
   getAllSiswa: () => api.get("/academic/siswa"),
-  getSiswa: () => api.get("/academic/siswa"),
+  getSiswa: (params = {}) => api.get("/academic/siswa", { params }),
   createSiswa: (payload) => api.post("/academic/siswa", payload),
   updateSiswa: (id, payload) => api.put(`/academic/siswa/${id}`, payload),
   deleteSiswa: (id) => api.delete(`/academic/siswa/${id}`),

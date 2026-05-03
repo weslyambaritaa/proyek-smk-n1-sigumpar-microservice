@@ -42,6 +42,12 @@ export const studentApi = {
   deleteSuratPanggilan: (id) =>
     axiosInstance.delete(`/api/student/surat-panggilan/${id}`),
 
+  getKelasPresensiWali: () =>
+    axiosInstance.get("/api/student/rekap-kehadiran/kelas"),
+
+  getSiswaPresensiWali: (params) =>
+    axiosInstance.get("/api/student/rekap-kehadiran/siswa", { params }),
+
   // Rekap Kehadiran Siswa
   getRekapKehadiran: (params) =>
     axiosInstance.get("/api/student/rekap-kehadiran", { params }),

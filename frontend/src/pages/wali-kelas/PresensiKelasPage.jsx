@@ -48,7 +48,11 @@ export default function PresensiKelasPage() {
   const [saving, setSaving] = useState(false);
 
   const [riwayatKelasId, setRiwayatKelasId] = useState("");
-  const [riwayatTanggal, setRiwayatTanggal] = useState("");
+
+  const [riwayatTanggal, setRiwayatTanggal] = useState(
+    new Date().toISOString().slice(0, 10),
+  );
+
   const [riwayatData, setRiwayatData] = useState([]);
   const [loadingRiwayat, setLoadingRiwayat] = useState(false);
 
@@ -78,7 +82,7 @@ export default function PresensiKelasPage() {
   useEffect(() => {
     const loadKelas = async () => {
       try {
-        const res = await academicApi.getKelas();
+        const res = await studentApi.getKelasPresensiWali();
         const rows = getRows(res);
 
         setKelasList(rows);
@@ -109,7 +113,7 @@ export default function PresensiKelasPage() {
 
       try {
         const [siswaRes, absensiRes] = await Promise.all([
-          academicApi.getSiswa({ kelas_id: kelasId }),
+          studentApi.getSiswaPresensiWali({ kelas_id: kelasId }),
           studentApi.getRekapKehadiran({
             kelas_id: kelasId,
             tanggal,
@@ -243,18 +247,35 @@ export default function PresensiKelasPage() {
       return;
     }
 
+    if (!riwayatTanggal) {
+      toast.error("Pilih tanggal riwayat terlebih dahulu");
+      return;
+    }
+
     setLoadingRiwayat(true);
 
     try {
       const res = await studentApi.getRekapKehadiran({
         kelas_id: riwayatKelasId,
-        tanggal: riwayatTanggal || undefined,
+        tanggal: riwayatTanggal,
       });
 
-      setRiwayatData(getRows(res));
+      const rows = getRows(res);
+
+      const validRows = rows.filter((item) => item.tanggal && item.status);
+
+      setRiwayatData(validRows);
+
+      if (validRows.length === 0) {
+        toast("Belum ada data presensi pada tanggal tersebut");
+      }
     } catch (err) {
       console.error("Gagal memuat riwayat:", err);
-      toast.error(err?.response?.data?.message || "Gagal memuat riwayat");
+      toast.error(
+        err?.response?.data?.message ||
+          err?.response?.data?.error ||
+          "Gagal memuat riwayat",
+      );
       setRiwayatData([]);
     } finally {
       setLoadingRiwayat(false);
@@ -647,20 +668,27 @@ export default function PresensiKelasPage() {
                       >
                         <td className="px-5 py-3 text-gray-400">{index + 1}</td>
                         <td className="px-5 py-3 text-gray-600">
-                          {item.tanggal}
+                          {item.tanggal
+                            ? new Date(item.tanggal).toLocaleDateString("id-ID")
+                            : "-"}
                         </td>
                         <td className="px-5 py-3 font-semibold text-gray-800">
                           {item.nama_lengkap || item.nama_siswa || "-"}
                         </td>
                         <td className="px-5 py-3 text-center">
-                          <span
-                            className={`px-2 py-0.5 rounded-full text-xs font-bold ${
-                              STATUS_BADGE[item.status] ||
-                              "bg-gray-100 text-gray-600"
-                            }`}
-                          >
-                            {item.status}
-                          </span>
+                          {item.status ? (
+                            <span
+                              className={`px-3 py-1 rounded-full text-xs font-bold capitalize ${
+                                STATUS_BADGE[
+                                  String(item.status).toLowerCase()
+                                ] || "bg-gray-100 text-gray-600"
+                              }`}
+                            >
+                              {String(item.status).toLowerCase()}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-gray-400">-</span>
+                          )}
                         </td>
                         <td className="px-5 py-3 text-gray-500 text-xs">
                           {item.keterangan || "-"}

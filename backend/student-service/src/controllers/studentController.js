@@ -15,7 +15,15 @@ const getUserRoles = (req) => {
   return [...new Set([...realmRoles, ...resourceRoles])];
 };
 
-const assertWaliOwnsKelas = async (req, kelasId) => {
+const normalizeAcademicRows = (payload) => {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.data)) return payload.data;
+  if (Array.isArray(payload?.rows)) return payload.rows;
+  if (Array.isArray(payload?.data?.rows)) return payload.data.rows;
+  return [];
+};
+
+const getKelasWaliFromAcademic = async (req) => {
   const userId = getUserId(req);
   const roles = getUserRoles(req);
 
@@ -26,7 +34,9 @@ const assertWaliOwnsKelas = async (req, kelasId) => {
   }
 
   if (!roles.includes("wali-kelas")) {
-    const err = new Error("Hanya wali-kelas yang boleh mengisi presensi kelas");
+    const err = new Error(
+      "Hanya wali-kelas yang boleh mengakses presensi kelas",
+    );
     err.statusCode = 403;
     throw err;
   }
@@ -40,21 +50,26 @@ const assertWaliOwnsKelas = async (req, kelasId) => {
     },
   );
 
-  const kelasList = response.data?.data || [];
-  const allowed = kelasList.some(
-    (kelas) => String(kelas.id) === String(kelasId),
-  );
+  return normalizeAcademicRows(response.data);
+};
 
-  if (!allowed) {
+const assertWaliOwnsKelas = async (req, kelasId) => {
+  const kelasList = await getKelasWaliFromAcademic(req);
+
+  const kelas = kelasList.find((item) => String(item.id) === String(kelasId));
+
+  if (!kelas) {
     const err = new Error(
       "Kelas ini bukan kelas yang di-assign kepada wali-kelas tersebut",
     );
     err.statusCode = 403;
     throw err;
   }
+
+  return kelas;
 };
 
-const getSiswaIdsByKelas = async (req, kelasId) => {
+const getSiswaRowsByKelas = async (req, kelasId) => {
   const response = await axios.get(
     `${ACADEMIC_SERVICE_URL}/api/academic/siswa`,
     {
@@ -65,7 +80,15 @@ const getSiswaIdsByKelas = async (req, kelasId) => {
     },
   );
 
-  const siswa = response.data?.data || [];
+  const siswa = normalizeAcademicRows(response.data);
+
+  return siswa.filter(
+    (item) => !item.kelas_id || String(item.kelas_id) === String(kelasId),
+  );
+};
+
+const getSiswaIdsByKelas = async (req, kelasId) => {
+  const siswa = await getSiswaRowsByKelas(req, kelasId);
   return siswa.map((item) => Number(item.id));
 };
 
@@ -577,6 +600,65 @@ exports.deleteSuratPanggilan = async (req, res) => {
 
 // ─── REKAP KEHADIRAN SISWA ─────────────────────────────────────
 
+exports.getKelasPresensiWali = async (req, res) => {
+  try {
+    const kelasList = await getKelasWaliFromAcademic(req);
+
+    return res.json({
+      success: true,
+      data: kelasList,
+    });
+  } catch (err) {
+    console.error(
+      "getKelasPresensiWali error:",
+      err.response?.data || err.message,
+    );
+    return res.status(err.statusCode || err.response?.status || 500).json({
+      success: false,
+      message:
+        err.response?.data?.message ||
+        err.response?.data?.error ||
+        err.message ||
+        "Gagal mengambil kelas wali",
+    });
+  }
+};
+
+exports.getSiswaPresensiWali = async (req, res) => {
+  try {
+    const { kelas_id } = req.query;
+
+    if (!kelas_id) {
+      return res.status(400).json({
+        success: false,
+        message: "kelas_id wajib diisi",
+      });
+    }
+
+    await assertWaliOwnsKelas(req, kelas_id);
+
+    const siswaRows = await getSiswaRowsByKelas(req, kelas_id);
+
+    return res.json({
+      success: true,
+      data: siswaRows,
+    });
+  } catch (err) {
+    console.error(
+      "getSiswaPresensiWali error:",
+      err.response?.data || err.message,
+    );
+    return res.status(err.statusCode || err.response?.status || 500).json({
+      success: false,
+      message:
+        err.response?.data?.message ||
+        err.response?.data?.error ||
+        err.message ||
+        "Gagal mengambil siswa presensi wali-kelas",
+    });
+  }
+};
+
 const normalizeHari = (value = "") =>
   String(value)
     .trim()
@@ -1001,11 +1083,7 @@ exports.getRekapAbsensiKepalaSekolah = async (req, res) => {
     }
 
     const params = [kelas_id];
-    const filters = ["kelas_id = $1"];
-
-    // Jika mapel dipilih, ambil absensi guru-mapel sesuai mapel.
-    // Jika mapel tidak dipilih, ambil seluruh absensi mapel di kelas tersebut.
-    filters.push("jadwal_id IS NOT NULL");
+    const filters = ["kelas_id = $1", "jadwal_id IS NOT NULL"];
 
     if (mapel_id) {
       params.push(mapel_id);
@@ -1066,30 +1144,49 @@ exports.getRekapKehadiran = async (req, res) => {
 
     await assertWaliOwnsKelas(req, kelas_id);
 
+    const siswaRows = await getSiswaRowsByKelas(req, kelas_id);
+    const siswaMap = new Map(
+      siswaRows.map((siswa) => [
+        String(siswa.id),
+        {
+          nama_lengkap:
+            siswa.nama_lengkap || siswa.nama_siswa || siswa.nama || null,
+          nama_siswa:
+            siswa.nama_siswa || siswa.nama_lengkap || siswa.nama || null,
+          nisn: siswa.nisn || null,
+        },
+      ]),
+    );
+
     if (tanggal) {
       const result = await pool.query(
         `
-  SELECT
-    id,
-    siswa_id,
-    kelas_id,
-    tanggal,
-    status,
-    keterangan,
-    created_at,
-    updated_at
-  FROM absensi_siswa
-  WHERE kelas_id = $1
-    AND tanggal = $2
-    AND jadwal_id IS NULL
-  ORDER BY siswa_id ASC
-  `,
+        SELECT
+          id,
+          siswa_id,
+          kelas_id,
+          tanggal,
+          status,
+          keterangan,
+          created_at,
+          updated_at
+        FROM absensi_siswa
+        WHERE kelas_id = $1
+          AND tanggal = $2
+          AND jadwal_id IS NULL
+        ORDER BY siswa_id ASC
+        `,
         [kelas_id, tanggal],
       );
 
+      const data = result.rows.map((row) => ({
+        ...row,
+        ...(siswaMap.get(String(row.siswa_id)) || {}),
+      }));
+
       return res.json({
         success: true,
-        data: result.rows,
+        data,
       });
     }
 
@@ -1123,15 +1220,27 @@ exports.getRekapKehadiran = async (req, res) => {
       params,
     );
 
+    const data = result.rows.map((row) => ({
+      ...row,
+      ...(siswaMap.get(String(row.siswa_id)) || {}),
+    }));
+
     return res.json({
       success: true,
-      data: result.rows,
+      data,
     });
   } catch (err) {
-    console.error("getRekapKehadiran error:", err);
-    return res.status(err.statusCode || 500).json({
+    console.error(
+      "getRekapKehadiran error:",
+      err.response?.data || err.message,
+    );
+    return res.status(err.statusCode || err.response?.status || 500).json({
       success: false,
-      error: err.message,
+      message:
+        err.response?.data?.message ||
+        err.response?.data?.error ||
+        err.message ||
+        "Gagal mengambil rekap kehadiran",
     });
   }
 };
@@ -1260,6 +1369,8 @@ exports.getNilaiSiswa = async (req, res) => {
       });
     }
 
+    await assertGuruMapelOwnsAssignment(req, kelas_id, mapel_id);
+
     const result = await pool.query(
       `
       SELECT *
@@ -1279,9 +1390,9 @@ exports.getNilaiSiswa = async (req, res) => {
     });
   } catch (err) {
     console.error("getNilaiSiswa error:", err);
-    return res.status(500).json({
+    return res.status(err.statusCode || 500).json({
       success: false,
-      error: err.message,
+      message: err.message,
     });
   }
 };
@@ -1487,50 +1598,6 @@ exports.createOrUpdateNilaiSiswa = async (req, res) => {
   }
 };
 
-exports.getNilaiSiswa = async (req, res) => {
-  try {
-    const {
-      kelas_id,
-      mapel_id,
-      tahun_ajar = "2024/2025",
-      semester = "ganjil",
-    } = req.query;
-
-    if (!kelas_id || !mapel_id) {
-      return res.status(400).json({
-        success: false,
-        message: "kelas_id dan mapel_id wajib diisi",
-      });
-    }
-
-    await assertGuruMapelOwnsAssignment(req, kelas_id, mapel_id);
-
-    const result = await pool.query(
-      `
-      SELECT *
-      FROM nilai_siswa
-      WHERE kelas_id = $1
-        AND mapel_id = $2
-        AND tahun_ajar = $3
-        AND semester = $4
-      ORDER BY siswa_id ASC
-      `,
-      [kelas_id, mapel_id, tahun_ajar, semester],
-    );
-
-    return res.json({
-      success: true,
-      data: result.rows,
-    });
-  } catch (err) {
-    console.error("getNilaiSiswa error:", err);
-    return res.status(err.statusCode || 500).json({
-      success: false,
-      message: err.message,
-    });
-  }
-};
-
 exports.getRekapNilai = async (req, res) => {
   try {
     const {
@@ -1594,29 +1661,46 @@ exports.createRekapKehadiran = async (req, res) => {
       });
     }
 
+    if (data_absensi.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "data_absensi tidak boleh kosong",
+      });
+    }
+
     await assertWaliOwnsKelas(req, kelas_id);
 
     const siswaIds = await getSiswaIdsByKelas(req, kelas_id);
 
     const invalidSiswa = data_absensi.find(
-      (item) => item.siswa_id && !siswaIds.includes(Number(item.siswa_id)),
+      (item) => !item.siswa_id || !siswaIds.includes(Number(item.siswa_id)),
     );
 
     if (invalidSiswa) {
       return res.status(400).json({
         success: false,
-        message: `Siswa ID ${invalidSiswa.siswa_id} tidak terdaftar di kelas ini`,
+        message: `Siswa ID ${invalidSiswa.siswa_id || "-"} tidak terdaftar di kelas ini`,
       });
     }
 
     const allowed = ["hadir", "izin", "sakit", "alpa", "terlambat"];
+
+    const invalidStatus = data_absensi.find((item) => {
+      const status = String(item.status || "").toLowerCase();
+      return !allowed.includes(status);
+    });
+
+    if (invalidStatus) {
+      return res.status(400).json({
+        success: false,
+        message: `Status presensi siswa ID ${invalidStatus.siswa_id || "-"} tidak valid`,
+      });
+    }
+
     const results = [];
 
     for (const item of data_absensi) {
-      if (!item.siswa_id) continue;
-
-      let status = String(item.status || "hadir").toLowerCase();
-      if (!allowed.includes(status)) status = "hadir";
+      const status = String(item.status).toLowerCase();
 
       const result = await pool.query(
         `
@@ -1638,12 +1722,13 @@ exports.createRekapKehadiran = async (req, res) => {
           kelas_id = EXCLUDED.kelas_id,
           status = EXCLUDED.status,
           keterangan = EXCLUDED.keterangan,
+          created_by = EXCLUDED.created_by,
           updated_at = CURRENT_TIMESTAMP
         RETURNING *
         `,
         [
-          item.siswa_id,
-          kelas_id,
+          Number(item.siswa_id),
+          Number(kelas_id),
           tanggal,
           status,
           item.keterangan || "",
@@ -1660,10 +1745,17 @@ exports.createRekapKehadiran = async (req, res) => {
       data: results,
     });
   } catch (err) {
-    console.error("createRekapKehadiran error:", err);
-    return res.status(err.statusCode || 500).json({
+    console.error(
+      "createRekapKehadiran error:",
+      err.response?.data || err.message,
+    );
+    return res.status(err.statusCode || err.response?.status || 500).json({
       success: false,
-      message: err.message,
+      message:
+        err.response?.data?.message ||
+        err.response?.data?.error ||
+        err.message ||
+        "Gagal menyimpan presensi kelas",
     });
   }
 };

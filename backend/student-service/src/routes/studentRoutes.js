@@ -117,6 +117,18 @@ router.delete(
   studentController.deleteSuratPanggilan,
 );
 
+router.get(
+  "/rekap-kehadiran/kelas",
+  extractIdentity,
+  studentController.getKelasPresensiWali,
+);
+
+router.get(
+  "/rekap-kehadiran/siswa",
+  extractIdentity,
+  studentController.getSiswaPresensiWali,
+);
+
 // Rekap Kehadiran / Presensi
 router.get(
   "/rekap-kehadiran",
