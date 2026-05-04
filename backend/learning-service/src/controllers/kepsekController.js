@@ -413,3 +413,11 @@ exports.saveEvaluasiGuru = async (req, res) => {
     res.status(500).json({ success: false, error: err.message });
   }
 };
+
+exports.getKepsekDashboard = async (req, res) => {
+  try {
+    res.json({ success: true, message: 'Dashboard Kepala Sekolah', data: {} });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};

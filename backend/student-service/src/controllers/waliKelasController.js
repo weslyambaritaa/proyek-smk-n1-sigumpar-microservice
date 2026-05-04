@@ -5,13 +5,13 @@ const {
   Siswa,
   MataPelajaran,
   AbsensiSiswa,
-} = require("../../../academic-service/src/models");
+} = require("../models");
 const {
   createError,
-} = require("../../../academic-service/src/middleware/errorHandler");
-const asyncHandler = require("../../../academic-service/src/utils/asyncHandler");
-const sequelize = require("../../../academic-service/src/config/db");
-const { QueryTypes } = require("sequelize");
+} = require("../middleware/errorHandler");
+const asyncHandler = require("../utils/asyncHandler");
+const sequelize = require("../config/db");
+const { QueryTypes, Op } = require("sequelize");
 
 // ─── PARENTING ─────────────────────────────────────────────────────────────
 
@@ -205,4 +205,12 @@ exports.getRekapAbsensiWali = asyncHandler(async (req, res) => {
     },
   );
   res.json({ success: true, data: rows });
+});
+
+exports.getSuratPanggilan = asyncHandler(async (req, res) => {
+  res.json({ success: true, data: [], message: 'Fitur surat panggilan belum tersedia' });
+});
+
+exports.createSuratPanggilan = asyncHandler(async (req, res) => {
+  res.status(201).json({ success: true, message: 'Surat panggilan berhasil dibuat (stub)' });
 });

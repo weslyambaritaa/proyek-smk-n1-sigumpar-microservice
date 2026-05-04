@@ -2,11 +2,6 @@ const express = require("express");
 const router = express.Router();
 const extractIdentity = require("../middleware/extractIdentity");
 const {
-  getAllTodos,
-  getTodoById,
-  createTodo,
-  updateTodo,
-  deleteTodo,
   getAllPerangkat,
   uploadPerangkat,
   downloadPerangkat,
@@ -16,6 +11,14 @@ const {
   getVersiDokumen,
   getLaporanTahunan,
 } = require("../controllers/learningController");
+
+const {
+  getAllTodos,
+  getTodoById,
+  createTodo,
+  updateTodo,
+  deleteTodo,
+} = require("../controllers/todoController");
 const {
   getAllAbsensiGuru,
   getAbsensiGuruById,

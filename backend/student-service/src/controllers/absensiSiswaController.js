@@ -3,12 +3,12 @@ const {
   Siswa,
   MataPelajaran,
   Kelas,
-} = require("../../../academic-service/src/models");
+} = require("../models");
 const {
   createError,
-} = require("../../../academic-service/src/middleware/errorHandler");
-const asyncHandler = require("../../../academic-service/src/utils/asyncHandler");
-const sequelize = require("../../../academic-service/src/config/db");
+} = require("../middleware/errorHandler");
+const asyncHandler = require("../utils/asyncHandler");
+const sequelize = require("../config/db");
 
 const VALID_STATUSES = ["hadir", "sakit", "izin", "alpa", "terlambat"];
 const isValidDate = (d) =>

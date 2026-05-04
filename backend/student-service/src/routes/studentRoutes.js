@@ -35,13 +35,13 @@ router.post(
 router.get(
   "/wali/kebersihan",
   extractIdentity,
-  waliKelasController.getRekapKebersihan,
+  waliKelasController.getKebersihan,
 );
 router.post(
   "/wali/kebersihan",
   extractIdentity,
   upload.single("foto"),
-  waliKelasController.createRekapKebersihan,
+  waliKelasController.createKebersihan,
 );
 router.get("/wali/refleksi", extractIdentity, waliKelasController.getRefleksi);
 router.post(
@@ -62,12 +62,12 @@ router.post(
 router.get(
   "/wali/rekap-kehadiran",
   extractIdentity,
-  waliKelasController.getRekapKehadiran,
+  waliKelasController.getRekapAbsensiWali,
 );
 router.get(
   "/wali/rekap-nilai",
   extractIdentity,
-  waliKelasController.getRekapNilai,
+  waliKelasController.getRekapNilaiWali,
 );
 
 // ─── ABSENSI SISWA ───────────────────────────────────────────────────────────
