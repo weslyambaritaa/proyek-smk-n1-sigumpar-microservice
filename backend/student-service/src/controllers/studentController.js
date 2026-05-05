@@ -666,9 +666,19 @@ const normalizeHari = (value = "") =>
     .replace(/[^a-z]/g, "");
 
 const getHariIndonesiaFromDate = (dateString) => {
-  const date = new Date(`${dateString}T00:00:00+07:00`);
-  const hari = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
-  return hari[date.getDay()];
+  // 1. Pastikan input menggunakan strip agar valid bagi constructor Date
+  const safeDateString = dateString.replace(/\//g, '-'); 
+  
+  // 2. Gunakan jam 12 siang agar tidak bergeser hari saat konversi zona waktu
+  const date = new Date(`${safeDateString}T12:00:00Z`);
+  
+  if (isNaN(date.getTime())) return "undefined";
+
+  // 3. Kunci ke zona waktu Asia/Jakarta untuk mendapatkan nama hari yang akurat
+  return new Intl.DateTimeFormat('id-ID', { 
+    weekday: 'long', 
+    timeZone: 'Asia/Jakarta' 
+  }).format(date);
 };
 
 const getMapelAssignmentsGuruMapel = async (req) => {
